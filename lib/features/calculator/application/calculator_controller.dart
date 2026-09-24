@@ -247,6 +247,64 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     );
   }
 
+  /// Restores a full history entry — puts the original expression back
+  /// into the editing buffer so the user can modify any token.
+  void loadExpression(String expressionStr, String result) {
+    // Parse the display string (e.g. "1,234 + 5%") back into tokens.
+    // Tokenisation rules: numbers contain [0-9.,], operators are +−×÷, % is percent.
+    final clean = expressionStr.trim();
+    final List<Token> tokens = [];
+    int i = 0;
+    while (i < clean.length) {
+      final ch = clean[i];
+      if (ch == ' ') { i++; continue; }
+      if (ch == '+') { tokens.add(const Token(TokenType.plus, '+')); i++; continue; }
+      if (ch == '−' || ch == '-') { tokens.add(const Token(TokenType.minus, '−')); i++; continue; }
+      if (ch == '×' || ch == '*') { tokens.add(const Token(TokenType.multiply, '×')); i++; continue; }
+      if (ch == '÷' || ch == '/') { tokens.add(const Token(TokenType.divide, '÷')); i++; continue; }
+      if (ch == '%') { tokens.add(const Token(TokenType.percent, '%')); i++; continue; }
+      // Number: collect digits, commas (thousands separator), dots
+      if (RegExp(r'[0-9.,\-]').hasMatch(ch)) {
+        final start = i;
+        while (i < clean.length && RegExp(r'[0-9.,]').hasMatch(clean[i])) { i++; }
+        final raw = clean.substring(start, i).replaceAll(',', '');
+        tokens.add(Token(TokenType.number, raw));
+        continue;
+      }
+      i++; // skip unknown
+    }
+
+    final restoredExpr = tokens.isEmpty
+        ? Expression.fromResult(result.replaceAll(',', ''))
+        : Expression.fromTokens(tokens);
+
+    // Compute live result for the restored expression
+    final resultNum = _tryEvaluate(restoredExpr) ?? result;
+
+    state = state.copyWith(
+      expression: restoredExpr,
+      resultText: resultNum,
+      expressionText: expressionStr,
+      clearEditingTokenIndex: true,
+      clearPreview: true,
+      clearError: true,
+      justEvaluated: false,
+    );
+  }
+
+  String? _tryEvaluate(Expression expr) {
+    try {
+      final tokens = expr.getAllTokens();
+      if (tokens.isEmpty) return null;
+      final ast = Parser.parse(tokens, tolerant: true);
+      if (ast == null) return null;
+      final val = Evaluator.evaluate(ast);
+      return NumberFormatter.format(val);
+    } catch (_) {
+      return null;
+    }
+  }
+
   void onEquals() {
     final tokens = state.expression.getAllTokens();
     if (tokens.isEmpty) return;

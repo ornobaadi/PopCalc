@@ -75,24 +75,25 @@ const _skins = <SkinOption>[
 ];
 
 class SettingsSheet extends ConsumerWidget {
-  final ThemeColors colors;
+  const SettingsSheet({super.key, ThemeColors? colors});
 
-  const SettingsSheet({super.key, required this.colors});
-
-  static Future<void> show(BuildContext context, {required ThemeColors colors}) {
+  static Future<void> show(BuildContext context, {ThemeColors? colors}) {
     return showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => SettingsSheet(colors: colors),
+      builder: (_) => const SettingsSheet(),
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(themeProvider);
+    final colors = AppTheme.colorsOf(currentMode);
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
       height: MediaQuery.of(context).size.height * 0.72,
       decoration: BoxDecoration(
         color: colors.bg,
@@ -317,7 +318,6 @@ class _SettingsRow extends StatelessWidget {
   final String label;
   final String? description;
   final ThemeColors colors;
-  final VoidCallback? onTap;
   final Widget? trailing;
 
   const _SettingsRow({
@@ -325,16 +325,13 @@ class _SettingsRow extends StatelessWidget {
     required this.label,
     this.description,
     required this.colors,
-    this.onTap,
     this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
         child: Row(
           children: [
             Icon(icon, color: colors.inkSoft, size: 22.0),
@@ -370,7 +367,6 @@ class _SettingsRow extends StatelessWidget {
             ?trailing,
           ],
         ),
-      ),
-    );
+      );
   }
 }

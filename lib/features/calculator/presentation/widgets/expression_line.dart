@@ -28,14 +28,14 @@ class ExpressionLine extends StatelessWidget {
   static const double _vPad = 3.0;
   // Border width is ALWAYS 2.0 — just color changes (transparent ↔ accent)
   static const double _borderW = 2.0;
-  static const double _fontSize = 28.0;
+  static const double _fontSize = 32.0;
 
   @override
   Widget build(BuildContext context) {
     final tokens = expression.getAllTokens();
 
     if (tokens.isEmpty) {
-      return const SizedBox(height: 40.0);
+      return const SizedBox(height: 44.0);
     }
 
     final children = <Widget>[];
@@ -43,17 +43,14 @@ class ExpressionLine extends StatelessWidget {
     for (int i = 0; i < tokens.length; i++) {
       final token = tokens[i];
       final isSelected = editingTokenIndex == i;
-      final isLast = i == tokens.length - 1;
 
       Color textColor;
       if (isSelected) {
         textColor = colors.ink;
       } else if (token.isOperator || token.isPercent) {
         textColor = colors.accent;
-      } else if (isLast) {
-        textColor = colors.ink;
       } else {
-        textColor = colors.ink.withValues(alpha: 0.72);
+        textColor = colors.ink;
       }
 
       children.add(
@@ -67,9 +64,7 @@ class ExpressionLine extends StatelessWidget {
             HapticFeedback.selectionClick();
             onTokenTap?.call(i);
           },
-          fontWeight: isSelected
-              ? FontWeight.w700
-              : (isLast ? FontWeight.w600 : FontWeight.w500),
+          fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
           hPad: _hPad,
           vPad: _vPad,
           borderW: _borderW,
@@ -84,7 +79,7 @@ class ExpressionLine extends StatelessWidget {
         _StaticChip(
           text: '=',
           color: colors.accent,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w400,
           fontSize: _fontSize,
           hPad: _hPad,
           vPad: _vPad,
@@ -96,7 +91,7 @@ class ExpressionLine extends StatelessWidget {
         _StaticChip(
           text: '=',
           color: colors.accent,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w400,
           fontSize: _fontSize,
           hPad: _hPad,
           vPad: _vPad,
@@ -106,8 +101,8 @@ class ExpressionLine extends StatelessWidget {
       children.add(
         _StaticChip(
           text: previewText!,
-          color: colors.inkSoft,
-          fontWeight: FontWeight.w500,
+          color: colors.ink.withValues(alpha: 0.65),
+          fontWeight: FontWeight.w400,
           fontSize: _fontSize,
           hPad: _hPad,
           vPad: _vPad,
@@ -117,7 +112,7 @@ class ExpressionLine extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 40.0,
+      height: 44.0,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12.0),
         child: SingleChildScrollView(
@@ -242,7 +237,7 @@ class _TokenChipState extends State<_TokenChip>
             fontSize: widget.fontSize,
             height: 1.0,
             leadingDistribution: TextLeadingDistribution.even,
-            letterSpacing: 0.3,
+            letterSpacing: 0.5,
             fontWeight: widget.fontWeight,
             color: widget.textColor,
           ),
@@ -288,7 +283,7 @@ class _StaticChip extends StatelessWidget {
           fontSize: fontSize,
           height: 1.0,
           leadingDistribution: TextLeadingDistribution.even,
-          letterSpacing: 0.3,
+          letterSpacing: 0.5,
           fontWeight: fontWeight,
           color: color,
         ),

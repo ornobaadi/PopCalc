@@ -2,40 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/history_store.dart';
+import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 
 class HistorySheet extends ConsumerWidget {
-  final ThemeColors colors;
-  final ValueChanged<String> onSelectResult;
+  final void Function(String expression, String result) onSelectEntry;
 
   const HistorySheet({
     super.key,
-    required this.colors,
-    required this.onSelectResult,
+    ThemeColors? colors,
+    required this.onSelectEntry,
   });
 
   static Future<void> show(
     BuildContext context, {
-    required ThemeColors colors,
-    required ValueChanged<String> onSelectResult,
+    ThemeColors? colors,
+    required void Function(String expression, String result) onSelectEntry,
   }) {
     return showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => HistorySheet(
-        colors: colors,
-        onSelectResult: onSelectResult,
+        onSelectEntry: onSelectEntry,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppTheme.colorsOf(ref.watch(themeProvider));
     final history = ref.watch(historyProvider);
     final historyNotifier = ref.read(historyProvider.notifier);
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
       height: MediaQuery.of(context).size.height * 0.65,
       decoration: BoxDecoration(
         color: colors.bg,
@@ -135,33 +137,44 @@ class HistorySheet extends ConsumerWidget {
                         child: InkWell(
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            onSelectResult(item.result);
+                            onSelectEntry(item.expression, item.result);
                             Navigator.of(context).pop();
                           },
                           borderRadius: BorderRadius.circular(16.0),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16.0, vertical: 12.0),
-                            child: Column(
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                  item.expression,
-                                  style: TextStyle(
-                                    fontFamily: 'BebasNeue',
-                                    fontSize: 20.0,
-                                    letterSpacing: 0.5,
-                                    color: colors.inkSoft,
-                                  ),
-                                ),
-                                const SizedBox(height: 2.0),
-                                Text(
-                                  item.result,
-                                  style: TextStyle(
-                                    fontFamily: 'BebasNeue',
-                                    fontSize: 34.0,
-                                    letterSpacing: 0.5,
-                                    color: colors.ink,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        item.expression,
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          fontFamily: 'BebasNeue',
+                                          fontSize: 18.0,
+                                          letterSpacing: 0.5,
+                                          color: colors.inkSoft,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2.0),
+                                      Text(
+                                        '= ${item.result}',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          fontFamily: 'BebasNeue',
+                                          fontSize: 30.0,
+                                          letterSpacing: 0.5,
+                                          fontWeight: FontWeight.w400,
+                                          color: colors.ink,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],

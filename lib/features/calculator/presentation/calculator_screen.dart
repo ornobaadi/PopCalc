@@ -93,10 +93,10 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                           HistorySheet.show(
                             context,
                             colors: colors,
-                            onSelectResult: (res) {
+                            onSelectEntry: (expr, res) {
                               ref
                                   .read(calculatorProvider.notifier)
-                                  .loadResult(res);
+                                  .loadExpression(expr, res);
                             },
                           );
                         },

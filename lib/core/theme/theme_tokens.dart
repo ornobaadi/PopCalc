@@ -33,12 +33,12 @@ class ThemeColors {
     bg: Color(0xFFFFAE00), // Vibrant golden marigold
     bgShade: Color(0xFFFFB818), // Subtle radiant highlight
     ink: Color(0xFF140F0B), // Deep espresso black for crisp, high-contrast numerals
-    inkSoft: Color(0xFF38220A), // Rich dark bronze-espresso (crisp readability on gold)
-    accent: Color(0xFFDE2600), // Vivid neon vermilion red for operators and equals
+    inkSoft: Color(0xFF2E1C0A), // Rich dark bronze-espresso (crisp readability on gold)
+    accent: Color(0xFFD61800), // Vivid punchy vermilion red for operators and equals
     extrudeTop: Color(0xFF221A12), // Deep warm graphite front face
-    extrudeSide: Color(0xFF483220), // Warm dimensional caramel-bronze side walls
-    extrudeShadow: Color(0x22361600), // Soft lighter ambient shadow (not a dark muddy blob)
-    extrudeChamfer: Color(0xFFFFD685), // Warm radiant golden bevel highlight rim
+    extrudeSide: Color(0xFF483220), // Solid warm dimensional caramel-bronze block
+    extrudeShadow: Color(0x35000000), // Soft ambient contact shadow
+    extrudeChamfer: Color(0xFFFFDF88), // Barely-visible cool white rim — not a border, just a catch light
   );
 
   /// Ink (tactile dark theme inspired by (NOT BORING) Calculator)
@@ -48,9 +48,9 @@ class ThemeColors {
     ink: Color(0xFFEEEEEE), // Crisp white numerals
     inkSoft: Color(0xFF7A7A7A), // Muted grey utility keys
     accent: Color(0xFFFFA000), // Punchy amber orange operators
-    extrudeTop: Color(0xFFEDEDED), // Crisp white front face
-    extrudeSide: Color(0xFF454545), // Shaded extrusion side walls
+    extrudeTop: Color(0xFFFFFFFF), // Crisp pure white front face
+    extrudeSide: Color(0xFF3C3C3C), // Solid slate grey block
     extrudeShadow: Color(0x99000000), // Soft contact shadow
-    extrudeChamfer: Color(0xFFFFFFFF), // Crisp chamfer highlight
+    extrudeChamfer: Color(0x50FFFFFF), // Subtle crisp bevel highlight rim
   );
 }

@@ -1,11 +1,13 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'extruded_number.dart';
 
-/// Manages physical motion, springs, tactile animations, and interactive
-/// 3D touch rotation for the hero extruded numerals.
+/// Manages physical motion, springs, tactile animations, interactive 3D touch rotation,
+/// and real-time physical device tilt via accelerometer for the hero extruded numerals.
 class AnimatedExtrudedNumber extends StatefulWidget {
   final String text;
   final bool isEvaluated;
@@ -50,6 +52,11 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
   Offset _dragOffset = Offset.zero;
   Offset _accumulatedDelta = Offset.zero;
   double _totalDragDist = 0.0;
+
+  // Real-time device tilt tracking via accelerometer
+  StreamSubscription<AccelerometerEvent>? _sensorSub;
+  double _sensorTiltX = 0.0;
+  double _sensorTiltY = 0.0;
 
   @override
   void initState() {
@@ -105,6 +112,32 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
         curve: Curves.elasticOut,
       ),
     );
+
+    // 6. Real-time physical device accelerometer tilt
+    _initDeviceMotionSensor();
+  }
+
+  void _initDeviceMotionSensor() {
+    try {
+      _sensorSub = accelerometerEventStream().listen(
+        (AccelerometerEvent event) {
+          // In portrait orientation:
+          // event.x: tilt left/right (typically -9.8 to +9.8)
+          // event.y: tilt up/down (typically ~6.0 when naturally held in hand at ~55°)
+          final targetX = (-event.x / 5.5).clamp(-1.0, 1.0);
+          final targetY = ((event.y - 6.0) / 5.5).clamp(-1.0, 1.0);
+
+          // Exponential moving average filter for buttery-smooth, jitter-free motion
+          _sensorTiltX = _sensorTiltX * 0.86 + targetX * 0.14;
+          _sensorTiltY = _sensorTiltY * 0.86 + targetY * 0.14;
+
+          if (mounted) setState(() {});
+        },
+        onError: (_) {
+          // Graceful fallback for devices/platforms without accelerometer
+        },
+      );
+    } catch (_) {}
   }
 
   @override
@@ -114,19 +147,18 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
     if (widget.hasError && !oldWidget.hasError) {
       _shakeController.forward(from: 0.0);
     } else if (widget.text != oldWidget.text) {
-      // Digit entered or changed: trigger punchy scale & spring depth
       _scaleController.forward(from: 0.0);
       _depthController.forward(from: 0.5);
     }
 
     if (widget.isEvaluated && !oldWidget.isEvaluated) {
-      // Equals pressed: deeper tactile extrusion spring
       _depthController.forward(from: 0.2);
     }
   }
 
   @override
   void dispose() {
+    _sensorSub?.cancel();
     _depthController.dispose();
     _shakeController.dispose();
     _scaleController.dispose();
@@ -219,18 +251,22 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
           final idleMod = 0.97 + (_idleController.value * 0.03);
           final currentDepth = (_depthAnimation.value * idleMod).clamp(0.0, 1.15);
 
-          // Current active 3D touch offset
-          final activeOffset = _dragSpringController.isAnimating
+          // Current active touch offset
+          final activeTouchOffset = _dragSpringController.isAnimating
               ? _dragSpringAnimation.value
               : _dragOffset;
 
-          // 3D rotation angles (radians)
-          final rotateY = activeOffset.dx * 0.42;
-          final rotateX = -activeOffset.dy * 0.42;
+          // Seamless fusion of touch dragging + physical device orientation movement
+          final double combinedX = (activeTouchOffset.dx + _sensorTiltX * 0.45).clamp(-1.2, 1.2);
+          final double combinedY = (activeTouchOffset.dy + _sensorTiltY * 0.45).clamp(-1.2, 1.2);
 
-          // Dynamic extrusion lighting angle reacting to tilt
+          // 3D perspective tilt angles for thick physical block motion
+          final rotateY = combinedX * 0.28;
+          final rotateX = -combinedY * 0.28;
+
+          // Dynamic extrusion lighting angle reacting to device orientation and touch
           final dynamicTilt = widget.tilt +
-              Offset(activeOffset.dx * 24.0, activeOffset.dy * 24.0);
+              Offset(combinedX * 12.0, combinedY * 12.0);
 
           return Transform.translate(
             offset: Offset(shakeOffsetX, 0.0),
@@ -239,7 +275,7 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
               child: Transform(
                 alignment: Alignment.center,
                 transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.0015) // perspective projection
+                  ..setEntry(3, 2, 0.0010) // Natural camera perspective
                   ..rotateX(rotateX)
                   ..rotateY(rotateY),
                 child: ExtrudedNumber(

@@ -1,8 +1,11 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 
-/// Renders ultra-smooth continuous 3D extruded numerals.
-/// Uses many sub-pixel micro-steps for silky gradient side walls — no staircase effect.
+/// Renders a thick, solid 3D extruded numeral block.
+/// The extrusion direction follows device tilt + touch drag for a natural
+/// "physical object" feel. Sub-pixel stamping with a gradient-shaded side wall
+/// gives the illusion of a real engraved block with zero visible staircase.
 class ExtrudedNumber extends StatelessWidget {
   final String text;
   final double depth; // 0.0 (flat) to 1.0 (full depth)
@@ -48,21 +51,17 @@ class ExtrudedNumber extends StatelessWidget {
   }
 }
 
-// ─── Layout cache ─────────────────────────────────────────────────────────────
-// Keyed by text+size+theme so multiple instances work correctly and only
-// re-layout when something actually changes.
+// ─── Layout Cache ─────────────────────────────────────────────────────────────
 final _painterCache = <String, _LayoutCache>{};
 
 class _LayoutCache {
   final TextPainter frontPainter;
-  final TextPainter? shadowPainter;
-  final TextPainter? chamferPainter;
+  final TextPainter shadowPainter;
   final double fontSize;
 
   _LayoutCache({
     required this.frontPainter,
-    this.shadowPainter,
-    this.chamferPainter,
+    required this.shadowPainter,
     required this.fontSize,
   });
 }
@@ -86,7 +85,7 @@ class _ExtrudedNumberPainter extends CustomPainter {
   });
 
   String _cacheKey(Size size) =>
-      '${text}_${size.width.toInt()}_${size.height.toInt()}_${colors.extrudeTop.toARGB32()}_$isLite';
+      '${text}_${size.width.toInt()}_${size.height.toInt()}_${colors.extrudeTop.toARGB32()}_${colors.extrudeSide.toARGB32()}_$isLite';
 
   _LayoutCache _buildCache(Size size) {
     double targetFontSize = size.height * 0.88;
@@ -106,7 +105,7 @@ class _ExtrudedNumberPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
 
-    final maxAllowedWidth = size.width - 36.0;
+    final maxAllowedWidth = size.width - 40.0;
     if (measurePainter.width > maxAllowedWidth) {
       final scaleFactor = maxAllowedWidth / measurePainter.width;
       targetFontSize = (targetFontSize * scaleFactor).clamp(40.0, 200.0);
@@ -114,45 +113,31 @@ class _ExtrudedNumberPainter extends CustomPainter {
 
     final fittedStyle = baseStyle.copyWith(fontSize: targetFontSize);
 
+    // Front face numeral
     final frontPainter = TextPainter(
-      text: TextSpan(text: text, style: fittedStyle.copyWith(color: colors.extrudeTop)),
+      text: TextSpan(
+        text: text,
+        style: fittedStyle.copyWith(color: colors.extrudeTop),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
 
-    TextPainter? shadowPainter;
-    TextPainter? chamferPainter;
-
-    if (!isLite) {
-      shadowPainter = TextPainter(
-        text: TextSpan(
-          text: text,
-          style: fittedStyle.copyWith(
-            foreground: Paint()
-              ..color = colors.extrudeShadow
-              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14.0),
-          ),
+    // Soft ambient contact shadow
+    final shadowPainter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: fittedStyle.copyWith(
+          foreground: Paint()
+            ..color = colors.extrudeShadow
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18.0),
         ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      chamferPainter = TextPainter(
-        text: TextSpan(
-          text: text,
-          style: fittedStyle.copyWith(
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 1.2
-              ..color = colors.extrudeChamfer.withValues(alpha: 0.55),
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-    }
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
 
     return _LayoutCache(
       frontPainter: frontPainter,
       shadowPainter: shadowPainter,
-      chamferPainter: chamferPainter,
       fontSize: targetFontSize,
     );
   }
@@ -163,8 +148,7 @@ class _ExtrudedNumberPainter extends CustomPainter {
 
     final key = _cacheKey(size);
     _painterCache[key] ??= _buildCache(size);
-    // Keep cache from growing unbounded
-    if (_painterCache.length > 14) {
+    if (_painterCache.length > 16) {
       _painterCache.remove(_painterCache.keys.first);
     }
 
@@ -172,11 +156,23 @@ class _ExtrudedNumberPainter extends CustomPainter {
     final textWidth = cache.frontPainter.width;
     final textHeight = cache.frontPainter.height;
 
-    // Extrusion vector — moderate magnitude for clean look
-    final double maxOffset = (isLite ? 7.0 : 13.0) * depth;
-    final double dirX = (-maxOffset * 0.65) + tilt.dx;
-    final double dirY = (maxOffset * 0.90) + tilt.dy;
+    // ── Extrusion direction ──
+    // Base direction: lower-right (classic block-letter look).
+    // tilt.dx / tilt.dy are in [-12, 12] range from touch+sensor combined.
+    // Tilt shifts the direction so as you tilt the device, the "light source"
+    // appears to shift naturally — left/right and up/down.
+    final double maxOffset = (isLite ? 10.0 : 18.0) * depth;
 
+    // Natural base direction at rest: lower-right shadow
+    final double baseDirX = maxOffset * 0.55;
+    final double baseDirY = maxOffset * 0.82;
+
+    // Tilt shifts the direction — normalised so tilt of ±12 ≈ ±half offset
+    final double tiltInfluence = isLite ? 0.4 : 0.55;
+    final double dirX = baseDirX + (tilt.dx * tiltInfluence);
+    final double dirY = baseDirY + (tilt.dy * tiltInfluence);
+
+    // Center the text so the block appears centered in the widget
     final double startX = (textAlign == TextAlign.center)
         ? (size.width - textWidth) / 2 - (dirX * 0.5)
         : size.width - textWidth - maxOffset.abs() - 20.0;
@@ -184,38 +180,33 @@ class _ExtrudedNumberPainter extends CustomPainter {
 
     final frontOffset = Offset(startX, startY);
 
-    // ─── 1. Drop shadow (maskFilter blur, no saveLayer) ───────────────────────
-    if (!isLite && depth > 0.05 && cache.shadowPainter != null) {
-      cache.shadowPainter!.paint(
+    // ─── 1. Soft ambient contact drop shadow ──────────────────────────────────
+    if (!isLite && depth > 0.05) {
+      cache.shadowPainter.paint(
         canvas,
-        Offset(startX + dirX * 1.4, startY + dirY * 1.4),
+        Offset(startX + dirX * 1.5, startY + dirY * 1.5),
       );
     }
 
-    // ─── 2. Smooth extrusion side walls ──────────────────────────────────────
-    //
-    // Paint from BACK to FRONT with many sub-pixel steps (no visible staircase).
-    // 22 steps at sub-pixel increments = smooth continuous volume appearance.
-    // Each layer has a smoothly interpolated color from dark (back) to mid (front).
-    //
-    final int steps = isLite ? 8 : 22;
-    final side = colors.extrudeSide;
+    // ─── 2. Gradient-shaded 3D block wall ─────────────────────────────────────
+    // Sub-pixel stamping with gradient colour lerp creates smooth bevel.
+    // t=0 (far layers): deep shadow colour  
+    // t=1 (near face):  slightly lighter rim, mimicking a real thick block edge
+    final double dist = sqrt(dirX * dirX + dirY * dirY);
+    final int steps = isLite ? 18 : (dist / 0.28).clamp(36, 64).toInt();
 
-    for (int i = steps; i >= 0; i--) {
-      final t = i / steps; // 1.0 = back, 0.0 = front edge
+    final Color deepColor = colors.extrudeSide;
+    final Color rimColor = Color.lerp(colors.extrudeSide, colors.extrudeTop, 0.28)!;
+
+    for (int i = 0; i < steps; i++) {
+      final t = i / (steps - 1.0);
       final layerOffset = Offset(
-        frontOffset.dx + dirX * t,
-        frontOffset.dy + dirY * t,
+        frontOffset.dx + dirX * (1.0 - t),
+        frontOffset.dy + dirY * (1.0 - t),
       );
 
-      // Smooth dark→medium color gradient along extrusion depth
-      final double darken = t * 0.20;
-      final layerColor = Color.fromARGB(
-        side.a.toInt(),
-        (side.r * (1.0 - darken)).round().clamp(0, 255),
-        (side.g * (1.0 - darken)).round().clamp(0, 255),
-        (side.b * (1.0 - darken)).round().clamp(0, 255),
-      );
+      final lerpT = Curves.easeInCubic.transform(t);
+      final layerColor = Color.lerp(deepColor, rimColor, lerpT)!;
 
       final tp = TextPainter(
         text: TextSpan(
@@ -231,16 +222,34 @@ class _ExtrudedNumberPainter extends CustomPainter {
           ),
         ),
         textDirection: TextDirection.ltr,
-      )..layout();
+      )..layout(maxWidth: size.width);
       tp.paint(canvas, layerOffset);
     }
 
-    // ─── 3. Front face ────────────────────────────────────────────────────────
+    // ─── 3. Crisp front face numeral ──────────────────────────────────────────
     cache.frontPainter.paint(canvas, frontOffset);
 
-    // ─── 4. Chamfer bevel rim highlight ──────────────────────────────────────
-    if (!isLite && cache.chamferPainter != null) {
-      cache.chamferPainter!.paint(canvas, frontOffset);
+    // ─── 4. Subtle bevel highlight at face rim ────────────────────────────────
+    if (!isLite && colors.extrudeChamfer != Colors.transparent) {
+      final chamferPainter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            fontFamily: 'BebasNeue',
+            fontFamilyFallback: const ['Antonio', 'sans-serif'],
+            fontWeight: FontWeight.w400,
+            letterSpacing: 1.0,
+            height: 1.0,
+            fontSize: cache.fontSize,
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1
+              ..color = colors.extrudeChamfer,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: size.width);
+      chamferPainter.paint(canvas, frontOffset);
     }
   }
 
@@ -254,3 +263,5 @@ class _ExtrudedNumberPainter extends CustomPainter {
         oldDelegate.textAlign != textAlign;
   }
 }
+
+
