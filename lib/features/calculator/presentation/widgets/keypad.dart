@@ -8,15 +8,34 @@ import 'key_button.dart';
 
 class Keypad extends ConsumerWidget {
   final ThemeColors colors;
+  /// When true, the next digit press replaces the current result.
+  final bool highlightMode;
+  final VoidCallback? onHighlightConsumed;
 
   const Keypad({
     super.key,
     required this.colors,
+    this.highlightMode = false,
+    this.onHighlightConsumed,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(calculatorProvider.notifier);
+
+    void pressDigit(String digit) {
+      if (highlightMode) {
+        onHighlightConsumed?.call();
+      }
+      controller.onDigit(digit);
+    }
+
+    void pressDecimal() {
+      if (highlightMode) {
+        onHighlightConsumed?.call();
+      }
+      controller.onDecimal();
+    }
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -73,7 +92,7 @@ class Keypad extends ConsumerWidget {
                   label: '7',
                   color: colors.ink,
                   fontSize: 46.0,
-                  onTap: () => controller.onDigit('7'),
+                  onTap: () => pressDigit('7'),
                 ),
               ),
               Expanded(
@@ -81,7 +100,7 @@ class Keypad extends ConsumerWidget {
                   label: '8',
                   color: colors.ink,
                   fontSize: 46.0,
-                  onTap: () => controller.onDigit('8'),
+                  onTap: () => pressDigit('8'),
                 ),
               ),
               Expanded(
@@ -89,7 +108,7 @@ class Keypad extends ConsumerWidget {
                   label: '9',
                   color: colors.ink,
                   fontSize: 46.0,
-                  onTap: () => controller.onDigit('9'),
+                  onTap: () => pressDigit('9'),
                 ),
               ),
               Expanded(
@@ -114,7 +133,7 @@ class Keypad extends ConsumerWidget {
                   label: '4',
                   color: colors.ink,
                   fontSize: 46.0,
-                  onTap: () => controller.onDigit('4'),
+                  onTap: () => pressDigit('4'),
                 ),
               ),
               Expanded(
@@ -122,7 +141,7 @@ class Keypad extends ConsumerWidget {
                   label: '5',
                   color: colors.ink,
                   fontSize: 46.0,
-                  onTap: () => controller.onDigit('5'),
+                  onTap: () => pressDigit('5'),
                 ),
               ),
               Expanded(
@@ -130,7 +149,7 @@ class Keypad extends ConsumerWidget {
                   label: '6',
                   color: colors.ink,
                   fontSize: 46.0,
-                  onTap: () => controller.onDigit('6'),
+                  onTap: () => pressDigit('6'),
                 ),
               ),
               Expanded(
@@ -155,7 +174,7 @@ class Keypad extends ConsumerWidget {
                   label: '1',
                   color: colors.ink,
                   fontSize: 46.0,
-                  onTap: () => controller.onDigit('1'),
+                  onTap: () => pressDigit('1'),
                 ),
               ),
               Expanded(
@@ -163,7 +182,7 @@ class Keypad extends ConsumerWidget {
                   label: '2',
                   color: colors.ink,
                   fontSize: 46.0,
-                  onTap: () => controller.onDigit('2'),
+                  onTap: () => pressDigit('2'),
                 ),
               ),
               Expanded(
@@ -171,7 +190,7 @@ class Keypad extends ConsumerWidget {
                   label: '3',
                   color: colors.ink,
                   fontSize: 46.0,
-                  onTap: () => controller.onDigit('3'),
+                  onTap: () => pressDigit('3'),
                 ),
               ),
               Expanded(
@@ -196,7 +215,7 @@ class Keypad extends ConsumerWidget {
                   label: '0',
                   color: colors.ink,
                   fontSize: 46.0,
-                  onTap: () => controller.onDigit('0'),
+                  onTap: () => pressDigit('0'),
                 ),
               ),
               Expanded(
@@ -205,7 +224,7 @@ class Keypad extends ConsumerWidget {
                   color: colors.ink,
                   fontSize: 46.0,
                   semanticLabel: 'Decimal point',
-                  onTap: () => controller.onDecimal(),
+                  onTap: () => pressDecimal(),
                 ),
               ),
               Expanded(

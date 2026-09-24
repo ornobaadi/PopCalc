@@ -28,17 +28,17 @@ class ThemeColors {
     required this.extrudeChamfer,
   });
 
-  /// Sunny (exact radiant golden marigold & neon vermilion from Not Boring)
+  /// Sunny (radiant golden marigold & punchy vermilion with high contrast legibility)
   static const sunnyTheme = ThemeColors(
     bg: Color(0xFFFFAE00), // Vibrant golden marigold
     bgShade: Color(0xFFFFB818), // Subtle radiant highlight
-    ink: Color(0xFF140F0B), // Deep espresso black
-    inkSoft: Color(0xFF8A5310), // Warm amber brown for utility keys
-    accent: Color(0xFFFF331F), // Vivid neon vermilion red for operators and equals
-    extrudeTop: Color(0xFF140F0B), // Bold espresso black front face
-    extrudeSide: Color(0xFF2B2017), // Rich dark bronze/chocolate side walls
-    extrudeShadow: Color(0x77000000), // Deep directional contact shadow
-    extrudeChamfer: Color(0xFF3D2E22), // Bevel highlight rim
+    ink: Color(0xFF140F0B), // Deep espresso black for crisp, high-contrast numerals
+    inkSoft: Color(0xFF38220A), // Rich dark bronze-espresso (crisp readability on gold)
+    accent: Color(0xFFDE2600), // Vivid neon vermilion red for operators and equals
+    extrudeTop: Color(0xFF221A12), // Deep warm graphite front face
+    extrudeSide: Color(0xFF483220), // Warm dimensional caramel-bronze side walls
+    extrudeShadow: Color(0x22361600), // Soft lighter ambient shadow (not a dark muddy blob)
+    extrudeChamfer: Color(0xFFFFD685), // Warm radiant golden bevel highlight rim
   );
 
   /// Ink (tactile dark theme inspired by (NOT BORING) Calculator)

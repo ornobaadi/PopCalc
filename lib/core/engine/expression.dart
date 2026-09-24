@@ -185,6 +185,44 @@ class Expression {
     return this;
   }
 
+  /// Replaces the token at [index] with [newToken]
+  Expression replaceTokenAt(int index, Token newToken) {
+    final all = getAllTokens();
+    if (index < 0 || index >= all.length) return this;
+    final newAll = List<Token>.from(all);
+    newAll[index] = newToken;
+    return Expression.fromTokens(newAll);
+  }
+
+  /// Removes the token at [index]
+  Expression removeTokenAt(int index) {
+    final all = getAllTokens();
+    if (index < 0 || index >= all.length) return this;
+    final newAll = List<Token>.from(all);
+    newAll.removeAt(index);
+    return Expression.fromTokens(newAll);
+  }
+
+  /// Inserts [newToken] right after [index]
+  Expression insertTokenAfter(int index, Token newToken) {
+    final all = getAllTokens();
+    if (index < 0 || index >= all.length) {
+      final newAll = List<Token>.from(all)..add(newToken);
+      return Expression.fromTokens(newAll);
+    }
+    final newAll = List<Token>.from(all);
+    newAll.insert(index + 1, newToken);
+    return Expression.fromTokens(newAll);
+  }
+
+  /// Creates a new Expression from an explicit list of tokens
+  factory Expression.fromTokens(List<Token> tokens) {
+    return Expression(
+      tokens: List.unmodifiable(tokens),
+      currentNumber: '',
+    );
+  }
+
   /// Clears the entire expression
   Expression clear() {
     return const Expression(tokens: [], currentNumber: '');

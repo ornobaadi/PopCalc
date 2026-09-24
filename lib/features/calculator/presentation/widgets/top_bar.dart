@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
+import 'package:popcalc/features/settings/presentation/settings_sheet.dart';
 
 class TopBar extends ConsumerWidget {
   final ThemeColors colors;
@@ -15,8 +16,6 @@ class TopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeProvider);
-
     return SizedBox(
       height: 44.0,
       child: Padding(
@@ -24,6 +23,7 @@ class TopBar extends ConsumerWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            // History button
             IconButton(
               icon: Icon(
                 Icons.access_time_rounded,
@@ -34,18 +34,19 @@ class TopBar extends ConsumerWidget {
               tooltip: 'History',
               onPressed: onHistoryTap,
             ),
+
+            // Settings / Skins button
             IconButton(
               icon: Icon(
-                themeMode == AppThemeMode.ink
-                    ? Icons.wb_sunny_outlined
-                    : Icons.nightlight_round_outlined,
+                Icons.tune_rounded,
                 color: colors.inkSoft.withValues(alpha: 0.65),
-                size: 18.0,
+                size: 20.0,
               ),
               splashRadius: 20.0,
-              tooltip: 'Toggle Theme',
+              tooltip: 'Settings',
               onPressed: () {
-                ref.read(themeProvider.notifier).toggleTheme();
+                HapticFeedback.selectionClick();
+                SettingsSheet.show(context, colors: colors);
               },
             ),
           ],

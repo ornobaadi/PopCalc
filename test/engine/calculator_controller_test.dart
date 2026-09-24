@@ -68,4 +68,65 @@ void main() {
     expect(controller.state.resultText, "Can't divide by zero");
     expect(controller.state.error, isNotNull);
   });
+
+  test('Percent displays on the big hero display', () {
+    controller.onDigit('8');
+    controller.onDigit('8');
+    controller.onOperator(TokenType.multiply, '×');
+    controller.onDigit('9');
+    controller.onPercent();
+
+    // Result text for the hero display should show 9%
+    expect(controller.state.resultText, '9%');
+    expect(controller.state.expression.toDisplayString(), '88 × 9%');
+  });
+
+  test('Token editing: tapping a number highlights it and typing a new digit replaces it', () {
+    // Enter 88 × 9
+    controller.onDigit('8');
+    controller.onDigit('8');
+    controller.onOperator(TokenType.multiply, '×');
+    controller.onDigit('9');
+
+    expect(controller.state.expression.toDisplayString(), '88 × 9');
+
+    // Tap the first token (88)
+    controller.selectToken(0);
+    expect(controller.state.editingTokenIndex, 0);
+    expect(controller.state.resultText, '88');
+
+    // Type '5': should replace 88 with 5
+    controller.onDigit('5');
+    expect(controller.state.resultText, '5');
+    expect(controller.state.expression.toDisplayString(), '5 × 9');
+
+    // Type '6': should append to make 56
+    controller.onDigit('6');
+    expect(controller.state.resultText, '56');
+    expect(controller.state.expression.toDisplayString(), '56 × 9');
+  });
+
+  test('Token editing: tapping an operator allows replacing it', () {
+    // Enter 50 + 10
+    controller.onDigit('5');
+    controller.onDigit('0');
+    controller.onOperator(TokenType.plus, '+');
+    controller.onDigit('1');
+    controller.onDigit('0');
+
+    // Select operator '+' at index 1
+    controller.selectToken(1);
+    expect(controller.state.editingTokenIndex, 1);
+    expect(controller.state.resultText, '+');
+
+    // Replace '+' with '×'
+    controller.onOperator(TokenType.multiply, '×');
+    expect(controller.state.resultText, '×');
+    expect(controller.state.expression.toDisplayString(), '50 × 10');
+
+    // On equals: 50 × 10 = 500
+    controller.onEquals();
+    expect(controller.state.resultText, '500');
+    expect(controller.state.editingTokenIndex, isNull);
+  });
 }
