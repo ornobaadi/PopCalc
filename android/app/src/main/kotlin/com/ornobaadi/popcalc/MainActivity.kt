@@ -1,4 +1,4 @@
-package com.example.popcalc
+package com.ornobaadi.popcalc
 
 import io.flutter.embedding.android.FlutterActivity
 

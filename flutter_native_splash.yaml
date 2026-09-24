@@ -1,0 +1,14 @@
+# PopCalc launch splash — bridges the cold-start gap until Flutter draws its
+# first frame, where a branded animated reveal takes over.
+# Apply changes with: dart run flutter_native_splash:create
+flutter_native_splash:
+  # Light scheme (follows the device's light/dark setting, not the in-app skin)
+  color: "#FFAE00"
+  image: assets/splash/splash_logo.png
+  color_dark: "#141414"
+  image_dark: assets/splash/splash_logo_dark.png
+  android_12:
+    color: "#FFAE00"
+    image: assets/splash/splash_android12.png
+    color_dark: "#141414"
+    image_dark: assets/splash/splash_android12_dark.png

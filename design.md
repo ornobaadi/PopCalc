@@ -1,4 +1,4 @@
-# Design: Pop Calc
+# Design: PopCalc
 
 Design language: **bold, condensed, tactile.** Huge numerals that feel like physical objects, a calm keypad, and motion that rewards every tap without ever slowing you down.
 

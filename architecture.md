@@ -1,4 +1,4 @@
-# Architecture: Pop Calc
+# Architecture: PopCalc
 
 A small, offline, single-module Flutter app. The guiding rule: **keep the math engine pure Dart, keep animation in the UI layer, and keep monetization behind one interface.** That makes the app easy to test, easy to change, and hard to break.
 

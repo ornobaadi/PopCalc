@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
-import 'package:popcalc/features/calculator/presentation/calculator_screen.dart';
+import 'package:popcalc/features/splash/presentation/splash_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,10 +38,10 @@ class PopCalcApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
-      title: 'Pop Calc',
+      title: 'PopCalc',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.getThemeData(themeMode),
-      home: const CalculatorScreen(),
+      home: const SplashScreen(),
     );
   }
 }

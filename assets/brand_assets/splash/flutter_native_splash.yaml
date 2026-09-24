@@ -1,0 +1,15 @@
+# Put this file in your project root (next to pubspec.yaml) and copy the PNGs to assets/splash/
+# Then run:
+#   flutter pub add --dev flutter_native_splash
+#   dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#FFAE00"
+  image: assets/splash/splash_logo.png
+  color_dark: "#141414"
+  image_dark: assets/splash/splash_logo_dark.png
+
+  android_12:
+    color: "#FFAE00"
+    image: assets/splash/splash_android12.png
+    color_dark: "#141414"
+    image_dark: assets/splash/splash_android12_dark.png

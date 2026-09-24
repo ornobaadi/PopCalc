@@ -1,4 +1,4 @@
-﻿# Pop Calc
+﻿# PopCalc
 
 > **Math, but make it physical.**
 > A calculator with extruded 3D numerals, tactile motion, and a design worth opening every day.
@@ -22,7 +22,7 @@ Built with Flutter · Android-first · 100% offline · Zero data collected
 
 ## Graphite Theme
 
-Graphite is Pop Calc's signature dark skin — deep slate black with crisp white numerals and punchy amber-orange operators.
+Graphite is PopCalc's signature dark skin — deep slate black with crisp white numerals and punchy amber-orange operators.
 
 | Token | Value | Role |
 |---|---|---|
@@ -42,7 +42,7 @@ The numerals are rendered using a layered extrusion technique: 10–16 stacked `
 
 ## Customization
 
-Pop Calc ships with **two free skins** and unlocks more with a single one-time Pro purchase — no subscriptions, no locked math.
+PopCalc ships with **two free skins** and unlocks more with a single one-time Pro purchase — no subscriptions, no locked math.
 
 ### Free skins
 
@@ -74,7 +74,7 @@ All cosmetic. Nothing needed to do math is ever locked.
 
 ## Logical Explanation
 
-Pop Calc uses **decimal arithmetic** (not binary floating point), so `0.1 + 0.2` shows `0.3`.
+PopCalc uses **decimal arithmetic** (not binary floating point), so `0.1 + 0.2` shows `0.3`.
 
 ### Order of operations
 
@@ -87,7 +87,7 @@ Standard algebraic precedence: multiply and divide are evaluated before add and 
 
 ### Percent semantics
 
-Pop Calc follows the convention of mainstream phone calculators, where `%` is context-sensitive:
+PopCalc follows the convention of mainstream phone calculators, where `%` is context-sensitive:
 
 | Input | Interpretation | Example | Result |
 |---|---|---|---|
@@ -171,4 +171,4 @@ Sound assets (Pro): CC0
 
 ---
 
-<sub>Pop Calc is not affiliated with or endorsed by Google, Apple, or Casio.</sub>
+<sub>PopCalc is not affiliated with or endorsed by Google, Apple, or Casio.</sub>

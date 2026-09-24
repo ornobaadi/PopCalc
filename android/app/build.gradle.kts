@@ -1,3 +1,11 @@
+import java.util.Properties
+
+val keyProperties = Properties()
+val keyPropertiesFile = rootProject.file("key.properties")
+if (keyPropertiesFile.exists()) {
+  keyProperties.load(keyPropertiesFile.inputStream())
+}
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -5,7 +13,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.popcalc"
+    namespace = "com.ornobaadi.popcalc"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,7 +24,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.popcalc"
+        applicationId = "com.ornobaadi.popcalc"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -29,11 +37,19 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(keyProperties.getProperty("storeFile")
+                ?: "android/app/popcalc.keystore")
+            storePassword = keyProperties.getProperty("storePassword") ?: ""
+            keyAlias = keyProperties.getProperty("keyAlias") ?: "popcalc_key"
+            keyPassword = keyProperties.getProperty("keyPassword") ?: ""
+        }
+    }
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Sign the release bundle so it can be uploaded to Google Play.
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

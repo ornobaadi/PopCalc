@@ -1,4 +1,4 @@
-# PRD: Pop Calc (working title)
+# PRD: PopCalc (working title)
 
 A calculator that feels like a toy and works like a tool. Big, bold, extruded 3D numbers that grow out of the screen as you type, satisfying haptics, and a clean everyday calculator underneath.
 

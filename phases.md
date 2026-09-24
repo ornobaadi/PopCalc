@@ -1,4 +1,4 @@
-# Phases: Pop Calc
+# Phases: PopCalc
 
 A build order designed around one fact: **a new personal Play account needs a closed test with at least 12 opted-in testers for 14 continuous days before you can apply for production.** So the plan gets a feature-complete free build into closed testing as early as possible, then builds Pro while the 14-day clock runs.
 
