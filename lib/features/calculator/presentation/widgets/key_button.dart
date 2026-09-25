@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:popcalc/core/haptics/app_haptics.dart';
 
 class KeyButton extends StatefulWidget {
   final Widget? child;
@@ -50,7 +50,7 @@ class _KeyButtonState extends State<KeyButton> with SingleTickerProviderStateMix
   }
 
   void _onTapDown(TapDownDetails _) {
-    HapticFeedback.selectionClick();
+    AppHaptics.lightImpact();
     setState(() => _isPressed = true);
     _controller.forward();
   }

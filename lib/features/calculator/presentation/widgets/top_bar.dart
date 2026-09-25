@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/features/settings/presentation/settings_sheet.dart';
@@ -45,7 +45,7 @@ class TopBar extends ConsumerWidget {
               splashRadius: 20.0,
               tooltip: 'Settings',
               onPressed: () {
-                HapticFeedback.selectionClick();
+                AppHaptics.selectionClick();
                 SettingsSheet.show(context, colors: colors);
               },
             ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/history_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
@@ -82,7 +82,7 @@ class HistorySheet extends ConsumerWidget {
                 if (history.isNotEmpty)
                   TextButton(
                     onPressed: () {
-                      HapticFeedback.mediumImpact();
+                      AppHaptics.mediumImpact();
                       historyNotifier.clearHistory();
                     },
                     child: Text(
@@ -136,7 +136,7 @@ class HistorySheet extends ConsumerWidget {
                         },
                         child: InkWell(
                           onTap: () {
-                            HapticFeedback.selectionClick();
+                            AppHaptics.selectionClick();
                             onSelectEntry(item.expression, item.result);
                             Navigator.of(context).pop();
                           },

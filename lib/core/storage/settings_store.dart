@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:popcalc/core/haptics/app_haptics.dart';
 
 class AppSettings {
   final bool showLivePreview;
@@ -47,6 +48,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         hapticsEnabled: prefs.getBool(_kHapticsEnabled) ?? true,
         liteMode: prefs.getBool(_kLiteMode) ?? false,
       );
+      AppHaptics.enabled = state.hapticsEnabled;
     } catch (_) {}
   }
 
@@ -60,6 +62,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   Future<void> setHapticsEnabled(bool value) async {
     state = state.copyWith(hapticsEnabled: value);
+    AppHaptics.enabled = value;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kHapticsEnabled, value);

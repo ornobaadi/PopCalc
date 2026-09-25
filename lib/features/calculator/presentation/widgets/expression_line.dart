@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:popcalc/core/engine/expression.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 
@@ -61,7 +61,7 @@ class ExpressionLine extends StatelessWidget {
           isSelected: isSelected,
           colors: colors,
           onTap: () {
-            HapticFeedback.selectionClick();
+            AppHaptics.selectionClick();
             onTokenTap?.call(i);
           },
           fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,

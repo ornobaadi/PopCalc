@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'extruded_number.dart';
@@ -200,7 +200,7 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
   }
 
   void _snapBack() {
-    HapticFeedback.lightImpact();
+    AppHaptics.lightImpact();
     _dragSpringAnimation = Tween<Offset>(
       begin: _dragOffset,
       end: Offset.zero,

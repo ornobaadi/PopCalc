@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
+import 'package:popcalc/core/haptics/app_haptics.dart';
 
 
 /// A skin (theme) descriptor used in the settings skin picker.
@@ -39,38 +39,6 @@ const _skins = <SkinOption>[
     badge: 'FREE',
     mode: AppThemeMode.ink,
     swatch: Color(0xFF1A1A1A),
-  ),
-  SkinOption(
-    id: 'opal',
-    label: 'OPAL',
-    badge: 'PRO',
-    mode: AppThemeMode.ink, // placeholder – locked
-    swatch: Color(0xFF8EC5FC),
-    locked: true,
-  ),
-  SkinOption(
-    id: 'chroma',
-    label: 'CHROMA',
-    badge: 'PRO',
-    mode: AppThemeMode.ink,
-    swatch: Color(0xFF833AB4),
-    locked: true,
-  ),
-  SkinOption(
-    id: 'mint',
-    label: 'MINT',
-    badge: 'PRO',
-    mode: AppThemeMode.ink,
-    swatch: Color(0xFF00C9A7),
-    locked: true,
-  ),
-  SkinOption(
-    id: 'carbon',
-    label: 'CARBON',
-    badge: 'PRO',
-    mode: AppThemeMode.ink,
-    swatch: Color(0xFF2D3436),
-    locked: true,
   ),
 ];
 
@@ -154,7 +122,7 @@ class SettingsSheet extends ConsumerWidget {
                 return GestureDetector(
                   onTap: () {
                     if (skin.locked) {
-                      HapticFeedback.lightImpact();
+                      AppHaptics.lightImpact();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: const Text('Unlock Pro to access this skin'),
@@ -165,7 +133,7 @@ class SettingsSheet extends ConsumerWidget {
                       );
                       return;
                     }
-                    HapticFeedback.selectionClick();
+                    AppHaptics.selectionClick();
                     ref.read(themeProvider.notifier).setTheme(skin.mode);
                   },
                   child: Column(
@@ -265,7 +233,7 @@ class SettingsSheet extends ConsumerWidget {
                     trailing: Switch(
                       value: settings.showLivePreview,
                       onChanged: (val) {
-                        HapticFeedback.selectionClick();
+                        AppHaptics.selectionClick();
                         settingsNotifier.setShowLivePreview(val);
                       },
                       activeThumbColor: colors.accent,

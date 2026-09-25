@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
@@ -27,7 +28,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
   void _copyResult(BuildContext context, String text) {
     if (text.isEmpty) return;
     Clipboard.setData(ClipboardData(text: text.replaceAll(',', '')));
-    HapticFeedback.mediumImpact();
+    AppHaptics.mediumImpact();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Copied $text to clipboard'),
@@ -88,7 +89,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                       child: TopBar(
                         colors: colors,
                         onHistoryTap: () {
-                          HapticFeedback.selectionClick();
+                          AppHaptics.selectionClick();
                           setState(() => _resultHighlighted = false);
                           HistorySheet.show(
                             context,
@@ -146,7 +147,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                                         .read(calculatorProvider.notifier)
                                         .deselectToken();
                                   } else {
-                                    HapticFeedback.selectionClick();
+                                    AppHaptics.selectionClick();
                                     setState(() {
                                       _resultHighlighted = !_resultHighlighted;
                                     });
