@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/engine/token.dart';
+import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/features/calculator/application/calculator_controller.dart';
 import 'backspace_icon.dart';
@@ -50,6 +51,7 @@ class Keypad extends ConsumerWidget {
                   color: colors.inkSoft,
                   fontSize: 42.0,
                   semanticLabel: 'Clear',
+                  haptic: AppHaptics.clear,
                   onTap: () => controller.onClear(),
                 ),
               ),
@@ -59,6 +61,7 @@ class Keypad extends ConsumerWidget {
                   color: colors.inkSoft,
                   fontSize: 40.0,
                   semanticLabel: 'Percent',
+                  haptic: AppHaptics.utility,
                   onTap: () => controller.onPercent(),
                 ),
               ),
@@ -66,6 +69,7 @@ class Keypad extends ConsumerWidget {
                 child: KeyButton(
                   color: colors.inkSoft,
                   semanticLabel: 'Backspace',
+                  haptic: AppHaptics.utility,
                   onTap: () => controller.onBackspace(),
                   child: BackspaceIcon(color: colors.inkSoft, size: 28),
                 ),
@@ -76,6 +80,7 @@ class Keypad extends ConsumerWidget {
                   color: colors.accent,
                   fontSize: 46.0,
                   semanticLabel: 'Divide',
+                  haptic: AppHaptics.operatorKey,
                   onTap: () => controller.onOperator(TokenType.divide, '÷'),
                 ),
               ),
@@ -117,6 +122,7 @@ class Keypad extends ConsumerWidget {
                   color: colors.accent,
                   fontSize: 42.0,
                   semanticLabel: 'Multiply',
+                  haptic: AppHaptics.operatorKey,
                   onTap: () => controller.onOperator(TokenType.multiply, '×'),
                 ),
               ),
@@ -158,6 +164,7 @@ class Keypad extends ConsumerWidget {
                   color: colors.accent,
                   fontSize: 46.0,
                   semanticLabel: 'Minus',
+                  haptic: AppHaptics.operatorKey,
                   onTap: () => controller.onOperator(TokenType.minus, '-'),
                 ),
               ),
@@ -199,6 +206,7 @@ class Keypad extends ConsumerWidget {
                   color: colors.accent,
                   fontSize: 46.0,
                   semanticLabel: 'Plus',
+                  haptic: AppHaptics.operatorKey,
                   onTap: () => controller.onOperator(TokenType.plus, '+'),
                 ),
               ),
@@ -233,6 +241,7 @@ class Keypad extends ConsumerWidget {
                   color: colors.inkSoft,
                   fontSize: 32.0,
                   semanticLabel: 'Toggle sign',
+                  haptic: AppHaptics.utility,
                   onTap: () => controller.onToggleSign(),
                 ),
               ),
@@ -242,6 +251,7 @@ class Keypad extends ConsumerWidget {
                   color: colors.accent,
                   fontSize: 48.0,
                   semanticLabel: 'Equals',
+                  haptic: AppHaptics.selectionClick,
                   onTap: () => controller.onEquals(),
                 ),
               ),

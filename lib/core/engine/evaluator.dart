@@ -83,6 +83,6 @@ class Evaluator {
       throw CalcException(CalcError.divideByZero);
     }
     final Rational rational = a.toRational() / b.toRational();
-    return rational.toDecimal(scaleOnInfinitePrecision: 12);
+    return rational.toDecimal(scaleOnInfinitePrecision: 32);
   }
 }

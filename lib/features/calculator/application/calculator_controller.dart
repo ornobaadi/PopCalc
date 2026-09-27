@@ -154,7 +154,7 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       return;
     }
 
-    final newExpr = state.expression.appendPercent();
+    final newExpr = _baseExpression().appendPercent();
     final preview = _computePreview(newExpr);
 
     final allTokens = newExpr.getAllTokens();
@@ -185,7 +185,7 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       return;
     }
 
-    final newExpr = state.expression.toggleSign();
+    final newExpr = _baseExpression().toggleSign();
     final currentNum = newExpr.currentNumber.isNotEmpty
         ? NumberFormatter.formatInputNumber(newExpr.currentNumber)
         : state.resultText;
@@ -199,7 +199,17 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       previewText: preview,
       clearPreview: preview == null,
       clearError: true,
+      justEvaluated: false,
     );
+  }
+
+  /// After `=`, follow-up actions (+/-, %) apply to the displayed answer,
+  /// not to the expression that produced it.
+  Expression _baseExpression() {
+    if (state.justEvaluated) {
+      return Expression.fromResult(state.resultText.replaceAll(',', ''));
+    }
+    return state.expression;
   }
 
   void onBackspace() {
@@ -266,7 +276,8 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       // Number: collect digits, commas (thousands separator), dots
       if (RegExp(r'[0-9.,\-]').hasMatch(ch)) {
         final start = i;
-        while (i < clean.length && RegExp(r'[0-9.,]').hasMatch(clean[i])) { i++; }
+        // 'e' keeps scientific results (e.g. "1.5e20") in one token.
+        while (i < clean.length && RegExp(r'[0-9.,e]').hasMatch(clean[i])) { i++; }
         final raw = clean.substring(start, i).replaceAll(',', '');
         tokens.add(Token(TokenType.number, raw));
         continue;
@@ -306,11 +317,19 @@ class CalculatorController extends StateNotifier<CalculatorState> {
   }
 
   void onEquals() {
+    // Pressing = again on an answer would duplicate history + celebration.
+    if (state.justEvaluated) return;
+
     final tokens = state.expression.getAllTokens();
     if (tokens.isEmpty) return;
 
     final ast = Parser.parse(tokens, tolerant: false);
-    if (ast == null) return;
+    if (ast == null) {
+      // A trailing operator ("5 +") is just incomplete — ignore quietly.
+      // Anything else is malformed (e.g. after token edits): surface it.
+      if (!tokens.last.isOperator) _showError(CalcError.invalidExpression);
+      return;
+    }
 
     try {
       final evaluated = Evaluator.evaluate(ast);
@@ -327,26 +346,24 @@ class CalculatorController extends StateNotifier<CalculatorState> {
         clearPreview: true,
         clearError: true,
         justEvaluated: true,
+        celebrationId: state.celebrationId + 1,
       );
     } on CalcException catch (e) {
-      state = state.copyWith(
-        error: e.error,
-        resultText: e.error.userMessage,
-        clearEditingTokenIndex: true,
-        isReplacingEditedToken: false,
-        clearPreview: true,
-        justEvaluated: false,
-      );
+      _showError(e.error);
     } catch (_) {
-      state = state.copyWith(
-        error: CalcError.invalidExpression,
-        resultText: CalcError.invalidExpression.userMessage,
-        clearEditingTokenIndex: true,
-        isReplacingEditedToken: false,
-        clearPreview: true,
-        justEvaluated: false,
-      );
+      _showError(CalcError.invalidExpression);
     }
+  }
+
+  void _showError(CalcError error) {
+    state = state.copyWith(
+      error: error,
+      resultText: error.userMessage,
+      clearEditingTokenIndex: true,
+      isReplacingEditedToken: false,
+      clearPreview: true,
+      justEvaluated: false,
+    );
   }
 
   // --- Handlers for Editing Highlighted Tokens ---
@@ -369,6 +386,8 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       } else if (token.text == '-0') {
         newText = '-$digit';
       } else {
+        final digitCount = token.text.replaceAll(RegExp(r'[^0-9]'), '').length;
+        if (digitCount >= Expression.maxDigitsPerNumber) return;
         newText = token.text + digit;
       }
     }

@@ -129,4 +129,98 @@ void main() {
     expect(controller.state.resultText, '500');
     expect(controller.state.editingTokenIndex, isNull);
   });
+
+  // --- Regression tests ---
+
+  void type(String keys) {
+    for (final k in keys.split('')) {
+      switch (k) {
+        case '+': controller.onOperator(TokenType.plus, '+');
+        case '-': controller.onOperator(TokenType.minus, '-');
+        case '*': controller.onOperator(TokenType.multiply, '×');
+        case '/': controller.onOperator(TokenType.divide, '÷');
+        case '=': controller.onEquals();
+        default: controller.onDigit(k);
+      }
+    }
+  }
+
+  test('Huge results use scientific notation instead of Infinity', () {
+    type('999999999999999');
+    for (var i = 0; i < 22; i++) {
+      type('*999999999999999');
+    }
+    type('=');
+    expect(controller.state.resultText, isNot(contains('Infinity')));
+    expect(controller.state.resultText, contains('e'));
+
+    // Continuing from a scientific result still works.
+    type('*2=');
+    expect(controller.state.error, isNull);
+    expect(controller.state.resultText, contains('e'));
+  });
+
+  test('Division results round instead of truncating', () {
+    type('1/3*3=');
+    expect(controller.state.resultText, '1');
+  });
+
+  test('Tiny negative results never display as -0', () {
+    type('0');
+    controller.onDecimal();
+    type('000000000000001');
+    type('/1000000=');
+    expect(controller.state.resultText, isNot('-0'));
+  });
+
+  test('Editing an operator into % does not silently drop numbers', () {
+    type('5+3');
+    controller.selectToken(1);
+    controller.onPercent();
+    controller.deselectToken();
+    controller.onEquals();
+    expect(controller.state.error, isNotNull);
+    expect(controller.state.resultText, isNot('0.05'));
+  });
+
+  test('+/- after equals negates the answer', () {
+    type('9*6=');
+    controller.onToggleSign();
+    expect(controller.state.resultText, '-54');
+    type('+4=');
+    expect(controller.state.resultText, '-50');
+  });
+
+  test('% after equals applies to the answer', () {
+    type('9*6=');
+    controller.onPercent();
+    type('=');
+    expect(controller.state.resultText, '0.54');
+  });
+
+  test('Pressing equals twice does not re-celebrate', () {
+    type('2+2=');
+    final id = controller.state.celebrationId;
+    type('=');
+    expect(controller.state.celebrationId, id);
+  });
+
+  test('Edited number tokens respect the digit cap', () {
+    type('1+2');
+    controller.selectToken(0);
+    for (var i = 0; i < 30; i++) {
+      controller.onDigit('9');
+    }
+    final digits = controller.state.expression
+        .getAllTokens()
+        .first
+        .text
+        .replaceAll(RegExp(r'[^0-9]'), '');
+    expect(digits.length, lessThanOrEqualTo(15));
+  });
+
+  test('History restore keeps scientific numbers intact', () {
+    controller.loadExpression('1.5e20 + 1', '1.5e20');
+    expect(controller.state.expression.getAllTokens().first.text, '1.5e20');
+  });
 }

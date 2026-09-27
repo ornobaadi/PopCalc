@@ -9,6 +9,8 @@ class KeyButton extends StatefulWidget {
   final String? semanticLabel;
   final double fontSize;
   final FontWeight fontWeight;
+  /// Haptic fired on touch-down. Defaults to a light digit tick.
+  final VoidCallback haptic;
 
   const KeyButton({
     super.key,
@@ -19,6 +21,7 @@ class KeyButton extends StatefulWidget {
     this.semanticLabel,
     this.fontSize = 42.0,
     this.fontWeight = FontWeight.w400,
+    this.haptic = AppHaptics.digit,
   }) : assert(child != null || label != null);
 
   @override
@@ -50,7 +53,7 @@ class _KeyButtonState extends State<KeyButton> with SingleTickerProviderStateMix
   }
 
   void _onTapDown(TapDownDetails _) {
-    AppHaptics.lightImpact();
+    widget.haptic();
     setState(() => _isPressed = true);
     _controller.forward();
   }

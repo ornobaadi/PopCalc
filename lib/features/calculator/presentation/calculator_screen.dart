@@ -7,6 +7,7 @@ import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/features/calculator/application/calculator_controller.dart';
 import 'package:popcalc/features/history/presentation/history_sheet.dart';
+import 'widgets/celebration_burst.dart';
 import 'widgets/expression_line.dart';
 import 'widgets/grain_overlay.dart';
 import 'widgets/keypad.dart';
@@ -133,7 +134,19 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 20.0),
                           child: Stack(
                             alignment: Alignment.center,
+                            clipBehavior: Clip.none,
                             children: [
+                              // Speed-line burst behind the answer
+                              Positioned.fill(
+                                left: -40,
+                                right: -40,
+                                child: CelebrationBurst(
+                                  trigger: calcState.celebrationId,
+                                  color: themeMode == AppThemeMode.ink
+                                      ? colors.accent
+                                      : Colors.white,
+                                ),
+                              ),
                               AnimatedExtrudedNumber(
                                 text: calcState.resultText,
                                 isEvaluated: calcState.justEvaluated,
@@ -141,6 +154,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                                 colors: colors,
                                 isLite: settings.liteMode,
                                 isZero: calcState.isZeroState,
+                                celebrationId: calcState.celebrationId,
                                 onTap: () {
                                   if (calcState.editingTokenIndex != null) {
                                     ref

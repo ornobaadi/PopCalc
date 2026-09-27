@@ -47,7 +47,17 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Separate app ID so debug builds install alongside the Play Store version.
+            applicationIdSuffix = ".dev"
+            manifestPlaceholders["appLabel"] = "PopCalc Dev"
+        }
+        getByName("profile") {
+            applicationIdSuffix = ".dev"
+            manifestPlaceholders["appLabel"] = "PopCalc Dev"
+        }
         release {
+            manifestPlaceholders["appLabel"] = "PopCalc"
             // Sign the release bundle so it can be uploaded to Google Play.
             signingConfig = signingConfigs.getByName("release")
         }

@@ -16,6 +16,8 @@ class AnimatedExtrudedNumber extends StatefulWidget {
   final Offset tilt;
   final bool isLite;
   final bool isZero;
+  /// Increments on each successful `=`, triggering the result pop.
+  final int celebrationId;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -28,6 +30,7 @@ class AnimatedExtrudedNumber extends StatefulWidget {
     this.tilt = Offset.zero,
     this.isLite = false,
     this.isZero = false,
+    this.celebrationId = 0,
     this.onTap,
     this.onLongPress,
   });
@@ -43,6 +46,11 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
   late final AnimationController _scaleController;
   late final AnimationController _idleController;
   late final AnimationController _dragSpringController;
+  late final AnimationController _typeController;
+  late final AnimationController _celebrateController;
+
+  /// +1 when a character was added (type-up), -1 when removed (drop).
+  int _typeDirection = 1;
 
   late Animation<double> _depthAnimation;
   late Animation<double> _scaleAnimation;
@@ -113,7 +121,19 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
       ),
     );
 
-    // 6. Real-time physical device accelerometer tilt
+    // 6. Typing "stamp": new text rises up from below and extrudes into place
+    _typeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    )..value = 1.0;
+
+    // 7. Answer celebration pop
+    _celebrateController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 720),
+    )..value = 1.0;
+
+    // 8. Real-time physical device accelerometer tilt
     _initDeviceMotionSensor();
   }
 
@@ -146,13 +166,15 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
 
     if (widget.hasError && !oldWidget.hasError) {
       _shakeController.forward(from: 0.0);
+      AppHaptics.error();
+    } else if (widget.celebrationId > oldWidget.celebrationId) {
+      _celebrateController.forward(from: 0.0);
+      AppHaptics.success();
+      _depthController.forward(from: 0.0);
     } else if (widget.text != oldWidget.text) {
-      _scaleController.forward(from: 0.0);
-      _depthController.forward(from: 0.5);
-    }
-
-    if (widget.isEvaluated && !oldWidget.isEvaluated) {
-      _depthController.forward(from: 0.2);
+      _typeDirection = widget.text.length >= oldWidget.text.length ? 1 : -1;
+      _typeController.forward(from: 0.0);
+      _depthController.forward(from: _typeDirection > 0 ? 0.15 : 0.6);
     }
   }
 
@@ -164,6 +186,8 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
     _scaleController.dispose();
     _idleController.dispose();
     _dragSpringController.dispose();
+    _typeController.dispose();
+    _celebrateController.dispose();
     super.dispose();
   }
 
@@ -237,6 +261,8 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
           _shakeController,
           _idleController,
           _dragSpringController,
+          _typeController,
+          _celebrateController,
         ]),
         builder: (context, _) {
           // Compute shake offset
@@ -268,10 +294,37 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
           final dynamicTilt = widget.tilt +
               Offset(combinedX * 12.0, combinedY * 12.0);
 
+          // Typing: type-up (rise + squash-stretch) or backspace (drop)
+          final typeT = _typeController.value;
+          final typeEase = Curves.easeOutBack.transform(typeT);
+          final typeOffsetY = _typeDirection > 0
+              ? (1.0 - typeEase) * 26.0
+              : -(1.0 - Curves.easeOutCubic.transform(typeT)) * 12.0;
+          final typeScaleY = _typeDirection > 0
+              ? 0.86 + 0.14 * typeEase
+              : 1.0 + 0.05 * (1.0 - typeT);
+          final typeScaleX = _typeDirection > 0
+              ? 1.06 - 0.06 * typeEase
+              : 1.0;
+
+          // Celebration: punch in from small, overshoot, settle with a wobble
+          final c = _celebrateController.value;
+          final celebrateScale = c >= 1.0
+              ? 1.0
+              : 0.55 + 0.45 * Curves.elasticOut.transform(c);
+          final celebrateTilt = c >= 1.0
+              ? 0.0
+              : sin(c * pi * 3) * (1.0 - c) * 0.06;
+
           return Transform.translate(
-            offset: Offset(shakeOffsetX, 0.0),
-            child: Transform.scale(
-              scale: _scaleAnimation.value,
+            offset: Offset(shakeOffsetX, typeOffsetY),
+            child: Transform(
+              alignment: Alignment.bottomCenter,
+              transform: Matrix4.diagonal3Values(
+                typeScaleX * celebrateScale * _scaleAnimation.value,
+                typeScaleY * celebrateScale * _scaleAnimation.value,
+                1.0,
+              )..rotateZ(celebrateTilt),
               child: Transform(
                 alignment: Alignment.center,
                 transform: Matrix4.identity()
