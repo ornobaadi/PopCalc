@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/features/calculator/presentation/calculator_screen.dart';
@@ -25,6 +26,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
+    // Launch "skrrr": the same sweep as clearing a calculation.
+    AppSounds.playWhenReady(Sfx.clear);
     _controller = AnimationController(vsync: this, duration: _duration)
       ..forward().whenComplete(_goHome);
   }

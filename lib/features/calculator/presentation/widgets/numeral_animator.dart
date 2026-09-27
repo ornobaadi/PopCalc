@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -167,9 +168,11 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
     if (widget.hasError && !oldWidget.hasError) {
       _shakeController.forward(from: 0.0);
       AppHaptics.error();
+      AppSounds.error();
     } else if (widget.celebrationId > oldWidget.celebrationId) {
       _celebrateController.forward(from: 0.0);
       AppHaptics.success();
+      AppSounds.success();
       _depthController.forward(from: 0.0);
     } else if (widget.text != oldWidget.text) {
       _typeDirection = widget.text.length >= oldWidget.text.length ? 1 : -1;
