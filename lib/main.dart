@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/features/splash/presentation/splash_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load sounds with the saved settings so the splash can play right away.
+  // Capped so a slow audio device can never hold up app launch.
+  await SettingsNotifier.initAudio()
+      .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
 
   // Lock portrait orientation
   SystemChrome.setPreferredOrientations([

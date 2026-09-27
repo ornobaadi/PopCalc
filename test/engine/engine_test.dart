@@ -66,7 +66,7 @@ void main() {
       expect(NumberFormatter.format(result), '0.3');
     });
 
-    test('1 / 3 handles infinite repeating decimals up to 12 places', () {
+    test('1 / 3 handles infinite repeating decimals rounded to the 15-digit display cap', () {
       final tokens = [
         const Token(TokenType.number, '1'),
         const Token(TokenType.divide, '÷'),
@@ -74,7 +74,7 @@ void main() {
       ];
       final ast = Parser.parse(tokens)!;
       final result = Evaluator.evaluate(ast);
-      expect(NumberFormatter.format(result), '0.333333333333');
+      expect(NumberFormatter.format(result), '0.33333333333333');
     });
 
     test('Formatter trims redundant trailing zeros: 2.50 -> 2.5', () {

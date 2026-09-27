@@ -43,6 +43,7 @@ class HistoryNotifier extends StateNotifier<List<HistoryEntry>> {
 
   static const int maxFreeEntries = 50;
   File? _file;
+  int _idCounter = 0;
 
   Future<File> _getFile() async {
     if (_file != null) return _file!;
@@ -69,7 +70,14 @@ class HistoryNotifier extends StateNotifier<List<HistoryEntry>> {
           loaded.add(HistoryEntry.fromJson(jsonDecode(line) as Map<String, dynamic>));
         } catch (_) {}
       }
-      state = loaded.reversed.toList();
+      // Merge with entries added while loading was in flight, then cap.
+      final merged = [...state, ...loaded.reversed];
+      state = merged.take(maxFreeEntries).toList();
+
+      // The file is append-only, so compact it once it outgrows the cap.
+      if (lines.length > maxFreeEntries * 2) {
+        await _saveAll();
+      }
     } catch (_) {}
   }
 
@@ -77,7 +85,8 @@ class HistoryNotifier extends StateNotifier<List<HistoryEntry>> {
     if (expression.isEmpty || result.isEmpty) return;
 
     final entry = HistoryEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      // Counter suffix keeps ids unique even within the same millisecond.
+      id: '${DateTime.now().microsecondsSinceEpoch}_${_idCounter++}',
       expression: expression,
       result: result,
       timestamp: DateTime.now(),

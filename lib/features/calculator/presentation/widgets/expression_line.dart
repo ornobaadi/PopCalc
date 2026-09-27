@@ -28,14 +28,14 @@ class ExpressionLine extends StatelessWidget {
   static const double _vPad = 3.0;
   // Border width is ALWAYS 2.0 — just color changes (transparent ↔ accent)
   static const double _borderW = 2.0;
-  static const double _fontSize = 32.0;
+  static const double _fontSize = 40.0;
 
   @override
   Widget build(BuildContext context) {
     final tokens = expression.getAllTokens();
 
     if (tokens.isEmpty) {
-      return const SizedBox(height: 44.0);
+      return const SizedBox(height: 56.0);
     }
 
     final children = <Widget>[];
@@ -112,11 +112,13 @@ class ExpressionLine extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 44.0,
+      height: 56.0,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12.0),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+          // Keep the newest token in view when the expression overflows.
+          reverse: true,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,

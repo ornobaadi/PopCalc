@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 
 class KeyButton extends StatefulWidget {
@@ -9,6 +10,10 @@ class KeyButton extends StatefulWidget {
   final String? semanticLabel;
   final double fontSize;
   final FontWeight fontWeight;
+  /// Haptic fired on touch-down. Defaults to a light digit tick.
+  final VoidCallback haptic;
+  /// Sound fired on touch-down, in sync with the haptic.
+  final VoidCallback? sound;
 
   const KeyButton({
     super.key,
@@ -19,6 +24,8 @@ class KeyButton extends StatefulWidget {
     this.semanticLabel,
     this.fontSize = 42.0,
     this.fontWeight = FontWeight.w400,
+    this.haptic = AppHaptics.digit,
+    this.sound,
   }) : assert(child != null || label != null);
 
   @override
@@ -49,8 +56,15 @@ class _KeyButtonState extends State<KeyButton> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  void _onTapDown(TapDownDetails _) {
-    AppHaptics.lightImpact();
+  void _onTapDown(TapDownDetails details) {
+    widget.haptic();
+    final sound = widget.sound;
+    if (sound != null) {
+      // Pan the sound toward the side of the screen that was tapped.
+      final width = MediaQuery.sizeOf(context).width;
+      final pan = width > 0 ? (details.globalPosition.dx / width - 0.5) * 0.6 : 0.0;
+      AppSounds.panned(pan, sound);
+    }
     setState(() => _isPressed = true);
     _controller.forward();
   }

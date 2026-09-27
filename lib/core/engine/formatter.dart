@@ -8,26 +8,26 @@ class NumberFormatter {
   /// Formats with thousands separators, trims trailing zeros,
   /// and switches to scientific notation if the length exceeds [maxSignificantDigits].
   static String format(Decimal value) {
-    if (value == Decimal.zero) {
-      return '0';
+    // Integer digits of |value| decide how many decimals fit in the cap.
+    final intDigits = value.abs().truncate().toString().length;
+
+    if (intDigits > maxSignificantDigits) {
+      return _scientific(value, intDigits - 1);
     }
 
-    final isNegative = value < Decimal.zero;
-    final absValue = isNegative ? -value : value;
+    // Round (not truncate) so 1 ÷ 3 × 3 shows 1, not 0.999999999999.
+    final rounded = value.round(scale: maxSignificantDigits - intDigits);
+    if (rounded == Decimal.zero) {
+      return '0'; // Also avoids displaying "-0" for tiny negatives.
+    }
 
-    // Convert to string representation
+    final isNegative = rounded < Decimal.zero;
+    final absValue = isNegative ? -rounded : rounded;
+
     String s = absValue.toString();
-
-    // Check if integer part is extremely large (>= 1e15)
     final parts = s.split('.');
     final integerPart = parts[0];
     final fractionalPart = parts.length > 1 ? parts[1] : '';
-
-    if (integerPart.length > maxSignificantDigits) {
-      // Use scientific notation
-      final doubleVal = value.toDouble();
-      return doubleVal.toStringAsExponential(6).replaceAll('+', '');
-    }
 
     // Format integer part with commas
     final formattedInt = _addCommas(integerPart);
@@ -62,6 +62,24 @@ class NumberFormatter {
 
     final result = trimmedFrac.isNotEmpty ? '$formattedInt.$trimmedFrac' : formattedInt;
     return isNegative ? '-$result' : result;
+  }
+
+  /// Scientific notation computed from the exact decimal, so huge values
+  /// never overflow to "Infinity" the way a double conversion would.
+  static String _scientific(Decimal value, int exponent) {
+    final isNegative = value < Decimal.zero;
+    final digits = value.abs().truncate().toString();
+    var mantissa = Decimal.parse('${digits[0]}.${digits.substring(1)}')
+        .round(scale: 6);
+    if (mantissa >= Decimal.ten) {
+      mantissa = Decimal.one;
+      exponent += 1;
+    }
+    var m = mantissa.toString();
+    if (m.contains('.')) {
+      m = m.replaceFirst(RegExp(r'\.?0+$'), '');
+    }
+    return '${isNegative ? '-' : ''}${m}e$exponent';
   }
 
   /// Formats an input number string with commas while typing (e.g. "1024" -> "1,024")

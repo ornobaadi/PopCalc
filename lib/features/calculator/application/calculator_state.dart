@@ -11,6 +11,9 @@ class CalculatorState {
   final int? editingTokenIndex;
   final bool isReplacingEditedToken;
 
+  /// Increments on every successful `=` evaluation to trigger the celebration.
+  final int celebrationId;
+
   const CalculatorState({
     this.expression = const Expression(),
     this.expressionText = '',
@@ -20,6 +23,7 @@ class CalculatorState {
     this.justEvaluated = false,
     this.editingTokenIndex,
     this.isReplacingEditedToken = false,
+    this.celebrationId = 0,
   });
 
   /// True when the result is the idle "0" with nothing typed.
@@ -42,6 +46,7 @@ class CalculatorState {
     int? editingTokenIndex,
     bool clearEditingTokenIndex = false,
     bool? isReplacingEditedToken,
+    int? celebrationId,
   }) {
     return CalculatorState(
       expression: expression ?? this.expression,
@@ -55,6 +60,7 @@ class CalculatorState {
           : (editingTokenIndex ?? this.editingTokenIndex),
       isReplacingEditedToken:
           isReplacingEditedToken ?? this.isReplacingEditedToken,
+      celebrationId: celebrationId ?? this.celebrationId,
     );
   }
 

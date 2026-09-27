@@ -26,6 +26,9 @@ class Parser {
     final parser = Parser(cleanTokens);
     try {
       final node = parser._expr();
+      // Leftover tokens (e.g. "5 % 3" or "5 3" after token editing) mean the
+      // expression is malformed — never silently drop them.
+      if (!parser._isAtEnd()) return null;
       return node;
     } catch (_) {
       return null;
