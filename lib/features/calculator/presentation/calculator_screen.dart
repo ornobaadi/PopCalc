@@ -12,6 +12,9 @@ import 'widgets/expression_line.dart';
 import 'widgets/grain_overlay.dart';
 import 'widgets/keypad.dart';
 import 'widgets/numeral_animator.dart';
+import 'widgets/numeral3d/numeral_3d_view.dart';
+import 'widgets/numeral3d/numeral_glyphs.dart';
+import 'widgets/numeral3d/numeral_renderer.dart';
 import 'widgets/top_bar.dart';
 
 class CalculatorScreen extends ConsumerStatefulWidget {
@@ -147,6 +150,35 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                                       : Colors.white,
                                 ),
                               ),
+                              if (!settings.liteMode &&
+                                  Numeral3DProgram.program != null &&
+                                  NumeralGlyph.supports(calcState.resultText))
+                                Numeral3DView(
+                                  text: calcState.resultText,
+                                  material: themeMode == AppThemeMode.ink
+                                      ? NumeralMaterial.pearl
+                                      : NumeralMaterial.lacquered,
+                                  opacity: calcState.isZeroState ? 0.35 : 1.0,
+                                  hasError: calcState.error != null,
+                                  celebrationId: calcState.celebrationId,
+                                  onTap: () {
+                                    if (calcState.editingTokenIndex != null) {
+                                      ref
+                                          .read(calculatorProvider.notifier)
+                                          .deselectToken();
+                                    } else {
+                                      AppHaptics.selectionClick();
+                                      setState(() {
+                                        _resultHighlighted = !_resultHighlighted;
+                                      });
+                                    }
+                                  },
+                                  onLongPress: () {
+                                    setState(() => _resultHighlighted = false);
+                                    _copyResult(context, calcState.resultText);
+                                  },
+                                )
+                              else
                               AnimatedExtrudedNumber(
                                 text: calcState.resultText,
                                 isEvaluated: calcState.justEvaluated,

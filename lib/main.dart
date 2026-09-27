@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
+import 'package:popcalc/features/calculator/presentation/widgets/numeral3d/numeral_3d_view.dart';
 import 'package:popcalc/features/splash/presentation/splash_screen.dart';
 
 Future<void> main() async {
@@ -12,6 +13,8 @@ Future<void> main() async {
   // Capped so a slow audio device can never hold up app launch.
   await SettingsNotifier.initAudio()
       .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+
+  await Numeral3DProgram.load();
 
   // Lock portrait orientation
   SystemChrome.setPreferredOrientations([

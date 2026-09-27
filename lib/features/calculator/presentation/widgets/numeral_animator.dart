@@ -136,6 +136,14 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
 
     // 8. Real-time physical device accelerometer tilt
     _initDeviceMotionSensor();
+
+    // Error messages have no 3D glyphs, so this 2D view is often created
+    // already showing one: give it the same shake and feedback.
+    if (widget.hasError) {
+      _shakeController.forward(from: 0.0);
+      AppHaptics.error();
+      AppSounds.error();
+    }
   }
 
   void _initDeviceMotionSensor() {

@@ -50,6 +50,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  shaders:
+    - shaders/numeral3d.frag
+
   assets:
     - assets/textures/
     - assets/licenses/
