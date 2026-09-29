@@ -42,7 +42,7 @@ The numerals are rendered using a layered extrusion technique: 10–16 stacked `
 
 ## Customization
 
-PopCalc ships with **three free skins** and unlocks more with a single one-time Pro purchase — no subscriptions, no locked math.
+PopCalc ships with **three free skins plus five Pro skins (free during launch)** and unlocks more with a single one-time Pro purchase — no subscriptions, no locked math.
 
 ### Free skins
 
@@ -52,13 +52,15 @@ PopCalc ships with **three free skins** and unlocks more with a single one-time 
 | **Graphite** | `#141414` Deep slate | `#FFA000` Amber orange | Dark, sculpted |
 | **Bubblegum** | `#FF8FC7` Bubblegum pink | `#2D1FD6` Electric cobalt | Neo-pop, playful |
 
-### Pro skins (unlocked via one-time purchase)
+### Pro skins (free during launch, unlocked via one-time purchase later)
 
-| Skin | Vibe |
-|---|---|
-| **Opal** | Pale sky blue on near-black |
-| **Chroma** | Deep violet with neon accent |
-| **Mint** | Fresh teal on dark green |
+| Skin | Background | Accent | Vibe |
+|---|---|---|---|
+| **Obsidian** | `#0B0B0C` Black lacquer | `#E8C877` Champagne gold | Luxury watch, gold numerals |
+| **Synthwave** | `#120A2A` Midnight violet | `#00E5FF` Electric cyan | Retro-80s neon, magenta extrusion |
+| **Matcha** | `#DDE4D0` Sage paper | `#A8431F` Terracotta | Calm Japanese ink and paper |
+| **Frost** | `#E8EFF5` Icy blue | `#BF360C` Signal orange | Nordic, navy numerals |
+| **Velvet** | `#3A0A1B` Wine velvet | `#E8A87C` Rose gold | Rich, cream numerals |
 | **Carbon** | Neutral mono with charcoal depth |
 
 ### Settings
