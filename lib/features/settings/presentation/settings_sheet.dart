@@ -28,17 +28,60 @@ class SkinOption {
 const _skins = <SkinOption>[
   SkinOption(
     id: 'sunny',
-    label: 'ANDY',
+    label: 'MARIGOLD',
     badge: 'FREE',
     mode: AppThemeMode.sunny,
     swatch: Color(0xFFFFAE00),
   ),
   SkinOption(
     id: 'ink',
-    label: 'GRAPHITE',
+    label: 'CHARCOAL',
     badge: 'FREE',
     mode: AppThemeMode.ink,
     swatch: Color(0xFF1A1A1A),
+  ),
+  SkinOption(
+    id: 'peony',
+    label: 'PEONY',
+    badge: 'NEW',
+    mode: AppThemeMode.peony,
+    swatch: Color(0xFFF7E6E4),
+  ),
+  // Pro skins: free during launch — set `locked: true` to gate them.
+  SkinOption(
+    id: 'obsidian',
+    label: 'OBSIDIAN',
+    badge: 'PRO',
+    mode: AppThemeMode.obsidian,
+    swatch: Color(0xFF0B0B0C),
+  ),
+  SkinOption(
+    id: 'synthwave',
+    label: 'SYNTHWAVE',
+    badge: 'PRO',
+    mode: AppThemeMode.synthwave,
+    swatch: Color(0xFF120A2A),
+  ),
+  SkinOption(
+    id: 'matcha',
+    label: 'MATCHA',
+    badge: 'PRO',
+    mode: AppThemeMode.matcha,
+    swatch: Color(0xFFDDE4D0),
+  ),
+  SkinOption(
+    id: 'frost',
+    label: 'FROST',
+    badge: 'PRO',
+    mode: AppThemeMode.frost,
+    swatch: Color(0xFFE8EFF5),
+  ),
+  SkinOption(
+    id: 'velvet',
+    label: 'VELVET',
+    badge: 'PRO',
+    mode: AppThemeMode.velvet,
+    swatch: Color(0xFF3A0A1B),
   ),
 ];
 
@@ -189,13 +232,10 @@ class SettingsSheet extends ConsumerWidget {
                                         ),
                                         size: 22.0,
                                       )
-                                    : isSelected
-                                    ? Icon(
-                                        Icons.check_rounded,
-                                        color: colors.accent,
-                                        size: 24.0,
-                                      )
-                                    : null,
+                                    : _SkinPreview(
+                                        colors: ThemeColors.of(skin.mode),
+                                        selected: isSelected,
+                                      ),
                               ),
                               const SizedBox(height: 6.0),
                               // Name
@@ -621,6 +661,55 @@ class _PackChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Tiny numeral + accent dot rendered in a skin's own colours so dark
+/// skins are distinguishable at a glance.
+class _SkinPreview extends StatelessWidget {
+  final ThemeColors colors;
+  final bool selected;
+
+  const _SkinPreview({required this.colors, required this.selected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Text(
+          '7',
+          style: TextStyle(
+            fontFamily: 'BebasNeue',
+            fontSize: 34.0,
+            height: 1.0,
+            color: colors.extrudeTop,
+            shadows: [
+              Shadow(color: colors.extrudeSide, offset: const Offset(2, 2)),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 8.0,
+          top: 8.0,
+          child: Container(
+            width: 9.0,
+            height: 9.0,
+            decoration: BoxDecoration(
+              color: colors.accent,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        if (selected)
+          Positioned(
+            right: 4.0,
+            bottom: 4.0,
+            child: Icon(Icons.check_circle_rounded,
+                color: colors.accent, size: 16.0),
+          ),
+      ],
     );
   }
 }

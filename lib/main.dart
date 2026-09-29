@@ -48,6 +48,20 @@ class PopCalcApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.getThemeData(themeMode),
       home: const SplashScreen(),
+      builder: (context, child) {
+        final isDark = AppTheme.colorsOf(themeMode).isDark;
+        final icons = isDark ? Brightness.light : Brightness.dark;
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: icons,
+            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarIconBrightness: icons,
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

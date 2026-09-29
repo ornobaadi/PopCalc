@@ -1,7 +1,7 @@
 POP CALC BRAND ASSETS
 =====================
 Master concept: extruded "=" mark, dark ink on marigold (#FFAE00).
-Dark variant:   amber mark on graphite (#141414).
+Dark variant:   amber mark on charcoal (#141414).
 Everything is rendered from vector, so edges are crisp at every size.
 Fonts in the wordmark and feature graphic are Antonio (SIL OFL), converted to outlines.
 

@@ -42,9 +42,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeProvider);
-    final colors = themeMode == AppThemeMode.ink
-        ? ThemeColors.inkTheme
-        : ThemeColors.sunnyTheme;
+    final colors = ThemeColors.of(themeMode);
     final calcState = ref.watch(calculatorProvider);
     final settings = ref.watch(settingsProvider);
 
@@ -142,9 +140,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                                 right: -40,
                                 child: CelebrationBurst(
                                   trigger: calcState.celebrationId,
-                                  color: themeMode == AppThemeMode.ink
-                                      ? colors.accent
-                                      : Colors.white,
+                                  color: colors.burst,
                                 ),
                               ),
                               AnimatedExtrudedNumber(

@@ -9,20 +9,20 @@ Built with Flutter · Android-first · 100% offline · Zero data collected
 
 <table>
   <tr>
-    <td align="center"><img src="assets/readme/1.png" width="220" alt="Graphite theme — main calculator"/></td>
+    <td align="center"><img src="assets/readme/1.png" width="220" alt="Charcoal theme — main calculator"/></td>
     <td align="center"><img src="assets/readme/2.png" width="220" alt="Skins & settings sheet"/></td>
   </tr>
   <tr>
     <td align="center"><img src="assets/readme/3.png" width="220" alt="Divide-by-zero error state"/></td>
-    <td align="center"><img src="assets/readme/4.png" width="220" alt="History sheet — Andy theme"/></td>
+    <td align="center"><img src="assets/readme/4.png" width="220" alt="History sheet — Marigold theme"/></td>
   </tr>
 </table>
 
 ---
 
-## Graphite Theme
+## Charcoal Theme
 
-Graphite is PopCalc's signature dark skin — deep slate black with crisp white numerals and punchy amber-orange operators.
+Charcoal is PopCalc's signature dark skin — deep slate black with crisp white numerals and punchy amber-orange operators.
 
 | Token | Value | Role |
 |---|---|---|
@@ -42,22 +42,25 @@ The numerals are rendered using a layered extrusion technique: 10–16 stacked `
 
 ## Customization
 
-PopCalc ships with **two free skins** and unlocks more with a single one-time Pro purchase — no subscriptions, no locked math.
+PopCalc ships with **three free skins plus five Pro skins (free during launch)** and unlocks more with a single one-time Pro purchase — no subscriptions, no locked math.
 
 ### Free skins
 
 | Skin | Background | Accent | Style |
 |---|---|---|---|
-| **Andy** | `#FFAE00` Golden marigold | `#D61800` Vermilion red | Sunny, high-energy |
-| **Graphite** | `#141414` Deep slate | `#FFA000` Amber orange | Dark, sculpted |
+| **Marigold** | `#FFAE00` Golden marigold | `#D61800` Vermilion red | Sunny, high-energy |
+| **Charcoal** | `#141414` Deep slate | `#FFA000` Amber orange | Dark, sculpted |
+| **Peony** | `#F7E6E4` Blush petal | `#A8385E` Peony rose | Soft, elegant, rose-quartz numerals |
 
-### Pro skins (unlocked via one-time purchase)
+### Pro skins (free during launch, unlocked via one-time purchase later)
 
-| Skin | Vibe |
-|---|---|
-| **Opal** | Pale sky blue on near-black |
-| **Chroma** | Deep violet with neon accent |
-| **Mint** | Fresh teal on dark green |
+| Skin | Background | Accent | Vibe |
+|---|---|---|---|
+| **Obsidian** | `#0B0B0C` Black lacquer | `#E8C877` Champagne gold | Luxury watch, gold numerals |
+| **Synthwave** | `#120A2A` Midnight violet | `#00E5FF` Electric cyan | Retro-80s neon, magenta extrusion |
+| **Matcha** | `#DDE4D0` Sage paper | `#A8431F` Terracotta | Calm Japanese ink and paper |
+| **Frost** | `#E8EFF5` Icy blue | `#BF360C` Signal orange | Nordic, navy numerals |
+| **Velvet** | `#3A0A1B` Wine velvet | `#E8A87C` Rose gold | Rich, cream numerals |
 | **Carbon** | Neutral mono with charcoal depth |
 
 ### Settings
