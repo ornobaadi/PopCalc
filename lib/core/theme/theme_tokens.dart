@@ -4,7 +4,7 @@ enum AppThemeMode {
   // Order matters: the index is persisted in SharedPreferences.
   ink,
   sunny,
-  bubblegum,
+  peony, // Replaced Bubblegum; keeps its index so saved choices map here.
   obsidian,
   synthwave,
   matcha,
@@ -42,7 +42,7 @@ class ThemeColors {
   static ThemeColors of(AppThemeMode mode) => switch (mode) {
         AppThemeMode.ink => inkTheme,
         AppThemeMode.sunny => sunnyTheme,
-        AppThemeMode.bubblegum => bubblegumTheme,
+        AppThemeMode.peony => peonyTheme,
         AppThemeMode.obsidian => obsidianTheme,
         AppThemeMode.synthwave => synthwaveTheme,
         AppThemeMode.matcha => matchaTheme,
@@ -80,20 +80,18 @@ class ThemeColors {
     isDark: true,
   );
 
-  /// Bubblegum (neo-pop / Memphis-inspired: bubblegum pink canvas, clay-like
-  /// violet extrusion, electric cobalt operators). Contrast: ink on bg ~9:1,
-  /// accent on bg ~4.5:1.
-  static const bubblegumTheme = ThemeColors(
-    bg: Color(0xFFFF8FC7), // Sweet bubblegum pink
-    bgShade: Color(0xFFFF9FD0), // Soft sugar highlight
-    ink: Color(0xFF1E0F3D), // Midnight grape numerals
-    inkSoft: Color(0xFF4A1F5E), // Plum utility keys
-    accent: Color(0xFF2D1FD6), // Electric cobalt operators and equals
-    extrudeTop: Color(0xFF24124A), // Deep grape front face
-    extrudeSide: Color(0xFF7B3FB8), // Juicy violet clay block
-    extrudeShadow: Color(0x40470A3A), // Berry-tinted contact shadow
-    extrudeChamfer: Color(0xFFFFD6EC), // Sugar-glaze catch light
-    burst: Color(0xFFFFF36B), // Lemon pop celebration lines
+  /// Peony (blush petals, rose-gold pearl extrusion, deep rose accents)
+  static const peonyTheme = ThemeColors(
+    bg: Color(0xFFF7E6E4), // Blush petal
+    bgShade: Color(0xFFFAEEEC), // Soft powder highlight
+    ink: Color(0xFF4A2233), // Deep mulberry numerals
+    inkSoft: Color(0xFF8A5A68), // Dusty mauve utility keys
+    accent: Color(0xFFA8385E), // Rich peony rose operators and equals
+    extrudeTop: Color(0xFF4A2233), // Mulberry front face
+    extrudeSide: Color(0xFFE0A6AE), // Rose-quartz block
+    extrudeShadow: Color(0x33A8385E), // Rose-tinted soft shadow
+    extrudeChamfer: Color(0xFFFFFFFF), // Pearl glint
+    burst: Color(0xFFD4A373), // Rose-gold celebration lines
     isDark: false,
   );
 

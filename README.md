@@ -50,7 +50,7 @@ PopCalc ships with **three free skins plus five Pro skins (free during launch)**
 |---|---|---|---|
 | **Marigold** | `#FFAE00` Golden marigold | `#D61800` Vermilion red | Sunny, high-energy |
 | **Graphite** | `#141414` Deep slate | `#FFA000` Amber orange | Dark, sculpted |
-| **Bubblegum** | `#FF8FC7` Bubblegum pink | `#2D1FD6` Electric cobalt | Neo-pop, playful |
+| **Peony** | `#F7E6E4` Blush petal | `#A8385E` Peony rose | Soft, elegant, rose-quartz numerals |
 
 ### Pro skins (free during launch, unlocked via one-time purchase later)
 

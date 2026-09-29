@@ -41,11 +41,11 @@ const _skins = <SkinOption>[
     swatch: Color(0xFF1A1A1A),
   ),
   SkinOption(
-    id: 'bubblegum',
-    label: 'BUBBLEGUM',
+    id: 'peony',
+    label: 'PEONY',
     badge: 'NEW',
-    mode: AppThemeMode.bubblegum,
-    swatch: Color(0xFFFF8FC7),
+    mode: AppThemeMode.peony,
+    swatch: Color(0xFFF7E6E4),
   ),
   // Pro skins: free during launch — set `locked: true` to gate them.
   SkinOption(
