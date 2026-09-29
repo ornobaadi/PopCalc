@@ -35,7 +35,7 @@ const _skins = <SkinOption>[
   ),
   SkinOption(
     id: 'ink',
-    label: 'GRAPHITE',
+    label: 'CHARCOAL',
     badge: 'FREE',
     mode: AppThemeMode.ink,
     swatch: Color(0xFF1A1A1A),

@@ -9,7 +9,7 @@ Built with Flutter · Android-first · 100% offline · Zero data collected
 
 <table>
   <tr>
-    <td align="center"><img src="assets/readme/1.png" width="220" alt="Graphite theme — main calculator"/></td>
+    <td align="center"><img src="assets/readme/1.png" width="220" alt="Charcoal theme — main calculator"/></td>
     <td align="center"><img src="assets/readme/2.png" width="220" alt="Skins & settings sheet"/></td>
   </tr>
   <tr>
@@ -20,9 +20,9 @@ Built with Flutter · Android-first · 100% offline · Zero data collected
 
 ---
 
-## Graphite Theme
+## Charcoal Theme
 
-Graphite is PopCalc's signature dark skin — deep slate black with crisp white numerals and punchy amber-orange operators.
+Charcoal is PopCalc's signature dark skin — deep slate black with crisp white numerals and punchy amber-orange operators.
 
 | Token | Value | Role |
 |---|---|---|
@@ -49,7 +49,7 @@ PopCalc ships with **three free skins plus five Pro skins (free during launch)**
 | Skin | Background | Accent | Style |
 |---|---|---|---|
 | **Marigold** | `#FFAE00` Golden marigold | `#D61800` Vermilion red | Sunny, high-energy |
-| **Graphite** | `#141414` Deep slate | `#FFA000` Amber orange | Dark, sculpted |
+| **Charcoal** | `#141414` Deep slate | `#FFA000` Amber orange | Dark, sculpted |
 | **Peony** | `#F7E6E4` Blush petal | `#A8385E` Peony rose | Soft, elegant, rose-quartz numerals |
 
 ### Pro skins (free during launch, unlocked via one-time purchase later)

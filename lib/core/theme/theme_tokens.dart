@@ -57,7 +57,7 @@ class ThemeColors {
     ink: Color(0xFF140F0B), // Deep espresso black for crisp, high-contrast numerals
     inkSoft: Color(0xFF2E1C0A), // Rich dark bronze-espresso (crisp readability on gold)
     accent: Color(0xFFD61800), // Vivid punchy vermilion red for operators and equals
-    extrudeTop: Color(0xFF221A12), // Deep warm graphite front face
+    extrudeTop: Color(0xFF221A12), // Deep warm charcoal front face
     extrudeSide: Color(0xFF483220), // Solid warm dimensional caramel-bronze block
     extrudeShadow: Color(0x35000000), // Soft ambient contact shadow
     extrudeChamfer: Color(0xFFFFDF88), // Barely-visible cool white rim — not a border, just a catch light
