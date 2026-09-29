@@ -203,6 +203,38 @@ class Expression {
     return Expression.fromTokens(newAll);
   }
 
+  /// Removes the token at [index] without leaving a malformed expression:
+  /// a number takes its percent and one neighbouring operator with it, and
+  /// removing an operator between two numbers joins them ("10 × 11" → "1011").
+  Expression removeTokenCleanly(int index) {
+    final all = getAllTokens();
+    if (index < 0 || index >= all.length) return this;
+    final newAll = List<Token>.from(all);
+    final token = newAll[index];
+
+    if (token.isNumber) {
+      var end = index + 1;
+      if (end < newAll.length && newAll[end].isPercent) end++;
+      var start = index;
+      if (start > 0 && newAll[start - 1].isOperator) {
+        start--;
+      } else if (end < newAll.length && newAll[end].isOperator) {
+        end++;
+      }
+      newAll.removeRange(start, end);
+    } else if (token.isOperator &&
+        index > 0 &&
+        index + 1 < newAll.length &&
+        newAll[index - 1].isNumber &&
+        newAll[index + 1].isNumber) {
+      final joined = newAll[index - 1].text + newAll[index + 1].text.replaceAll('-', '');
+      newAll.replaceRange(index - 1, index + 2, [Token(TokenType.number, joined)]);
+    } else {
+      newAll.removeAt(index);
+    }
+    return Expression.fromTokens(newAll);
+  }
+
   /// Inserts [newToken] right after [index]
   Expression insertTokenAfter(int index, Token newToken) {
     final all = getAllTokens();
@@ -217,6 +249,12 @@ class Expression {
 
   /// Creates a new Expression from an explicit list of tokens
   factory Expression.fromTokens(List<Token> tokens) {
+    if (tokens.isNotEmpty && tokens.last.isNumber) {
+      return Expression(
+        tokens: List.unmodifiable(tokens.sublist(0, tokens.length - 1)),
+        currentNumber: tokens.last.text,
+      );
+    }
     return Expression(
       tokens: List.unmodifiable(tokens),
       currentNumber: '',
