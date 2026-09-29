@@ -59,6 +59,10 @@ class CalculatorController extends StateNotifier<CalculatorState> {
           : last.text;
     }
 
+    if (state.justEvaluated) {
+      defaultResult = _tryEvaluate(state.expression) ?? defaultResult;
+    }
+
     state = state.copyWith(
       clearEditingTokenIndex: true,
       isReplacingEditedToken: false,
@@ -403,6 +407,7 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       previewText: preview,
       clearPreview: preview == null,
       clearError: true,
+      justEvaluated: false,
       isReplacingEditedToken: false,
     );
   }
@@ -435,6 +440,7 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       previewText: preview,
       clearPreview: preview == null,
       clearError: true,
+      justEvaluated: false,
       isReplacingEditedToken: false,
     );
   }
@@ -460,11 +466,21 @@ class CalculatorController extends StateNotifier<CalculatorState> {
         previewText: preview,
         clearPreview: preview == null,
         clearError: true,
+        justEvaluated: false,
         isReplacingEditedToken: false,
       );
     } else {
-      // User tapped an operator while a number was highlighted
-      final newExpr = state.expression.insertTokenAfter(idx, Token(op, symbol));
+      // User tapped an operator while a number was highlighted: swap the
+      // operator that follows it, or append one if the number is last.
+      var after = idx;
+      if (after + 1 < allTokens.length && allTokens[after + 1].isPercent) {
+        after++;
+      }
+      final opToken = Token(op, symbol);
+      final newExpr =
+          after + 1 < allTokens.length && allTokens[after + 1].isOperator
+              ? state.expression.replaceTokenAt(after + 1, opToken)
+              : state.expression.insertTokenAfter(after, opToken);
       final preview = _computePreview(newExpr);
 
       state = state.copyWith(
@@ -476,6 +492,7 @@ class CalculatorController extends StateNotifier<CalculatorState> {
         clearEditingTokenIndex: true,
         isReplacingEditedToken: false,
         clearError: true,
+        justEvaluated: false,
       );
     }
   }
@@ -490,36 +507,24 @@ class CalculatorController extends StateNotifier<CalculatorState> {
 
     final token = allTokens[idx];
     if (token.isPercent) return;
+    if (!token.isNumber) return;
+    if (idx + 1 < allTokens.length && allTokens[idx + 1].isPercent) return;
 
-    if (token.isOperator) {
-      final newToken = const Token(TokenType.percent, '%');
-      final newExpr = state.expression.replaceTokenAt(idx, newToken);
-      final preview = _computePreview(newExpr);
+    // Number token: append percent after it
+    final newExpr = state.expression.insertTokenAfter(idx, const Token(TokenType.percent, '%'));
+    final preview = _computePreview(newExpr);
 
-      state = state.copyWith(
-        expression: newExpr,
-        expressionText: newExpr.toDisplayString(),
-        resultText: '%',
-        previewText: preview,
-        clearPreview: preview == null,
-        clearError: true,
-      );
-    } else {
-      // Number token: append percent after it
-      final newExpr = state.expression.insertTokenAfter(idx, const Token(TokenType.percent, '%'));
-      final preview = _computePreview(newExpr);
-
-      state = state.copyWith(
-        expression: newExpr,
-        expressionText: newExpr.toDisplayString(),
-        resultText: '${NumberFormatter.formatInputNumber(token.text)}%',
-        previewText: preview,
-        clearPreview: preview == null,
-        clearError: true,
-        editingTokenIndex: idx + 1,
-        isReplacingEditedToken: false,
-      );
-    }
+    state = state.copyWith(
+      expression: newExpr,
+      expressionText: newExpr.toDisplayString(),
+      resultText: '${NumberFormatter.formatInputNumber(token.text)}%',
+      previewText: preview,
+      clearPreview: preview == null,
+      clearError: true,
+      justEvaluated: false,
+      editingTokenIndex: idx + 1,
+      isReplacingEditedToken: false,
+    );
   }
 
   void _handleEditedTokenToggleSign() {
@@ -546,6 +551,7 @@ class CalculatorController extends StateNotifier<CalculatorState> {
         previewText: preview,
         clearPreview: preview == null,
         clearError: true,
+        justEvaluated: false,
         isReplacingEditedToken: false,
       );
     }
@@ -564,7 +570,7 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       if (state.isReplacingEditedToken ||
           token.text.length <= 1 ||
           (token.text.length == 2 && token.text.startsWith('-'))) {
-        final newExpr = state.expression.removeTokenAt(idx);
+        final newExpr = state.expression.removeTokenCleanly(idx);
         final preview = _computePreview(newExpr);
         final remaining = newExpr.getAllTokens();
 
@@ -573,10 +579,11 @@ class CalculatorController extends StateNotifier<CalculatorState> {
           expressionText: newExpr.toDisplayString(),
           clearEditingTokenIndex: true,
           isReplacingEditedToken: false,
-          resultText: remaining.isNotEmpty ? remaining.last.text : '0',
+          resultText: _displayFor(remaining),
           previewText: preview,
           clearPreview: preview == null,
           clearError: true,
+          justEvaluated: false,
         );
       } else {
         final newText = token.text.substring(0, token.text.length - 1);
@@ -591,11 +598,12 @@ class CalculatorController extends StateNotifier<CalculatorState> {
           previewText: preview,
           clearPreview: preview == null,
           clearError: true,
+          justEvaluated: false,
           isReplacingEditedToken: false,
         );
       }
     } else {
-      final newExpr = state.expression.removeTokenAt(idx);
+      final newExpr = state.expression.removeTokenCleanly(idx);
       final preview = _computePreview(newExpr);
       final remaining = newExpr.getAllTokens();
 
@@ -604,12 +612,19 @@ class CalculatorController extends StateNotifier<CalculatorState> {
         expressionText: newExpr.toDisplayString(),
         clearEditingTokenIndex: true,
         isReplacingEditedToken: false,
-        resultText: remaining.isNotEmpty ? remaining.last.text : '0',
+        resultText: _displayFor(remaining),
         previewText: preview,
         clearPreview: preview == null,
         clearError: true,
+        justEvaluated: false,
       );
     }
+  }
+
+  String _displayFor(List<Token> tokens) {
+    if (tokens.isEmpty) return '0';
+    final last = tokens.last;
+    return last.isNumber ? NumberFormatter.formatInputNumber(last.text) : last.text;
   }
 
   String? _computePreview(Expression expr) {

@@ -173,14 +173,14 @@ void main() {
     expect(controller.state.resultText, isNot('-0'));
   });
 
-  test('Editing an operator into % does not silently drop numbers', () {
+  test('% on a highlighted operator is ignored, not turned into a bad expression', () {
     type('5+3');
     controller.selectToken(1);
     controller.onPercent();
     controller.deselectToken();
     controller.onEquals();
-    expect(controller.state.error, isNotNull);
-    expect(controller.state.resultText, isNot('0.05'));
+    expect(controller.state.error, isNull);
+    expect(controller.state.resultText, '8');
   });
 
   test('+/- after equals negates the answer', () {
@@ -222,5 +222,104 @@ void main() {
   test('History restore keeps scientific numbers intact', () {
     controller.loadExpression('1.5e20 + 1', '1.5e20');
     expect(controller.state.expression.getAllTokens().first.text, '1.5e20');
+  });
+
+  group('Editing tokens', () {
+    void type(String keys) {
+      for (final k in keys.split('')) {
+        switch (k) {
+          case '+':
+            controller.onOperator(TokenType.plus, '+');
+          case 'x':
+            controller.onOperator(TokenType.multiply, '×');
+          case '.':
+            controller.onDecimal();
+          default:
+            controller.onDigit(k);
+        }
+      }
+    }
+
+    test('editing a number after = and pressing = shows the new answer', () {
+      type('10x11');
+      controller.onEquals();
+      expect(controller.state.resultText, '110');
+
+      controller.selectToken(0);
+      type('20');
+      controller.onEquals();
+      expect(controller.state.resultText, '220');
+      expect(controller.state.justEvaluated, isTrue);
+      expect(controller.state.editingTokenIndex, isNull);
+    });
+
+    test('editing, then deselecting, then = still evaluates', () {
+      type('10x11');
+      controller.onEquals();
+      controller.selectToken(0);
+      type('20');
+      controller.deselectToken();
+      controller.onEquals();
+      expect(controller.state.resultText, '220');
+    });
+
+    test('deselecting without edits after = keeps the answer on screen', () {
+      type('10x11');
+      controller.onEquals();
+      controller.selectToken(0);
+      controller.deselectToken();
+      expect(controller.state.resultText, '110');
+    });
+
+    test('typing after editing the last number extends it', () {
+      type('10x11');
+      controller.selectToken(2);
+      type('12');
+      controller.deselectToken();
+      type('5');
+      controller.onEquals();
+      expect(controller.state.resultText, '1,250');
+    });
+
+    test('operator on a highlighted middle number swaps the next operator', () {
+      type('10x11');
+      controller.selectToken(0);
+      controller.onOperator(TokenType.plus, '+');
+      controller.onEquals();
+      expect(controller.state.resultText, '21');
+    });
+
+    test('deleting a middle number removes its operator too', () {
+      type('10x11+5');
+      controller.selectToken(2);
+      controller.onBackspace(); // replacing mode: removes whole token
+      controller.onEquals();
+      expect(controller.state.resultText, '15');
+    });
+
+    test('deleting an operator joins the numbers around it', () {
+      type('10x11');
+      controller.selectToken(1);
+      controller.onBackspace();
+      controller.onEquals();
+      expect(controller.state.resultText, '1,011');
+    });
+
+    test('percent on a highlighted operator is ignored', () {
+      type('10x11');
+      controller.selectToken(1);
+      controller.onPercent();
+      controller.onEquals();
+      expect(controller.state.resultText, '110');
+    });
+
+    test('number ending with a dot after editing still evaluates', () {
+      type('10x11');
+      controller.selectToken(0);
+      type('5.');
+      controller.onEquals();
+      expect(controller.state.error, isNull);
+      expect(controller.state.resultText, '55');
+    });
   });
 }
