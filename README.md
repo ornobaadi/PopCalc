@@ -14,7 +14,7 @@ Built with Flutter · Android-first · 100% offline · Zero data collected
   </tr>
   <tr>
     <td align="center"><img src="assets/readme/3.png" width="220" alt="Divide-by-zero error state"/></td>
-    <td align="center"><img src="assets/readme/4.png" width="220" alt="History sheet — Andy theme"/></td>
+    <td align="center"><img src="assets/readme/4.png" width="220" alt="History sheet — Marigold theme"/></td>
   </tr>
 </table>
 
@@ -42,14 +42,15 @@ The numerals are rendered using a layered extrusion technique: 10–16 stacked `
 
 ## Customization
 
-PopCalc ships with **two free skins** and unlocks more with a single one-time Pro purchase — no subscriptions, no locked math.
+PopCalc ships with **three free skins** and unlocks more with a single one-time Pro purchase — no subscriptions, no locked math.
 
 ### Free skins
 
 | Skin | Background | Accent | Style |
 |---|---|---|---|
-| **Andy** | `#FFAE00` Golden marigold | `#D61800` Vermilion red | Sunny, high-energy |
+| **Marigold** | `#FFAE00` Golden marigold | `#D61800` Vermilion red | Sunny, high-energy |
 | **Graphite** | `#141414` Deep slate | `#FFA000` Amber orange | Dark, sculpted |
+| **Bubblegum** | `#FF8FC7` Bubblegum pink | `#2D1FD6` Electric cobalt | Neo-pop, playful |
 
 ### Pro skins (unlocked via one-time purchase)
 

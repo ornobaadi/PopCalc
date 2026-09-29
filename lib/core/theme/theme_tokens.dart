@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 enum AppThemeMode {
+  // Order matters: the index is persisted in SharedPreferences.
   ink,
   sunny,
+  bubblegum,
 }
 
 class ThemeColors {
@@ -15,6 +17,8 @@ class ThemeColors {
   final Color extrudeSide;
   final Color extrudeShadow;
   final Color extrudeChamfer;
+  final Color burst; // answer celebration speed-lines
+  final bool isDark;
 
   const ThemeColors({
     required this.bg,
@@ -26,9 +30,17 @@ class ThemeColors {
     required this.extrudeSide,
     required this.extrudeShadow,
     required this.extrudeChamfer,
+    required this.burst,
+    required this.isDark,
   });
 
-  /// Sunny (radiant golden marigold & punchy vermilion with high contrast legibility)
+  static ThemeColors of(AppThemeMode mode) => switch (mode) {
+        AppThemeMode.ink => inkTheme,
+        AppThemeMode.sunny => sunnyTheme,
+        AppThemeMode.bubblegum => bubblegumTheme,
+      };
+
+  /// Marigold (radiant golden marigold & punchy vermilion with high contrast legibility)
   static const sunnyTheme = ThemeColors(
     bg: Color(0xFFFFAE00), // Vibrant golden marigold
     bgShade: Color(0xFFFFB818), // Subtle radiant highlight
@@ -39,6 +51,8 @@ class ThemeColors {
     extrudeSide: Color(0xFF483220), // Solid warm dimensional caramel-bronze block
     extrudeShadow: Color(0x35000000), // Soft ambient contact shadow
     extrudeChamfer: Color(0xFFFFDF88), // Barely-visible cool white rim — not a border, just a catch light
+    burst: Color(0xFFFFFFFF),
+    isDark: false,
   );
 
   /// Ink (tactile dark theme inspired by (NOT BORING) Calculator)
@@ -52,5 +66,24 @@ class ThemeColors {
     extrudeSide: Color(0xFF3C3C3C), // Solid slate grey block
     extrudeShadow: Color(0x99000000), // Soft contact shadow
     extrudeChamfer: Color(0x50FFFFFF), // Subtle crisp bevel highlight rim
+    burst: Color(0xFFFFA000),
+    isDark: true,
+  );
+
+  /// Bubblegum (neo-pop / Memphis-inspired: bubblegum pink canvas, clay-like
+  /// violet extrusion, electric cobalt operators). Contrast: ink on bg ~9:1,
+  /// accent on bg ~4.5:1.
+  static const bubblegumTheme = ThemeColors(
+    bg: Color(0xFFFF8FC7), // Sweet bubblegum pink
+    bgShade: Color(0xFFFF9FD0), // Soft sugar highlight
+    ink: Color(0xFF1E0F3D), // Midnight grape numerals
+    inkSoft: Color(0xFF4A1F5E), // Plum utility keys
+    accent: Color(0xFF2D1FD6), // Electric cobalt operators and equals
+    extrudeTop: Color(0xFF24124A), // Deep grape front face
+    extrudeSide: Color(0xFF7B3FB8), // Juicy violet clay block
+    extrudeShadow: Color(0x40470A3A), // Berry-tinted contact shadow
+    extrudeChamfer: Color(0xFFFFD6EC), // Sugar-glaze catch light
+    burst: Color(0xFFFFF36B), // Lemon pop celebration lines
+    isDark: false,
   );
 }

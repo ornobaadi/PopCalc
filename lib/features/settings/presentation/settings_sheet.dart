@@ -28,7 +28,7 @@ class SkinOption {
 const _skins = <SkinOption>[
   SkinOption(
     id: 'sunny',
-    label: 'ANDY',
+    label: 'MARIGOLD',
     badge: 'FREE',
     mode: AppThemeMode.sunny,
     swatch: Color(0xFFFFAE00),
@@ -39,6 +39,13 @@ const _skins = <SkinOption>[
     badge: 'FREE',
     mode: AppThemeMode.ink,
     swatch: Color(0xFF1A1A1A),
+  ),
+  SkinOption(
+    id: 'bubblegum',
+    label: 'BUBBLEGUM',
+    badge: 'NEW',
+    mode: AppThemeMode.bubblegum,
+    swatch: Color(0xFFFF8FC7),
   ),
 ];
 

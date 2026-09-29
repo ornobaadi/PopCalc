@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
-import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/features/calculator/presentation/calculator_screen.dart';
 
 /// Animated branded launch splash.
@@ -64,7 +63,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeProvider);
     final colors = AppTheme.colorsOf(themeMode);
-    final isDark = themeMode == AppThemeMode.ink;
+    final isDark = colors.isDark;
 
     final markAsset = isDark
         ? 'assets/brand_assets/logo/pop_calc_mark_dark_2048.png'

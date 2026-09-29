@@ -46,12 +46,12 @@ class ThemeNotifier extends StateNotifier<AppThemeMode> {
 
 class AppTheme {
   static ThemeColors colorsOf(AppThemeMode mode) {
-    return mode == AppThemeMode.ink ? ThemeColors.inkTheme : ThemeColors.sunnyTheme;
+    return ThemeColors.of(mode);
   }
 
   static ThemeData getThemeData(AppThemeMode mode) {
     final colors = colorsOf(mode);
-    final isDark = mode == AppThemeMode.ink;
+    final isDark = colors.isDark;
 
     return ThemeData(
       brightness: isDark ? Brightness.dark : Brightness.light,
