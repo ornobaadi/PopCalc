@@ -1,177 +1,195 @@
-﻿# PopCalc
+# PopCalc
 
-> **Math, but make it physical.**
-> A calculator with extruded 3D numerals, tactile motion, and a design worth opening every day.
+![PopCalc: Math, but make it physical.](assets/brand_assets/feature_graphic_1024x500.png)
 
-Built with Flutter · Android-first · 100% offline · Zero data collected
+**Math, but make it physical.**
+
+PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, musical sound effects and eight hand-crafted skins.
+
+- Version: 1.1.1
+- Platform: Android
+- Built with: Flutter
+- 100% offline, no ads, no account, zero data collected
 
 ---
 
+## Demo
+
+<video src="https://github.com/ornobaadi/PopCalc/raw/main/assets/mockup.mp4" controls muted width="360"></video>
+
+If the player doesn't load, [open the demo video](assets/mockup.mp4).
+
+---
+
+## Screenshots
+
 <table>
   <tr>
-    <td align="center"><img src="assets/readme/1.png" width="220" alt="Charcoal theme — main calculator"/></td>
-    <td align="center"><img src="assets/readme/2.png" width="220" alt="Skins & settings sheet"/></td>
+    <td><img src="assets/readme/1.png" width="260" alt="Charcoal skin with answer celebration"/><br/>Charcoal: answer celebration</td>
+    <td><img src="assets/readme/2.png" width="260" alt="Skin picker and settings"/><br/>Marigold: skins and settings</td>
   </tr>
   <tr>
-    <td align="center"><img src="assets/readme/3.png" width="220" alt="Divide-by-zero error state"/></td>
-    <td align="center"><img src="assets/readme/4.png" width="220" alt="History sheet — Marigold theme"/></td>
+    <td><img src="assets/readme/3.png" width="260" alt="Divide-by-zero error"/><br/>Frost: error state</td>
+    <td><img src="assets/readme/4.png" width="260" alt="History sheet"/><br/>Matcha: history</td>
   </tr>
 </table>
 
 ---
 
-## Charcoal Theme
+## Features
 
-Charcoal is PopCalc's signature dark skin — deep slate black with crisp white numerals and punchy amber-orange operators.
+### 3D numerals and motion
+- Extruded 3D numerals with bevelled edges, soft shadows and a subtle grain texture
+- Tilt the phone or drag the number to shift it in 3D
+- Digits rise and drop into place as you type
+- A speed-line burst when the answer lands
 
-| Token | Value | Role |
-|---|---|---|
-| `bg` | `#141414` | Deep slate black background |
-| `bgShade` | `#1F1F1F` | Subtle panel gradient |
-| `ink` | `#EEEEEE` | Crisp white numerals and keys |
-| `inkSoft` | `#7A7A7A` | Muted grey utility keys (C, %, ⌫) |
-| `accent` | `#FFA000` | Amber orange operators and equals |
-| `extrudeTop` | `#FFFFFF` | 3D numeral front face |
-| `extrudeSide` | `#3C3C3C` | Slate-grey depth wall |
-| `extrudeShadow` | `#00000099` | Soft ambient contact shadow |
-| `extrudeChamfer` | `#FFFFFF50` | Bevel highlight rim on numeral edges |
+### Haptics
+- Native Android haptics with a different feel for each key type
+- Heavier feedback on errors
+- Adjustable haptic strength
 
-The numerals are rendered using a layered extrusion technique: 10–16 stacked `TextPainter` passes offset along an oblique vector, topped with a chamfer-highlight stroke that reads as a physical, sculpted edge. A Gaussian ambient shadow grounds the stack. In **Lite Effects** mode this drops to 4 layers with no blur for smooth performance on low-end devices.
+### Sound
+- Three sound packs: Pop, Mellow and Typewriter
+- Number keys play a pentatonic melody as you type
+- Plays alongside your music without pausing it
 
----
+### Math
+- Exact decimal arithmetic, so `0.1 + 0.2 = 0.3`
+- Live preview of the answer while you type
+- Tap any number or operator in the expression to edit it, and the answer updates instantly
+- History restores the full expression so you can keep editing
 
-## Customization
-
-PopCalc ships with **three free skins plus five Pro skins (free during launch)** and unlocks more with a single one-time Pro purchase — no subscriptions, no locked math.
-
-### Free skins
-
-| Skin | Background | Accent | Style |
-|---|---|---|---|
-| **Marigold** | `#FFAE00` Golden marigold | `#D61800` Vermilion red | Sunny, high-energy |
-| **Charcoal** | `#141414` Deep slate | `#FFA000` Amber orange | Dark, sculpted |
-| **Peony** | `#F7E6E4` Blush petal | `#A8385E` Peony rose | Soft, elegant, rose-quartz numerals |
-
-### Pro skins (free during launch, unlocked via one-time purchase later)
-
-| Skin | Background | Accent | Vibe |
-|---|---|---|---|
-| **Obsidian** | `#0B0B0C` Black lacquer | `#E8C877` Champagne gold | Luxury watch, gold numerals |
-| **Synthwave** | `#120A2A` Midnight violet | `#00E5FF` Electric cyan | Retro-80s neon, magenta extrusion |
-| **Matcha** | `#DDE4D0` Sage paper | `#A8431F` Terracotta | Calm Japanese ink and paper |
-| **Frost** | `#E8EFF5` Icy blue | `#BF360C` Signal orange | Nordic, navy numerals |
-| **Velvet** | `#3A0A1B` Wine velvet | `#E8A87C` Rose gold | Rich, cream numerals |
-| **Carbon** | Neutral mono with charcoal depth |
-
-### Settings
-
-| Setting | Default | Description |
-|---|---|---|
-| **Live Preview on Top** | Off | Shows the computed result above the expression while typing |
-| **Haptic Feedback** | On | `selectionClick` per key · `mediumImpact` on `=` · `heavyImpact` on error |
-| **Lite Effects Mode** | Off | Drops extrusion to 4 layers and disables Gaussian blur for low-end devices |
-
-All cosmetic. Nothing needed to do math is ever locked.
+### Privacy and performance
+- Fully offline, with no internet permission
+- No ads, no account, no data collected
+- Lite Effects mode for low-end devices
 
 ---
 
-## Logical Explanation
+## Skins
 
-PopCalc uses **decimal arithmetic** (not binary floating point), so `0.1 + 0.2` shows `0.3`.
+Each skin restyles the whole app: numerals, keys, sheets, celebration and status bar.
+
+| Skin | Style | Background | Accent | Tier |
+|---|---|---|---|---|
+| Charcoal | Dark, white numerals, amber operators | `#141414` | `#FFA000` | Free |
+| Marigold | Sunny gold and vermilion | `#FFAE00` | `#D61800` | Free |
+| Peony | Blush petals, rose-quartz numerals | `#F7E6E4` | `#A8385E` | Free |
+| Obsidian | Black lacquer and brushed gold | `#0B0B0C` | `#E8C877` | Pro |
+| Synthwave | Retro-80s neon | `#120A2A` | `#00E5FF` | Pro |
+| Matcha | Sage paper, ink and terracotta | `#DDE4D0` | `#A8431F` | Pro |
+| Frost | Nordic ice, navy numerals | `#E8EFF5` | `#BF360C` | Pro |
+| Velvet | Deep wine, cream and rose gold | `#3A0A1B` | `#E8A87C` | Pro |
+
+Pro skins are free for everyone during launch. Nothing needed to do math will ever be locked.
+
+---
+
+## Join the closed beta
+
+PopCalc is in closed testing on Google Play.
+
+1. Join the Google Group: https://groups.google.com/g/popcalc
+2. Opt in on the web: https://play.google.com/apps/testing/com.ornobaadi.popcalc
+3. Install on Android: https://play.google.com/store/apps/details?id=com.ornobaadi.popcalc
+
+Use the same Google account for all three steps. The Play Store listing can take a few minutes to appear after opting in.
+
+Feedback and feature ideas are welcome in [Issues](https://github.com/ornobaadi/PopCalc/issues).
+
+---
+
+## How the math works
 
 ### Order of operations
 
-Standard algebraic precedence: multiply and divide are evaluated before add and subtract. Within the same precedence level, evaluation is left-to-right.
+Multiply and divide come before add and subtract. Operations at the same level run left to right.
 
 ```
-1 + 2 × 3   →   7        (not 9)
-8 / 4 + 2   →   4
+1 + 2 × 3   →   7
+8 ÷ 4 + 2   →   4
 ```
 
-### Percent semantics
+### Percent
 
-PopCalc follows the convention of mainstream phone calculators, where `%` is context-sensitive:
-
-| Input | Interpretation | Example | Result |
+| Input | Meaning | Example | Result |
 |---|---|---|---|
 | `a + b%` | `a + (a × b / 100)` | `1024 + 5%` | `1075.2` |
 | `a − b%` | `a − (a × b / 100)` | `200 − 15%` | `170` |
 | `a × b%` | `a × (b / 100)` | `80 × 25%` | `20` |
 | `a ÷ b%` | `a ÷ (b / 100)` | `50 ÷ 25%` | `200` |
-| `b%` alone | `b / 100` | `12%` | `0.12` |
+| `b%` | `b / 100` | `12%` | `0.12` |
 
 ### Edge cases
 
 | Case | Behaviour |
 |---|---|
-| Divide by zero | Shows **"Can't divide by zero"** with a horizontal shake and heavy haptic. Expression stays editable. |
-| Consecutive operators | Latest operator replaces the previous one |
-| Leading zeros | `007` collapses to `7` |
-| Multiple decimals | Second decimal point in a number is ignored |
-| Very large results | Scientific notation (`1.2345e15`) beyond 15 significant digits |
-| Trailing zeros | Trimmed — `2.50` displays as `2.5` |
-| Negative numbers | `+/−` toggles sign of the current term |
-
-### Expression line
-
-Sits above the giant result, right-aligned at 24 sp. Operators are tinted in the skin's accent color; the active term in full ink. The result updates live at 60% opacity while typing. Pressing `=` triggers the **result morph**: font weight animates from 200 → 700 over 420 ms (`easeOutCubic`) as depth rises from 0 → 1.
+| Divide by zero | Shows "Can't divide by zero"; the expression stays editable |
+| Consecutive operators | The latest operator replaces the previous one |
+| Leading zeros | `007` becomes `7` |
+| Very large results | Scientific notation beyond 15 significant digits |
+| Trailing zeros | `2.50` shows as `2.5` |
+| Repeated `=` | Ignored, so no duplicate history entries |
 
 ---
 
-## History
-
-The history sheet slides up as a modal bottom sheet — the calculator stays in context.
-
-- **Capacity:** Last 50 calculations (Pro: unlimited, with search and pin)
-- **Tap** any entry to restore its result into the main display
-- **Swipe left** to delete a single entry
-- **Clear All** removes the full list
-- Entries are right-aligned: expression on top, `= result` in large bold type below
-
-History is stored locally on-device. No sync, no cloud, no account required.
-
----
-
-## Architecture
+## Project structure
 
 ```
 lib/
 ├── core/
-│   ├── theme/          # ThemeColors tokens, AppThemeMode enum
-│   └── ...
+│   ├── engine/      # Pure-Dart math: Expression, Parser, Evaluator, Formatter
+│   ├── audio/       # Sound packs (flutter_soloud)
+│   ├── haptics/     # Native Android haptics via MethodChannel
+│   ├── storage/     # Settings and history
+│   └── theme/       # Skin colour tokens
 └── features/
-    ├── calculator/
-    │   ├── domain/     # Expression parser, percent resolver, decimal engine
-    │   ├── data/       # History repository (local storage)
-    │   └── presentation/
-    │       └── widgets/
-    │           └── extruded_number.dart   # ExtrudedNumberPainter (CustomPainter)
-    └── settings/       # Skin picker, Pro unlock, toggle prefs
+    ├── calculator/  # Controller, 3D numeral painter, keypad, animations
+    ├── history/     # History sheet
+    ├── settings/    # Skin picker and preferences
+    └── splash/
 ```
 
-Built with **Flutter** · State managed via **Riverpod** · Decimal math via `decimal` package · Haptics via `flutter_haptic_feedback` · Storage via `shared_preferences`
+- State management: Riverpod
+- Math: `decimal` package, with no Flutter imports in the engine
+- Sounds are generated by `tool/generate_sounds.py`
+
+---
+
+## Build from source
+
+```bash
+flutter pub get
+flutter test
+flutter run
+```
+
+Release builds:
+
+```bash
+flutter build appbundle --release
+flutter build apk --release
+```
 
 ---
 
 ## Platform
 
-| | Status |
+| | |
 |---|---|
-| Android | ✅ Primary target (API 21+, targets API 36) |
-| iOS | 🔜 Planned — same codebase |
-| Format | Signed Android App Bundle (`.aab`) |
-| Orientation | Portrait only (v1) |
-| Offline | 100% — no internet permission |
-| Data collected | None |
+| Android | Supported |
+| iOS | Planned |
+| Orientation | Portrait |
+| Network | None |
+| Data collected | None ([privacy policy](docs/privacy-policy.html)) |
 
 ---
 
 ## License
 
-App source: **MIT**
-Fonts (Antonio): [SIL Open Font License](assets/licenses/OFL.txt)
-Sound assets (Pro): CC0
+- App source: MIT
+- Fonts: Antonio and Bebas Neue, SIL Open Font License ([Antonio licence](assets/licenses/Antonio-OFL.txt))
+- Sounds: procedurally generated, original to PopCalc
 
----
-
-<sub>PopCalc is not affiliated with or endorsed by Google, Apple, or Casio.</sub>
+PopCalc is not affiliated with Google, Apple or Casio.
