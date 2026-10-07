@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
+import 'package:popcalc/core/engine/evaluator.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 
 class AppSettings {
@@ -12,6 +13,18 @@ class AppSettings {
   final double soundVolume;
   final SoundPack soundPack;
 
+  /// Advanced tools (one Settings switch): puts the scientific f(x)
+  /// toggle and the unit converter button in the top bar.
+  final bool advancedTools;
+
+  /// Whether the scientific tray is showing right now; flipped from the
+  /// top bar so users can hop between simple and scientific.
+  final bool scientificActive;
+
+  /// Whether the scientific tray shows both rows or just the first.
+  final bool scientificExpanded;
+  final AngleUnit angleUnit;
+
   const AppSettings({
     this.showLivePreview = false,
     this.hapticsEnabled = true,
@@ -20,6 +33,10 @@ class AppSettings {
     this.soundEnabled = true,
     this.soundVolume = 0.5,
     this.soundPack = SoundPack.pop,
+    this.advancedTools = false,
+    this.scientificActive = true,
+    this.scientificExpanded = true,
+    this.angleUnit = AngleUnit.degrees,
   });
 
   AppSettings copyWith({
@@ -30,6 +47,10 @@ class AppSettings {
     bool? soundEnabled,
     double? soundVolume,
     SoundPack? soundPack,
+    bool? advancedTools,
+    bool? scientificActive,
+    bool? scientificExpanded,
+    AngleUnit? angleUnit,
   }) {
     return AppSettings(
       showLivePreview: showLivePreview ?? this.showLivePreview,
@@ -39,12 +60,17 @@ class AppSettings {
       soundEnabled: soundEnabled ?? this.soundEnabled,
       soundVolume: soundVolume ?? this.soundVolume,
       soundPack: soundPack ?? this.soundPack,
+      advancedTools: advancedTools ?? this.advancedTools,
+      scientificActive: scientificActive ?? this.scientificActive,
+      scientificExpanded: scientificExpanded ?? this.scientificExpanded,
+      angleUnit: angleUnit ?? this.angleUnit,
     );
   }
 }
 
-final settingsProvider =
-    StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
+final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((
+  ref,
+) {
   return SettingsNotifier();
 });
 
@@ -62,6 +88,10 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   // key resets test builds that saved the old louder default.
   static const _kSoundVolume = 'settings_sound_volume_v2';
   static const _kSoundPack = 'settings_sound_pack';
+  static const _kAdvancedTools = 'settings_advanced_tools';
+  static const _kScientificActive = 'settings_scientific_active';
+  static const _kScientificExpanded = 'settings_scientific_expanded';
+  static const _kAngleUnit = 'settings_angle_unit';
 
   /// Starts the sound engine with saved settings before the first frame,
   /// so the splash screen's launch sound respects the user's choices.
@@ -89,6 +119,10 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         soundEnabled: prefs.getBool(_kSoundEnabled) ?? true,
         soundVolume: prefs.getDouble(_kSoundVolume) ?? 0.5,
         soundPack: SoundPack.fromName(prefs.getString(_kSoundPack)),
+        advancedTools: prefs.getBool(_kAdvancedTools) ?? false,
+        scientificActive: prefs.getBool(_kScientificActive) ?? true,
+        scientificExpanded: prefs.getBool(_kScientificExpanded) ?? true,
+        angleUnit: AngleUnit.fromName(prefs.getString(_kAngleUnit)),
       );
       AppHaptics.enabled = state.hapticsEnabled;
       AppHaptics.strength = state.hapticStrength;
@@ -140,7 +174,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     await _persist((p) => p.setString(_kSoundPack, pack.name));
   }
 
-
   Future<void> setShowLivePreview(bool value) async {
     state = state.copyWith(showLivePreview: value);
     try {
@@ -164,5 +197,33 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kLiteMode, value);
     } catch (_) {}
+  }
+
+  /// Turning the tools on also shows the scientific tray, so the switch
+  /// has a visible effect straight away.
+  Future<void> setAdvancedTools(bool value) async {
+    state = state.copyWith(
+      advancedTools: value,
+      scientificActive: value ? true : null,
+    );
+    await _persist((p) async {
+      await p.setBool(_kAdvancedTools, value);
+      if (value) await p.setBool(_kScientificActive, true);
+    });
+  }
+
+  Future<void> setScientificActive(bool value) async {
+    state = state.copyWith(scientificActive: value);
+    await _persist((p) => p.setBool(_kScientificActive, value));
+  }
+
+  Future<void> setScientificExpanded(bool value) async {
+    state = state.copyWith(scientificExpanded: value);
+    await _persist((p) => p.setBool(_kScientificExpanded, value));
+  }
+
+  Future<void> setAngleUnit(AngleUnit unit) async {
+    state = state.copyWith(angleUnit: unit);
+    await _persist((p) => p.setString(_kAngleUnit, unit.name));
   }
 }

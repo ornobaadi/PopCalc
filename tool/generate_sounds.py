@@ -11,6 +11,7 @@ Output: assets/sounds/<pack>/*.wav
 import math
 import os
 import random
+import shutil
 import struct
 import wave
 
@@ -268,12 +269,30 @@ def pack_typewriter(rng):
     return s
 
 
+# ─── Shared sounds ────────────────────────────────────────────────────────────
+# Played the same whichever pack is chosen.
+#   launch.wav  the typewriter carriage-return "skrr" (its clear sound)
+#   detent.wav  one notch of a swipe-to-step control, like a slider
+#               clicking into place
+
+def detent(rng):
+    tick = noise_burst(0.018, 0.0025, rng, hp=2500, lp=9000)
+    mix(tick, [v * 0.6 for v in resonant_click(2300, 0.018, 0.003)])
+    mix(tick, [v * 0.35 for v in resonant_click(720, 0.025, 0.006)])
+    m = max(abs(v) for v in tick)
+    return [v / m * 0.6 for v in tick]
+
+
 def main():
     rng = random.Random(42)
     for name, builder in [('pop', pack_pop), ('mellow', pack_mellow), ('typewriter', pack_typewriter)]:
         for sfx, buf in builder(rng).items():
             write_wav(os.path.join(ROOT, name, f'{sfx}.wav'), fade_edges(buf))
         print(f'pack {name}: done')
+    shutil.copyfile(os.path.join(ROOT, 'typewriter', 'clear.wav'),
+                    os.path.join(ROOT, 'launch.wav'))
+    write_wav(os.path.join(ROOT, 'detent.wav'), fade_edges(detent(random.Random(9)), ms=1))
+    print('shared sounds: done')
 
 
 if __name__ == '__main__':

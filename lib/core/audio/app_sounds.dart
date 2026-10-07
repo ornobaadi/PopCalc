@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter_soloud/flutter_soloud.dart';
 
 /// Selectable sound packs. Every pack ships the same file names
@@ -38,6 +39,7 @@ enum Sfx {
 
   bool get isDigit => index <= 9;
 
+  /// File name: "digit_3", "clear", ...
   String get file => isDigit ? 'digit_$index' : name;
 
   static Sfx digit(String d) => Sfx.values[int.parse(d)];
@@ -59,7 +61,16 @@ class AppSounds {
   /// is instant.
   static final Map<SoundPack, Map<Sfx, AudioSource>> _sources = {};
 
-  /// A sound requested before it finished loading (the launch sound).
+  /// PopCalc's launch sound (the typewriter "skrr"), used for every pack.
+  static AudioSource? _launch;
+  static DateTime? _launchPendingAt;
+
+  /// Mechanical detent tick for swipe-to-step controls: one sound for
+  /// every pack, like a slider clicking into notches.
+  static AudioSource? _detent;
+  static DateTime _lastDetent = DateTime(0);
+
+  /// A sound requested before it finished loading.
   /// Played as soon as it's ready, unless it has gone stale.
   static Sfx? _pendingSfx;
   static DateTime? _pendingAt;
@@ -78,8 +89,8 @@ class AppSounds {
   static double get volume => _volume;
   static SoundPack get pack => _pack;
 
-  /// Starts the engine, then loads sounds in the background — the current
-  /// pack's launch sound first, so the splash can play it immediately.
+  /// Starts the engine, then loads sounds in the background — the
+  /// launch sound first, so the splash can play it immediately.
   static Future<void> init({
     required bool enabled,
     required double volume,
@@ -102,11 +113,22 @@ class AppSounds {
   }
 
   static Future<void> _loadAll() async {
-    // Current pack first (launch + key sounds), then the rest for previews.
+    // Launch sound first so the splash can play it, then the current pack,
+    // then the rest for previews.
+    try {
+      _launch = await SoLoud.instance.loadAsset('assets/sounds/launch.wav');
+      final at = _launchPendingAt;
+      _launchPendingAt = null;
+      if (at != null && DateTime.now().difference(at) <= _pendingTtl) {
+        launch();
+      }
+    } catch (_) {}
+    try {
+      _detent = await SoLoud.instance.loadAsset('assets/sounds/detent.wav');
+    } catch (_) {}
     final order = [_pack, ...SoundPack.values.where((p) => p != _pack)];
     for (final pack in order) {
-      final sfxOrder = [Sfx.clear, ...Sfx.values.where((s) => s != Sfx.clear)];
-      for (final sfx in sfxOrder) {
+      for (final sfx in Sfx.values) {
         try {
           final source = await SoLoud.instance.loadAsset(
             'assets/sounds/${pack.name}/${sfx.file}.wav',
@@ -164,7 +186,9 @@ class AppSounds {
   /// Small random pitch drift keeps repeated non-melodic sounds from feeling
   /// robotic. Digits stay exact so typing still plays a clean melody.
   static double _pitchFor(Sfx sfx) {
-    if (sfx.isDigit || sfx == Sfx.success) return 1.0;
+    if (sfx.isDigit || sfx == Sfx.success) {
+      return 1.0;
+    }
     if (sfx == Sfx.backspace) {
       final now = DateTime.now();
       if (now.difference(_lastBackspace) > const Duration(milliseconds: 600)) {
@@ -184,6 +208,24 @@ class AppSounds {
     if (source != null) _playSource(source, pitch: _pitchFor(sfx));
   }
 
+  /// Plays [sfx] [semitones] away from its recorded pitch, with no drift,
+  /// so a series of taps can walk a scale.
+  /// One notch of a swipe-to-step control. Stepping up clicks a touch
+  /// higher than stepping down; fast swipes are thinned out so the ticks
+  /// never blur into a buzz.
+  static void detent({bool up = true}) {
+    if (!_canPlay) return;
+    final source = _detent;
+    if (source == null) return;
+    final now = DateTime.now();
+    if (now.difference(_lastDetent) < const Duration(milliseconds: 40)) return;
+    _lastDetent = now;
+    _playSource(
+      source,
+      pitch: (up ? 1.05 : 0.95) + (_random.nextDouble() - 0.5) * 0.04,
+    );
+  }
+
   /// Like [play], but if the sound is still loading (e.g. at app launch),
   /// plays it the moment it's ready.
   static void playWhenReady(Sfx sfx) {
@@ -193,6 +235,18 @@ class AppSounds {
     } else {
       _pendingSfx = sfx;
       _pendingAt = DateTime.now();
+    }
+  }
+
+  /// The launch "skrr", played the moment it's loaded if the splash asks
+  /// before it's ready.
+  static void launch() {
+    if (!_enabled || _volume == 0) return;
+    final source = _launch;
+    if (source != null && _ready) {
+      _playSource(source);
+    } else {
+      _launchPendingAt = DateTime.now();
     }
   }
 

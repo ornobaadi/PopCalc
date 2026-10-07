@@ -296,6 +296,27 @@ class SettingsSheet extends ConsumerWidget {
 
                       return Column(
                         children: [
+                          // Scientific keys + unit converter, both
+                          // reached from the top bar
+                          _SettingsRow(
+                            icon: Icons.functions_rounded,
+                            label: 'Scientific & Converter',
+                            description:
+                                'Adds f(x) and unit converter buttons to the top bar',
+                            colors: colors,
+                            trailing: Switch(
+                              value: settings.advancedTools,
+                              onChanged: (val) {
+                                AppHaptics.mode(val);
+                                settingsNotifier.setAdvancedTools(val);
+                              },
+                              activeThumbColor: colors.accent,
+                              activeTrackColor: colors.accent.withValues(
+                                alpha: 0.35,
+                              ),
+                            ),
+                          ),
+
                           // Live Result Preview toggle
                           _SettingsRow(
                             icon: Icons.visibility_outlined,

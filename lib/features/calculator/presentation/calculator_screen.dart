@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:popcalc/core/engine/evaluator.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/features/calculator/application/calculator_controller.dart';
+import 'package:popcalc/features/converter/presentation/converter_screen.dart';
 import 'package:popcalc/features/history/presentation/history_sheet.dart';
 import 'widgets/celebration_burst.dart';
 import 'widgets/expression_line.dart';
 import 'widgets/grain_overlay.dart';
 import 'widgets/keypad.dart';
 import 'widgets/numeral_animator.dart';
+import 'widgets/scientific_tray.dart';
 import 'widgets/top_bar.dart';
 
 class CalculatorScreen extends ConsumerStatefulWidget {
@@ -45,6 +48,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
     final colors = ThemeColors.of(themeMode);
     final calcState = ref.watch(calculatorProvider);
     final settings = ref.watch(settingsProvider);
+    final scientific = settings.advancedTools && settings.scientificActive;
 
     // Auto-clear highlight when state changes externally
     if (_resultHighlighted &&
@@ -87,6 +91,11 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                     RepaintBoundary(
                       child: TopBar(
                         colors: colors,
+                        onConverterTap: () {
+                          AppHaptics.mode(true);
+                          setState(() => _resultHighlighted = false);
+                          ConverterScreen.open(context);
+                        },
                         onHistoryTap: () {
                           AppHaptics.selectionClick();
                           setState(() => _resultHighlighted = false);
@@ -123,8 +132,24 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
 
                     // Hero 3D extruded numeral result zone (~44% of vertical space)
                     // Interactive: users can rotate/move the 3D number in real-time with touch!
-                    Expanded(
-                      flex: 44,
+                    // With the scientific tray open the keypad keeps its
+                    // finger-sized rows and the answer gives up the room.
+                    // The split eases between layouts as the tray comes and
+                    // goes (flex is scaled ×10 so the tween moves smoothly).
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(
+                        end: !scientific
+                            ? 44
+                            : settings.scientificExpanded
+                                ? 24
+                                : 34,
+                      ),
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, flex, child) => Expanded(
+                        flex: (flex * 10).round(),
+                        child: child!,
+                      ),
                       child: RepaintBoundary(
                         child: Container(
                           width: double.infinity,
@@ -168,6 +193,29 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                                   _copyResult(context, calcState.resultText);
                                 },
                               ),
+                              // Angle unit badge, display-corner style
+                              if (scientific)
+                                Positioned(
+                                  top: 6,
+                                  left: 0,
+                                  child: _AngleBadge(
+                                    colors: colors,
+                                    unit: settings.angleUnit,
+                                    onTap: () {
+                                      final toRadians = settings.angleUnit ==
+                                          AngleUnit.degrees;
+                                      AppHaptics.shift(toRadians);
+                                      ref
+                                          .read(settingsProvider.notifier)
+                                          .setAngleUnit(
+                                            settings.angleUnit ==
+                                                    AngleUnit.degrees
+                                                ? AngleUnit.radians
+                                                : AngleUnit.degrees,
+                                          );
+                                    },
+                                  ),
+                                ),
                               // Highlight overlay when in whole-result edit mode
                               if (_resultHighlighted)
                                 Positioned.fill(
@@ -190,9 +238,35 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                       ),
                     ),
 
+                    // Scientific keys (Settings > Scientific Calculator),
+                    // shown or hidden from the top bar.
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 260),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) => SizeTransition(
+                        sizeFactor: animation,
+                        alignment: Alignment.bottomCenter,
+                        child: FadeTransition(opacity: animation, child: child),
+                      ),
+                      child: scientific
+                          ? Padding(
+                              key: const ValueKey('tray'),
+                              padding: const EdgeInsets.fromLTRB(
+                                  18.0, 0.0, 18.0, 6.0),
+                              child: RepaintBoundary(
+                                child: ScientificTray(colors: colors),
+                              ),
+                            )
+                          : const SizedBox(
+                              key: ValueKey('no-tray'),
+                              width: double.infinity,
+                            ),
+                    ),
+
                     // Tactile Keypad (~52% of vertical space)
                     Expanded(
-                      flex: 52,
+                      flex: 520,
                       child: RepaintBoundary(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(
@@ -214,6 +288,65 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// DEG / RAD indicator in the display's corner; tap to switch.
+class _AngleBadge extends StatelessWidget {
+  final ThemeColors colors;
+  final AngleUnit unit;
+  final VoidCallback onTap;
+
+  const _AngleBadge({
+    required this.colors,
+    required this.unit,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDeg = unit == AngleUnit.degrees;
+    return Semantics(
+      button: true,
+      label: isDeg
+          ? 'Angles in degrees. Tap for radians'
+          : 'Angles in radians. Tap for degrees',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 160),
+            transitionBuilder: (child, anim) =>
+                FadeTransition(opacity: anim, child: child),
+            child: Container(
+              key: ValueKey(isDeg),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 9.0, vertical: 4.0),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: colors.accent.withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              child: Text(
+                isDeg ? 'DEG' : 'RAD',
+                style: TextStyle(
+                  fontFamily: 'BebasNeue',
+                  fontSize: 15.0,
+                  letterSpacing: 1.2,
+                  height: 1.0,
+                  color: colors.accent,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

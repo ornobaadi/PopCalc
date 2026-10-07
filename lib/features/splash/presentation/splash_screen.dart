@@ -25,8 +25,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
-    // Launch "skrrr": the same sweep as clearing a calculation.
-    AppSounds.playWhenReady(Sfx.clear);
+    // Launch "skrr": the typewriter carriage return, whichever pack is chosen.
+    AppSounds.launch();
     _controller = AnimationController(vsync: this, duration: _duration)
       ..forward().whenComplete(_goHome);
   }

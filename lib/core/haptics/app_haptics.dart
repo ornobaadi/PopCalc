@@ -105,6 +105,77 @@ class AppHaptics {
         HapticFeedback.heavyImpact,
       );
 
+  // ─── Scientific keys ───────────────────────────────────────────────────────
+  // Lighter than the keypad, so the tray feels like a secondary layer.
+
+  /// sin, ln, √...: a tick that lands into a soft click, like a door opening.
+  static void function() => _play(const [
+    _Hit('tick', 0.6),
+    _Hit('click', 0.55, 30),
+  ], HapticFeedback.selectionClick);
+
+  /// "(" swells up, ")" falls away: mirrored, so pairs feel matched.
+  static void bracketOpen() =>
+      _play(const [_Hit('quickRise', 0.55)], HapticFeedback.selectionClick);
+
+  static void bracketClose() =>
+      _play(const [_Hit('quickFall', 0.6)], HapticFeedback.selectionClick);
+
+  /// π, e: two featherweight ticks, a sparkle.
+  static void constant() => _play(const [
+    _Hit('tick', 0.45),
+    _Hit('tick', 0.7, 28),
+  ], HapticFeedback.selectionClick);
+
+  /// Powers and !: a rise that lands on a click, like stepping up.
+  static void power() => _play(const [
+    _Hit('quickRise', 0.6),
+    _Hit('click', 0.7, 35),
+  ], HapticFeedback.lightImpact);
+
+  /// 2nd, DEG/RAD and other two-state switches: ticks that climb when
+  /// switching on and drop when switching off.
+  static void shift(bool on) => _play(
+    on
+        ? const [_Hit('tick', 0.5), _Hit('tick', 0.9, 40)]
+        : const [_Hit('tick', 0.9), _Hit('tick', 0.5, 40)],
+    HapticFeedback.selectionClick,
+  );
+
+  /// Opening (on) or leaving (off) the scientific tray or converter:
+  /// a slow swell into a click, or a fall into a low tick.
+  static void mode(bool on) => _play(
+    on
+        ? const [_Hit('slowRise', 0.6), _Hit('click', 0.9, 70)]
+        : const [_Hit('quickFall', 0.7), _Hit('lowTick', 0.8, 45)],
+    on ? HapticFeedback.mediumImpact : HapticFeedback.lightImpact,
+  );
+
+  // ─── Unit converter ────────────────────────────────────────────────────────
+
+  /// Swap: a spin timed with the button's half-turn, then a landing click.
+  static void swap() => _play(const [
+    _Hit('spin', 0.6),
+    _Hit('click', 0.85, 90),
+  ], HapticFeedback.mediumImpact);
+
+  /// Category tabs: a featherweight detent.
+  static void category() =>
+      _play(const [_Hit('tick', 0.45)], HapticFeedback.selectionClick);
+
+  /// Picking a unit: one firm, confident click.
+  static void unitPick() =>
+      _play(const [_Hit('click', 0.7)], HapticFeedback.lightImpact);
+
+  /// One notch of a swipe-to-step control (units, categories): a crisp
+  /// tick, like a slider clicking into place.
+  static void detent() =>
+      _play(const [_Hit('tick', 0.85)], HapticFeedback.selectionClick);
+
+  /// Swiped past the last notch: a soft bump against the end stop.
+  static void detentEnd() =>
+      _play(const [_Hit('thud', 0.5)], HapticFeedback.lightImpact);
+
   // ─── Results ───────────────────────────────────────────────────────────────
 
   /// Answer lands: a rising swell into a strong click and a sparkle tick,

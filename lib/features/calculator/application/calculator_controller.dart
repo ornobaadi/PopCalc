@@ -6,21 +6,30 @@ import 'package:popcalc/core/engine/formatter.dart';
 import 'package:popcalc/core/engine/parser.dart';
 import 'package:popcalc/core/engine/token.dart';
 import 'package:popcalc/core/storage/history_store.dart';
+import 'package:popcalc/core/storage/settings_store.dart';
 import 'calculator_state.dart';
 
 final calculatorProvider =
     StateNotifierProvider<CalculatorController, CalculatorState>((ref) {
-  return CalculatorController(
+  final controller = CalculatorController(
     onHistoryAdded: (expr, res) {
       ref.read(historyProvider.notifier).addEntry(expr, res);
     },
+    angleUnit: () => ref.read(settingsProvider).angleUnit,
   );
+  ref.listen(settingsProvider.select((s) => s.angleUnit),
+      (_, _) => controller.refreshPreview());
+  return controller;
 });
 
 class CalculatorController extends StateNotifier<CalculatorState> {
   final void Function(String expression, String result)? onHistoryAdded;
+  final AngleUnit Function()? angleUnit;
 
-  CalculatorController({this.onHistoryAdded}) : super(const CalculatorState());
+  CalculatorController({this.onHistoryAdded, this.angleUnit})
+      : super(const CalculatorState());
+
+  AngleUnit get _angleUnit => angleUnit?.call() ?? AngleUnit.degrees;
 
   /// Selects a token in the expression for editing.
   /// Tapping the already selected token deselects it.
@@ -245,6 +254,77 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     );
   }
 
+  // --- Advanced mode keys ---
+
+  /// "(" or a function such as "sin(". After "=" these start a new
+  /// expression, like a digit does.
+  void onOpener(Token opener) =>
+      _applyAdvanced((e) => e.appendOpener(opener), continueFromResult: false);
+
+  void onRightParen() => _applyAdvanced((e) => e.appendRightParen());
+
+  void onConstant(String symbol) => _applyAdvanced(
+      (e) => e.appendConstant(symbol),
+      continueFromResult: false);
+
+  void onFactorial() => _applyAdvanced((e) => e.appendFactorial());
+
+  /// x²: "^2" on the current operand.
+  void onSquare() => _applyAdvanced((e) {
+        final withPower = e.appendOperator(TokenType.power, '^');
+        final all = withPower.getAllTokens();
+        return all.isNotEmpty && all.last.type == TokenType.power
+            ? withPower.appendDigit('2')
+            : e;
+      });
+
+  /// eˣ: "e^".
+  void onExpE() => _applyAdvanced(
+      (e) => e.appendConstant('e').appendOperator(TokenType.power, '^'),
+      continueFromResult: false);
+
+  /// 10ˣ: "10^", multiplying whatever came before.
+  void onExp10() => _applyAdvanced((e) => e.appendPowerOf('10'),
+      continueFromResult: false);
+
+  /// Shared path for advanced keys. [continueFromResult] decides whether,
+  /// after "=", the key applies to the answer (like an operator) or starts
+  /// fresh (like a digit).
+  void _applyAdvanced(Expression Function(Expression) edit,
+      {bool continueFromResult = true}) {
+    if (state.editingTokenIndex != null) deselectToken();
+
+    var expr = state.expression;
+    if (state.justEvaluated) {
+      expr = continueFromResult ? _baseExpression() : const Expression();
+    }
+
+    final newExpr = edit(expr);
+    if (identical(newExpr, expr) && !state.justEvaluated) return;
+
+    final preview = _computePreview(newExpr);
+    final shown = newExpr.currentNumber.isNotEmpty
+        ? NumberFormatter.formatInputNumber(newExpr.currentNumber)
+        : _tryEvaluate(newExpr) ?? (state.justEvaluated ? '0' : state.resultText);
+
+    state = state.copyWith(
+      expression: newExpr,
+      expressionText: newExpr.toDisplayString(),
+      resultText: shown,
+      previewText: preview,
+      clearPreview: preview == null,
+      clearError: true,
+      justEvaluated: false,
+    );
+  }
+
+  /// Recomputes the live preview, e.g. after switching DEG/RAD.
+  void refreshPreview() {
+    if (state.justEvaluated || state.error != null) return;
+    final preview = _computePreview(state.expression);
+    state = state.copyWith(previewText: preview, clearPreview: preview == null);
+  }
+
   void onClear() {
     state = const CalculatorState();
   }
@@ -277,11 +357,23 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       if (ch == '×' || ch == '*') { tokens.add(const Token(TokenType.multiply, '×')); i++; continue; }
       if (ch == '÷' || ch == '/') { tokens.add(const Token(TokenType.divide, '÷')); i++; continue; }
       if (ch == '%') { tokens.add(const Token(TokenType.percent, '%')); i++; continue; }
+      if (ch == '^') { tokens.add(const Token(TokenType.power, '^')); i++; continue; }
+      if (ch == '(') { tokens.add(const Token(TokenType.leftParen, '(')); i++; continue; }
+      if (ch == ')') { tokens.add(const Token(TokenType.rightParen, ')')); i++; continue; }
+      if (ch == '!') { tokens.add(const Token(TokenType.factorial, '!')); i++; continue; }
+      if (ch == 'π' || ch == 'e') { tokens.add(Token(TokenType.constant, ch)); i++; continue; }
+      final fn = _functionNames.where((f) => clean.startsWith(f, i)).firstOrNull;
+      if (fn != null) { tokens.add(Token(TokenType.function, fn)); i += fn.length; continue; }
       // Number: collect digits, commas (thousands separator), dots
       if (RegExp(r'[0-9.,\-]').hasMatch(ch)) {
         final start = i;
-        // 'e' keeps scientific results (e.g. "1.5e20") in one token.
-        while (i < clean.length && RegExp(r'[0-9.,e]').hasMatch(clean[i])) { i++; }
+        // 'e' keeps scientific results (e.g. "1.5e20") in one token, but
+        // only when a digit follows; otherwise it is the constant e ("2e").
+        while (i < clean.length &&
+            (RegExp(r'[0-9.,]').hasMatch(clean[i]) ||
+                (clean[i] == 'e' &&
+                    i + 1 < clean.length &&
+                    RegExp(r'[0-9]').hasMatch(clean[i + 1])))) { i++; }
         final raw = clean.substring(start, i).replaceAll(',', '');
         tokens.add(Token(TokenType.number, raw));
         continue;
@@ -307,13 +399,19 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     );
   }
 
+  /// Function openers as they appear in expression strings.
+  static const _functionNames = [
+    'sin⁻¹(', 'cos⁻¹(', 'tan⁻¹(', 'sin(', 'cos(', 'tan(',
+    'ln(', 'log(', '√(', '∛(',
+  ];
+
   String? _tryEvaluate(Expression expr) {
     try {
       final tokens = expr.getAllTokens();
       if (tokens.isEmpty) return null;
       final ast = Parser.parse(tokens, tolerant: true);
       if (ast == null) return null;
-      final val = Evaluator.evaluate(ast);
+      final val = Evaluator.evaluate(ast, angleUnit: _angleUnit);
       return NumberFormatter.format(val);
     } catch (_) {
       return null;
@@ -329,14 +427,16 @@ class CalculatorController extends StateNotifier<CalculatorState> {
 
     final ast = Parser.parse(tokens, tolerant: false);
     if (ast == null) {
-      // A trailing operator ("5 +") is just incomplete — ignore quietly.
-      // Anything else is malformed (e.g. after token edits): surface it.
-      if (!tokens.last.isOperator) _showError(CalcError.invalidExpression);
+      // A trailing operator ("5 +") or opener ("sin(") is just incomplete —
+      // ignore quietly. Anything else is malformed (e.g. after token edits).
+      if (!tokens.last.isOperator && !tokens.last.isOpener) {
+        _showError(CalcError.invalidExpression);
+      }
       return;
     }
 
     try {
-      final evaluated = Evaluator.evaluate(ast);
+      final evaluated = Evaluator.evaluate(ast, angleUnit: _angleUnit);
       final formattedResult = NumberFormatter.format(evaluated);
       final exprStr = state.expression.toDisplayString();
 
@@ -635,7 +735,7 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     if (ast == null) return null;
 
     try {
-      final res = Evaluator.evaluate(ast);
+      final res = Evaluator.evaluate(ast, angleUnit: _angleUnit);
       return NumberFormatter.format(res);
     } catch (_) {
       return null;
