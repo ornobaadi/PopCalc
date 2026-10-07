@@ -6,7 +6,7 @@
 
 PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, musical sound effects and eight hand-crafted skins.
 
-- Version: 1.1.1
+- Version: 1.2.0
 - Platform: Android
 - Built with: Flutter
 - 100% offline, no ads, no account, zero data collected
@@ -52,6 +52,7 @@ If the player doesn't load, [open the demo video](assets/mockup.mp4).
 ### Sound
 - Three sound packs: Pop, Mellow and Typewriter
 - Number keys play a pentatonic melody as you type
+- Sound only where it matters; everything else is haptics
 - Plays alongside your music without pausing it
 
 ### Math
@@ -59,6 +60,11 @@ If the player doesn't load, [open the demo video](assets/mockup.mp4).
 - Live preview of the answer while you type
 - Tap any number or operator in the expression to edit it, and the answer updates instantly
 - History restores the full expression so you can keep editing
+
+### Scientific & Converter
+- One switch in Settings adds two buttons to the top bar
+- **Scientific:** powers, roots, brackets, trig (DEG/RAD), logs, π, e and factorial, in a tray that folds away. Switch between simple and scientific with one tap
+- **Unit converter:** ten categories with exact factors, on its own screen. Swipe through units and categories like a slider
 
 ### Privacy and performance
 - Fully offline, with no internet permission

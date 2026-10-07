@@ -1,3 +1,42 @@
+# PopCalc v1.2.0 (build 5) — Scientific & Converter
+
+## ✨ What's new
+
+### 🧮 Scientific calculator
+- Turn on **Scientific & Converter** in Settings to get an **f(x)** button in the top bar. It switches between simple and scientific keys in one tap
+- Powers (xʸ, x²), roots (√, ∛), brackets, π, e and factorial
+- sin, cos, tan and their inverses, ln, log, eˣ and 10ˣ, with **2nd** to flip keys to their inverse
+- **DEG/RAD** badge on the display. In degrees, sin 180 is exactly 0 and tan 90 shows "Not defined"
+- Smart input: brackets close themselves on `=`, and `2π` or `2(3)` multiply automatically
+- Exact answers for everyday maths. Trig and logs are accurate to 15 digits
+- The second row of keys folds away with the handle when you want more room for the answer
+
+### 📏 Unit converter
+- A **ruler** button in the top bar opens a clean, dedicated converter screen
+- 10 categories: length, weight, temperature, volume, area, speed, time, data, pressure and energy
+- Exact conversion factors, a one-unit reference line, swap, ANS (bring in your last answer) and copy
+- **Swipe like a slider:** swipe the category strip or a unit row up and down to click through notches, with a mechanical tick and vibration
+- Remembers your last category and units
+
+### 🔊 Sound & haptics
+- New launch sound: the Typewriter "skrr", whichever sound pack you use
+- Sound stays where it matters: keys, answers and converter notches. Everything else is haptics only
+- **Stronger haptics on phones with weaker vibration motors**, while phones that already felt good stay about the same
+
+---
+
+### Play Store "What's new" (under 500 chars)
+```
+New in 1.2.0: Scientific & Converter
+• Turn it on in Settings: f(x) and ruler buttons appear in the top bar
+• Scientific keys: powers, roots, brackets, trig (DEG/RAD), logs, π, e, n!
+• Unit converter: 10 categories, exact factors, swipe through units like a slider
+• New launch sound and calmer, more focused sound design
+• Stronger haptics on phones with weak vibration
+```
+
+---
+
 # PopCalc v1.1.1 (build 4) — Theme update & bug fixes
 
 ## 🎨 New skins
