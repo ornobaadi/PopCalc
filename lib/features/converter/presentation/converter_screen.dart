@@ -71,49 +71,58 @@ class ConverterScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = ThemeColors.of(ref.watch(themeProvider));
 
-    return Scaffold(
-      backgroundColor: colors.bg,
-      body: Stack(
-        children: [
-          RepaintBoundary(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0.2, -0.3),
-                  radius: 1.3,
-                  colors: [colors.bgShade, colors.bg],
+    // Leaving plays the mirror of the open sound, whether by the back
+    // button or the system back gesture.
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) return;
+        AppHaptics.mode(false);
+        AppSounds.mode(false);
+      },
+      child: Scaffold(
+        backgroundColor: colors.bg,
+        body: Stack(
+          children: [
+            RepaintBoundary(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0.2, -0.3),
+                    radius: 1.3,
+                    colors: [colors.bgShade, colors.bg],
+                  ),
                 ),
               ),
             ),
-          ),
-          const GrainOverlay(),
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440.0),
-              child: SafeArea(
-                child: Column(
-                  children: [
-                    _Header(colors: colors),
-                    _CategoryTabs(colors: colors),
-                    Expanded(flex: 48, child: _Readout(colors: colors)),
-                    Expanded(
-                      flex: 44,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          24.0,
-                          4.0,
-                          24.0,
-                          20.0,
+            const GrainOverlay(),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440.0),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      _Header(colors: colors),
+                      _CategoryTabs(colors: colors),
+                      Expanded(flex: 48, child: _Readout(colors: colors)),
+                      Expanded(
+                        flex: 44,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            24.0,
+                            4.0,
+                            24.0,
+                            20.0,
+                          ),
+                          child: _ConverterKeypad(colors: colors),
                         ),
-                        child: _ConverterKeypad(colors: colors),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -141,7 +150,6 @@ class _Header extends StatelessWidget {
               splashRadius: 20.0,
               tooltip: 'Back to calculator',
               onPressed: () {
-                AppHaptics.selectionClick();
                 Navigator.of(context).maybePop();
               },
             ),
@@ -229,7 +237,7 @@ class _CategoryTabsState extends ConsumerState<_CategoryTabs> {
           padding: const EdgeInsets.symmetric(horizontal: 22.0),
           child: Row(
             children: [
-              for (final category in Units.categories)
+              for (final (i, category) in Units.categories.indexed)
                 Semantics(
                   key: _keys[category.id],
                   button: true,
@@ -240,8 +248,8 @@ class _CategoryTabsState extends ConsumerState<_CategoryTabs> {
                     behavior: HitTestBehavior.opaque,
                     onTap: () {
                       if (category.id == selected.id) return;
-                      AppHaptics.selectionClick();
-                      AppSounds.utility();
+                      AppHaptics.category();
+                      AppSounds.category(i);
                       ref
                           .read(converterProvider.notifier)
                           .selectCategory(category);
@@ -472,8 +480,8 @@ class _SwapDividerState extends State<_SwapDivider> {
             excludeSemantics: true,
             child: GestureDetector(
               onTapDown: (_) {
-                AppHaptics.operatorKey();
-                AppSounds.operatorKey();
+                AppHaptics.swap();
+                AppSounds.swap();
                 setState(() => _pressed = true);
               },
               onTapCancel: () => setState(() => _pressed = false),
@@ -584,7 +592,8 @@ class _UnitSheet {
                         unit: unit,
                         selected: unit.id == current.id,
                         onTap: () {
-                          AppHaptics.selectionClick();
+                          AppHaptics.unitPick();
+                          AppSounds.unitPick();
                           onPick(unit);
                           Navigator.of(sheetContext).pop();
                         },
@@ -756,8 +765,8 @@ class _ConverterKeypad extends ConsumerWidget {
               color: colors.accent,
               fontSize: 28.0,
               semanticLabel: 'Use the calculator answer',
-              haptic: AppHaptics.utility,
-              sound: AppSounds.utility,
+              haptic: AppHaptics.constant,
+              sound: AppSounds.constant,
               onTap: () {
                 final calc = ref.read(calculatorProvider);
                 if (calc.error == null) c.loadValue(calc.resultText);

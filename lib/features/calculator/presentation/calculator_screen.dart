@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/engine/evaluator.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,7 +49,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
     final colors = ThemeColors.of(themeMode);
     final calcState = ref.watch(calculatorProvider);
     final settings = ref.watch(settingsProvider);
-    final scientific = settings.scientificMode;
+    final scientific = settings.scientificMode && settings.scientificActive;
 
     // Auto-clear highlight when state changes externally
     if (_resultHighlighted &&
@@ -92,6 +93,8 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                       child: TopBar(
                         colors: colors,
                         onConverterTap: () {
+                          AppHaptics.mode(true);
+                          AppSounds.mode(true);
                           setState(() => _resultHighlighted = false);
                           ConverterScreen.open(context);
                         },
@@ -133,12 +136,22 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                     // Interactive: users can rotate/move the 3D number in real-time with touch!
                     // With the scientific tray open the keypad keeps its
                     // finger-sized rows and the answer gives up the room.
-                    Expanded(
-                      flex: !scientific
-                          ? 44
-                          : settings.scientificExpanded
-                              ? 24
-                              : 34,
+                    // The split eases between layouts as the tray comes and
+                    // goes (flex is scaled ×10 so the tween moves smoothly).
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(
+                        end: !scientific
+                            ? 44
+                            : settings.scientificExpanded
+                                ? 24
+                                : 34,
+                      ),
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, flex, child) => Expanded(
+                        flex: (flex * 10).round(),
+                        child: child!,
+                      ),
                       child: RepaintBoundary(
                         child: Container(
                           width: double.infinity,
@@ -191,7 +204,10 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                                     colors: colors,
                                     unit: settings.angleUnit,
                                     onTap: () {
-                                      AppHaptics.selectionClick();
+                                      final toRadians = settings.angleUnit ==
+                                          AngleUnit.degrees;
+                                      AppHaptics.shift(toRadians);
+                                      AppSounds.shift(toRadians);
                                       ref
                                           .read(settingsProvider.notifier)
                                           .setAngleUnit(
@@ -225,18 +241,35 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                       ),
                     ),
 
-                    // Scientific keys (Settings > Scientific Calculator)
-                    if (scientific)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(18.0, 0.0, 18.0, 6.0),
-                        child: RepaintBoundary(
-                          child: ScientificTray(colors: colors),
-                        ),
+                    // Scientific keys (Settings > Scientific Calculator),
+                    // shown or hidden from the top bar.
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 260),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) => SizeTransition(
+                        sizeFactor: animation,
+                        alignment: Alignment.bottomCenter,
+                        child: FadeTransition(opacity: animation, child: child),
                       ),
+                      child: scientific
+                          ? Padding(
+                              key: const ValueKey('tray'),
+                              padding: const EdgeInsets.fromLTRB(
+                                  18.0, 0.0, 18.0, 6.0),
+                              child: RepaintBoundary(
+                                child: ScientificTray(colors: colors),
+                              ),
+                            )
+                          : const SizedBox(
+                              key: ValueKey('no-tray'),
+                              width: double.infinity,
+                            ),
+                    ),
 
                     // Tactile Keypad (~52% of vertical space)
                     Expanded(
-                      flex: 52,
+                      flex: 520,
                       child: RepaintBoundary(
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(

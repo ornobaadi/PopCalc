@@ -301,7 +301,7 @@ class SettingsSheet extends ConsumerWidget {
                             icon: Icons.functions_rounded,
                             label: 'Scientific Calculator',
                             description:
-                                'Trig, powers, roots, logs and brackets',
+                                'Trig, powers, roots and logs. Switch from the top bar',
                             colors: colors,
                             trailing: Switch(
                               value: settings.scientificMode,

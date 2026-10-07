@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter_soloud/flutter_soloud.dart';
 
 /// Selectable sound packs. Every pack ships the same file names
@@ -34,11 +35,32 @@ enum Sfx {
   backspace,
   clear,
   success,
-  error;
+  error,
+  // Scientific keys
+  function,
+  bracketOpen,
+  bracketClose,
+  constant,
+  power,
+  shiftOn,
+  shiftOff,
+  // Mode switches (scientific tray, converter screen)
+  modeOn,
+  modeOff,
+  // Unit converter
+  swap,
+  category,
+  unitPick;
 
   bool get isDigit => index <= 9;
 
-  String get file => isDigit ? 'digit_$index' : name;
+  /// File name: "digit_3", "bracket_open", ...
+  String get file => isDigit
+      ? 'digit_$index'
+      : name.replaceAllMapped(
+          RegExp('[A-Z]'),
+          (m) => '_${m[0]!.toLowerCase()}',
+        );
 
   static Sfx digit(String d) => Sfx.values[int.parse(d)];
 }
@@ -164,7 +186,12 @@ class AppSounds {
   /// Small random pitch drift keeps repeated non-melodic sounds from feeling
   /// robotic. Digits stay exact so typing still plays a clean melody.
   static double _pitchFor(Sfx sfx) {
-    if (sfx.isDigit || sfx == Sfx.success) return 1.0;
+    if (sfx.isDigit ||
+        sfx == Sfx.success ||
+        sfx == Sfx.modeOn ||
+        sfx == Sfx.modeOff) {
+      return 1.0;
+    }
     if (sfx == Sfx.backspace) {
       final now = DateTime.now();
       if (now.difference(_lastBackspace) > const Duration(milliseconds: 600)) {
@@ -182,6 +209,16 @@ class AppSounds {
     if (!_canPlay) return;
     final source = _sources[_pack]?[sfx];
     if (source != null) _playSource(source, pitch: _pitchFor(sfx));
+  }
+
+  /// Plays [sfx] [semitones] away from its recorded pitch, with no drift,
+  /// so a series of taps can walk a scale.
+  static void playNote(Sfx sfx, int semitones) {
+    if (!_canPlay) return;
+    final source = _sources[_pack]?[sfx];
+    if (source != null) {
+      _playSource(source, pitch: pow(2, semitones / 12).toDouble());
+    }
   }
 
   /// Like [play], but if the sound is still loading (e.g. at app launch),
@@ -222,4 +259,26 @@ class AppSounds {
   static void clear() => play(Sfx.clear);
   static void success() => play(Sfx.success);
   static void error() => play(Sfx.error);
+
+  // Scientific keys
+  static void function() => play(Sfx.function);
+  static void bracketOpen() => play(Sfx.bracketOpen);
+  static void bracketClose() => play(Sfx.bracketClose);
+  static void constant() => play(Sfx.constant);
+  static void power() => play(Sfx.power);
+  static void shift(bool on) => play(on ? Sfx.shiftOn : Sfx.shiftOff);
+
+  /// Entering (on) or leaving (off) the scientific tray or converter.
+  static void mode(bool on) => play(on ? Sfx.modeOn : Sfx.modeOff);
+
+  // Unit converter
+  static void swap() => play(Sfx.swap);
+  static void unitPick() => play(Sfx.unitPick);
+
+  /// Category tabs walk the pentatonic scale left to right, so moving
+  /// across them plays a tiny run.
+  static void category(int index) {
+    const penta = [0, 2, 4, 7, 9];
+    playNote(Sfx.category, penta[index % 5] + 12 * (index ~/ 5) - 5);
+  }
 }

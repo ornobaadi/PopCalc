@@ -12,8 +12,11 @@ class AppSettings {
   final bool soundEnabled;
   final double soundVolume;
   final SoundPack soundPack;
-  /// Shows the scientific key tray on the calculator.
+  /// Makes the scientific calculator available (Settings switch).
   final bool scientificMode;
+  /// Whether the scientific tray is showing right now; flipped from the
+  /// top bar so users can hop between simple and scientific.
+  final bool scientificActive;
   /// Whether the scientific tray shows both rows or just the first.
   final bool scientificExpanded;
   /// Adds the unit converter screen, opened from the top bar.
@@ -29,6 +32,7 @@ class AppSettings {
     this.soundVolume = 0.5,
     this.soundPack = SoundPack.pop,
     this.scientificMode = false,
+    this.scientificActive = true,
     this.scientificExpanded = true,
     this.converterEnabled = false,
     this.angleUnit = AngleUnit.degrees,
@@ -43,6 +47,7 @@ class AppSettings {
     double? soundVolume,
     SoundPack? soundPack,
     bool? scientificMode,
+    bool? scientificActive,
     bool? scientificExpanded,
     bool? converterEnabled,
     AngleUnit? angleUnit,
@@ -56,6 +61,7 @@ class AppSettings {
       soundVolume: soundVolume ?? this.soundVolume,
       soundPack: soundPack ?? this.soundPack,
       scientificMode: scientificMode ?? this.scientificMode,
+      scientificActive: scientificActive ?? this.scientificActive,
       scientificExpanded: scientificExpanded ?? this.scientificExpanded,
       converterEnabled: converterEnabled ?? this.converterEnabled,
       angleUnit: angleUnit ?? this.angleUnit,
@@ -83,6 +89,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const _kSoundVolume = 'settings_sound_volume_v2';
   static const _kSoundPack = 'settings_sound_pack';
   static const _kScientificMode = 'settings_scientific_mode';
+  static const _kScientificActive = 'settings_scientific_active';
   static const _kScientificExpanded = 'settings_scientific_expanded';
   static const _kConverterEnabled = 'settings_converter_enabled';
   static const _kAngleUnit = 'settings_angle_unit';
@@ -114,6 +121,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         soundVolume: prefs.getDouble(_kSoundVolume) ?? 0.5,
         soundPack: SoundPack.fromName(prefs.getString(_kSoundPack)),
         scientificMode: prefs.getBool(_kScientificMode) ?? false,
+        scientificActive: prefs.getBool(_kScientificActive) ?? true,
         scientificExpanded: prefs.getBool(_kScientificExpanded) ?? true,
         converterEnabled: prefs.getBool(_kConverterEnabled) ?? false,
         angleUnit: AngleUnit.fromName(prefs.getString(_kAngleUnit)),
@@ -194,9 +202,22 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     } catch (_) {}
   }
 
+  /// Turning the feature on also shows the tray, so the switch has a
+  /// visible effect straight away.
   Future<void> setScientificMode(bool value) async {
-    state = state.copyWith(scientificMode: value);
-    await _persist((p) => p.setBool(_kScientificMode, value));
+    state = state.copyWith(
+      scientificMode: value,
+      scientificActive: value ? true : null,
+    );
+    await _persist((p) async {
+      await p.setBool(_kScientificMode, value);
+      if (value) await p.setBool(_kScientificActive, true);
+    });
+  }
+
+  Future<void> setScientificActive(bool value) async {
+    state = state.copyWith(scientificActive: value);
+    await _persist((p) => p.setBool(_kScientificActive, value));
   }
 
   Future<void> setScientificExpanded(bool value) async {

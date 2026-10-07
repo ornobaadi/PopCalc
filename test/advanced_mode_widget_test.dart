@@ -23,6 +23,8 @@ Future<void> pumpScreen(
   // Let settings load from SharedPreferences.
   await tester.pump(const Duration(milliseconds: 50));
   await tester.pump(const Duration(milliseconds: 50));
+  // Let the scientific tray finish easing in.
+  await tester.pump(const Duration(milliseconds: 400));
 }
 
 Future<void> tapKey(WidgetTester tester, String label) async {
@@ -36,6 +38,7 @@ void main() {
     expect(find.text('sin'), findsNothing);
     expect(find.text('DEG'), findsNothing);
     expect(find.byTooltip('Unit converter'), findsNothing);
+    expect(find.bySemanticsLabel('Scientific keys'), findsNothing);
     expect(find.text('7'), findsOneWidget);
   });
 
@@ -64,10 +67,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Top-bar f(x) switches between simple and scientific', (
+    tester,
+  ) async {
+    await pumpScreen(tester, scientific: true);
+    final toggle = find.bySemanticsLabel('Scientific keys');
+    expect(toggle, findsOneWidget);
+    expect(find.text('sin'), findsOneWidget);
+
+    await tester.tap(toggle);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('sin'), findsNothing);
+    expect(find.text('DEG'), findsNothing);
+
+    await tester.tap(toggle);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('sin'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Tray handle folds the second row away', (tester) async {
     await pumpScreen(tester, scientific: true);
     expect(find.text('log'), findsOneWidget);
     await tester.tap(find.bySemanticsLabel('Show fewer scientific keys'));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('log'), findsNothing);
     expect(find.text('π'), findsOneWidget);
