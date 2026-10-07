@@ -296,6 +296,26 @@ class SettingsSheet extends ConsumerWidget {
 
                       return Column(
                         children: [
+                          // Advanced mode: scientific keys + unit converter
+                          _SettingsRow(
+                            icon: Icons.functions_rounded,
+                            label: 'Advanced Mode',
+                            description:
+                                'Scientific keys and a unit converter',
+                            colors: colors,
+                            trailing: Switch(
+                              value: settings.advancedMode,
+                              onChanged: (val) {
+                                AppHaptics.selectionClick();
+                                settingsNotifier.setAdvancedMode(val);
+                              },
+                              activeThumbColor: colors.accent,
+                              activeTrackColor: colors.accent.withValues(
+                                alpha: 0.35,
+                              ),
+                            ),
+                          ),
+
                           // Live Result Preview toggle
                           _SettingsRow(
                             icon: Icons.visibility_outlined,

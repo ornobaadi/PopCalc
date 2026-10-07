@@ -234,9 +234,10 @@ class _TokenChipState extends State<_TokenChip>
         child: Text(
           widget.text,
           style: TextStyle(
-            fontFamily: 'BebasNeue',
+            // Bebas Neue is caps-only; keep the constant e lowercase.
+            fontFamily: widget.text == 'e' ? 'Antonio' : 'BebasNeue',
             fontFamilyFallback: const ['Antonio', 'sans-serif'],
-            fontSize: widget.fontSize,
+            fontSize: widget.text == 'e' ? widget.fontSize * 0.75 : widget.fontSize,
             height: 1.0,
             leadingDistribution: TextLeadingDistribution.even,
             letterSpacing: 0.5,

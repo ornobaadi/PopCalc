@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
+import 'package:popcalc/core/engine/evaluator.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 
 class AppSettings {
@@ -11,6 +12,9 @@ class AppSettings {
   final bool soundEnabled;
   final double soundVolume;
   final SoundPack soundPack;
+  /// Unlocks the scientific keys and the unit converter.
+  final bool advancedMode;
+  final AngleUnit angleUnit;
 
   const AppSettings({
     this.showLivePreview = false,
@@ -20,6 +24,8 @@ class AppSettings {
     this.soundEnabled = true,
     this.soundVolume = 0.5,
     this.soundPack = SoundPack.pop,
+    this.advancedMode = false,
+    this.angleUnit = AngleUnit.degrees,
   });
 
   AppSettings copyWith({
@@ -30,6 +36,8 @@ class AppSettings {
     bool? soundEnabled,
     double? soundVolume,
     SoundPack? soundPack,
+    bool? advancedMode,
+    AngleUnit? angleUnit,
   }) {
     return AppSettings(
       showLivePreview: showLivePreview ?? this.showLivePreview,
@@ -39,6 +47,8 @@ class AppSettings {
       soundEnabled: soundEnabled ?? this.soundEnabled,
       soundVolume: soundVolume ?? this.soundVolume,
       soundPack: soundPack ?? this.soundPack,
+      advancedMode: advancedMode ?? this.advancedMode,
+      angleUnit: angleUnit ?? this.angleUnit,
     );
   }
 }
@@ -62,6 +72,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   // key resets test builds that saved the old louder default.
   static const _kSoundVolume = 'settings_sound_volume_v2';
   static const _kSoundPack = 'settings_sound_pack';
+  static const _kAdvancedMode = 'settings_advanced_mode';
+  static const _kAngleUnit = 'settings_angle_unit';
 
   /// Starts the sound engine with saved settings before the first frame,
   /// so the splash screen's launch sound respects the user's choices.
@@ -89,6 +101,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         soundEnabled: prefs.getBool(_kSoundEnabled) ?? true,
         soundVolume: prefs.getDouble(_kSoundVolume) ?? 0.5,
         soundPack: SoundPack.fromName(prefs.getString(_kSoundPack)),
+        advancedMode: prefs.getBool(_kAdvancedMode) ?? false,
+        angleUnit: AngleUnit.fromName(prefs.getString(_kAngleUnit)),
       );
       AppHaptics.enabled = state.hapticsEnabled;
       AppHaptics.strength = state.hapticStrength;
@@ -164,5 +178,15 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kLiteMode, value);
     } catch (_) {}
+  }
+
+  Future<void> setAdvancedMode(bool value) async {
+    state = state.copyWith(advancedMode: value);
+    await _persist((p) => p.setBool(_kAdvancedMode, value));
+  }
+
+  Future<void> setAngleUnit(AngleUnit unit) async {
+    state = state.copyWith(angleUnit: unit);
+    await _persist((p) => p.setString(_kAngleUnit, unit.name));
   }
 }
