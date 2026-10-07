@@ -17,4 +17,11 @@ void main() {
     expect(File('assets/sounds/launch.wav').existsSync(), isTrue);
     expect(File('assets/sounds/detent.wav').existsSync(), isTrue);
   });
+
+  test('file names are snake_case', () {
+    expect(Sfx.bracketOpen.file, 'bracket_open');
+    expect(Sfx.shiftOff.file, 'shift_off');
+    expect(Sfx.digit3.file, 'digit_3');
+    expect(Sfx.trig.file, 'trig');
+  });
 }

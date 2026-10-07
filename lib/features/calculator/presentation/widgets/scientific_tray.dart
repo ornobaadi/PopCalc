@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/engine/token.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
@@ -95,7 +96,7 @@ class _ScientificTrayState extends ConsumerState<ScientificTray> {
               once(() => fn('∛')),
               index: '3',
               semantic: 'Cube root',
-              feel: _Feel.function,
+              feel: _Feel.root,
             ),
             key(
               '(',
@@ -126,12 +127,7 @@ class _ScientificTrayState extends ConsumerState<ScientificTray> {
               feel: _Feel.power,
               accent: true,
             ),
-            key(
-              '√',
-              () => fn('√'),
-              semantic: 'Square root',
-              feel: _Feel.function,
-            ),
+            key('√', () => fn('√'), semantic: 'Square root', feel: _Feel.root),
             key(
               '(',
               () => controller.onOpener(const Token(TokenType.leftParen, '(')),
@@ -159,21 +155,21 @@ class _ScientificTrayState extends ConsumerState<ScientificTray> {
               once(() => fn('sin⁻¹')),
               sup: '-1',
               semantic: 'Inverse sine',
-              feel: _Feel.function,
+              feel: _Feel.trig,
             ),
             key(
               'cos',
               once(() => fn('cos⁻¹')),
               sup: '-1',
               semantic: 'Inverse cosine',
-              feel: _Feel.function,
+              feel: _Feel.trig,
             ),
             key(
               'tan',
               once(() => fn('tan⁻¹')),
               sup: '-1',
               semantic: 'Inverse tangent',
-              feel: _Feel.function,
+              feel: _Feel.trig,
             ),
             key(
               'e',
@@ -193,40 +189,25 @@ class _ScientificTrayState extends ConsumerState<ScientificTray> {
               '!',
               controller.onFactorial,
               semantic: 'Factorial',
-              feel: _Feel.power,
+              feel: _Feel.factorial,
             ),
           ]
         : [
-            key('sin', () => fn('sin'), semantic: 'Sine', feel: _Feel.function),
-            key(
-              'cos',
-              () => fn('cos'),
-              semantic: 'Cosine',
-              feel: _Feel.function,
-            ),
-            key(
-              'tan',
-              () => fn('tan'),
-              semantic: 'Tangent',
-              feel: _Feel.function,
-            ),
-            key(
-              'ln',
-              () => fn('ln'),
-              semantic: 'Natural log',
-              feel: _Feel.function,
-            ),
+            key('sin', () => fn('sin'), semantic: 'Sine', feel: _Feel.trig),
+            key('cos', () => fn('cos'), semantic: 'Cosine', feel: _Feel.trig),
+            key('tan', () => fn('tan'), semantic: 'Tangent', feel: _Feel.trig),
+            key('ln', () => fn('ln'), semantic: 'Natural log', feel: _Feel.log),
             key(
               'log',
               () => fn('log'),
               semantic: 'Log base ten',
-              feel: _Feel.function,
+              feel: _Feel.log,
             ),
             key(
               '!',
               controller.onFactorial,
               semantic: 'Factorial',
-              feel: _Feel.power,
+              feel: _Feel.factorial,
             ),
           ];
 
@@ -272,20 +253,24 @@ class _ScientificTrayState extends ConsumerState<ScientificTray> {
   }
 }
 
-/// How a key feels: openers rise, closers fall, powers step up,
-/// constants sparkle, and 2nd climbs or drops with its state. The tray is
-/// touch-only: sound stays with the main keypad.
+/// How a key sounds and feels. Each kind of key has its own short figure
+/// (trig waves, logs settle, powers climb, roots step down, brackets open
+/// up and close down, constants sparkle, ! knocks), with a matching haptic.
 enum _Feel {
-  function(AppHaptics.function),
-  bracketOpen(AppHaptics.bracketOpen),
-  bracketClose(AppHaptics.bracketClose),
-  constant(AppHaptics.constant),
-  power(AppHaptics.power),
-  shiftOn(_shiftOnHaptic),
-  shiftOff(_shiftOffHaptic);
+  trig(AppHaptics.trig, Sfx.trig),
+  log(AppHaptics.log, Sfx.log),
+  power(AppHaptics.power, Sfx.power),
+  root(AppHaptics.root, Sfx.root),
+  bracketOpen(AppHaptics.bracketOpen, Sfx.bracketOpen),
+  bracketClose(AppHaptics.bracketClose, Sfx.bracketClose),
+  constant(AppHaptics.constant, Sfx.constant),
+  factorial(AppHaptics.factorial, Sfx.factorial),
+  shiftOn(_shiftOnHaptic, Sfx.shiftOn),
+  shiftOff(_shiftOffHaptic, Sfx.shiftOff);
 
   final void Function() haptic;
-  const _Feel(this.haptic);
+  final Sfx sound;
+  const _Feel(this.haptic, this.sound);
 }
 
 void _shiftOnHaptic() => AppHaptics.shift(true);
@@ -372,6 +357,11 @@ class _TrayKeyState extends State<_TrayKey> {
 
   void _down(TapDownDetails details) {
     widget.feel.haptic();
+    final width = MediaQuery.sizeOf(context).width;
+    final pan = width > 0
+        ? (details.globalPosition.dx / width - 0.5) * 0.6
+        : 0.0;
+    AppSounds.panned(pan, () => AppSounds.play(widget.feel.sound));
     setState(() => _pressed = true);
   }
 
