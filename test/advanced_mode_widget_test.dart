@@ -117,4 +117,19 @@ void main() {
     expect(find.text('CONVERT'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Swiping a unit steps through the list', (tester) async {
+    await pumpScreen(tester, tools: true);
+    await tester.tap(find.byTooltip('Unit converter'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Length opens on kilometre → mile; one notch up moves past kilometre.
+    final from = find.bySemanticsLabel(RegExp(r'^Kilometre\. Change unit'));
+    expect(from, findsOneWidget);
+    await tester.drag(from, const Offset(0, -60));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(from, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

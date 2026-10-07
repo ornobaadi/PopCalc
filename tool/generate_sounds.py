@@ -212,9 +212,6 @@ def pack_pop(rng):
     mix(err, bloop(note_hz(2), dur=0.14, drop=0.3, decay=0.06, shape='tri'))
     mix(err, bloop(note_hz(1), dur=0.18, drop=0.3, decay=0.07, shape='tri'), at=int(0.12 * SR))
     s['error'] = normalize(err, 0.6)
-    s.update(advanced_sounds(
-        lambda st, dur, decay: bloop(note_hz(st), dur=dur, drop=0.5, decay=decay),
-        random.Random(101), lambda dur, r: whoosh(dur, r, 1800, 7000)))
     return s
 
 
@@ -239,9 +236,6 @@ def pack_mellow(rng):
     mix(err, marimba(note_hz(-6), dur=0.35, decay=0.1))
     mix(err, marimba(note_hz(-7), dur=0.35, decay=0.1), at=int(0.14 * SR))
     s['error'] = normalize(err, 0.6)
-    s.update(advanced_sounds(
-        lambda st, dur, decay: marimba(note_hz(st - 5), dur=dur * 2, decay=decay * 2.2),
-        random.Random(102), lambda dur, r: whoosh(dur, r, 1200, 4500)))
     return s
 
 
@@ -272,97 +266,33 @@ def pack_typewriter(rng):
     mix(err, key(900, weight=2.0))
     mix(err, key(860, weight=2.0), at=int(0.1 * SR))
     s['error'] = normalize(err, 0.55)
-
-    # Typewriter keeps its mechanics: pitched key strikes, the carriage
-    # bell for constants, and a platen ratchet for swaps.
-    def strike(st, dur, decay):
-        return key(1100 * 2 ** (st / 24))
-
-    def ratchet(dur, r):
-        out = []
-        for k in range(int(dur / 0.025)):
-            mix(out, noise_burst(0.02, 0.004, r, hp=2500), at=int(k * 0.025 * SR))
-        return out
-
-    adv = advanced_sounds(strike, rng, ratchet)
-    bell_ping = key(1500)
-    mix(bell_ping, [v * 0.7 for v in bell(2637, dur=0.5, decay=0.15)], at=int(0.02 * SR))
-    adv['constant'] = normalize(bell_ping, 0.5)
-    s.update(adv)
     return s
 
 
-# ─── Advanced mode (scientific keys + unit converter) ─────────────────────────
-# Shared shapes, voiced per pack. Each gesture has a musical meaning:
-# openers rise and closers fall, powers slide up, constants sparkle, 2nd
-# and the mode switch play mirrored up/down figures, and swap flips two
-# notes around a whoosh. Category taps are one note the app re-pitches
-# along the pentatonic scale, so scrolling the tabs plays a little run.
+# ─── Shared sounds ────────────────────────────────────────────────────────────
+# Played the same whichever pack is chosen.
+#   launch.wav  the typewriter carriage-return "skrr" (its clear sound)
+#   detent.wav  one notch of a swipe-to-step control, like a slider
+#               clicking into place
 
-def advanced_sounds(tone, rng, air):
-    """[tone](semitone, dur, decay) is the pack's voice; [air] its texture."""
-    s = {}
-    fn = []
-    mix(fn, tone(12, 0.09, 0.03))
-    mix(fn, [v * 0.8 for v in tone(19, 0.12, 0.04)], at=int(0.04 * SR))
-    s['function'] = normalize(fn, 0.5)
+def detent(rng):
+    tick = noise_burst(0.018, 0.0025, rng, hp=2500, lp=9000)
+    mix(tick, [v * 0.6 for v in resonant_click(2300, 0.018, 0.003)])
+    mix(tick, [v * 0.35 for v in resonant_click(720, 0.025, 0.006)])
+    m = max(abs(v) for v in tick)
+    return [v / m * 0.6 for v in tick]
 
-    s['bracket_open'] = normalize(mix(tone(7, 0.06, 0.02),
-                                      [v * 0.7 for v in tone(14, 0.08, 0.03)], at=int(0.025 * SR)), 0.45)
-    s['bracket_close'] = normalize(mix(tone(14, 0.06, 0.02),
-                                       [v * 0.7 for v in tone(7, 0.08, 0.03)], at=int(0.025 * SR)), 0.45)
-
-    sparkle = tone(24, 0.25, 0.07)
-    mix(sparkle, [v * 0.45 for v in tone(31, 0.25, 0.06)], at=int(0.03 * SR))
-    mix(sparkle, [v * 0.25 for v in tone(36, 0.2, 0.05)], at=int(0.06 * SR))
-    s['constant'] = normalize(sparkle, 0.5)
-
-    pw = []
-    for k, st in enumerate([0, 7, 12, 19]):
-        mix(pw, [v * (0.55 + 0.15 * k) for v in tone(st, 0.08, 0.025)], at=int(k * 0.022 * SR))
-    s['power'] = normalize(pw, 0.5)
-
-    s['shift_on'] = normalize(mix(tone(14, 0.05, 0.015),
-                                  tone(21, 0.07, 0.025), at=int(0.035 * SR)), 0.42)
-    s['shift_off'] = normalize(mix(tone(21, 0.05, 0.015),
-                                   tone(14, 0.07, 0.025), at=int(0.035 * SR)), 0.42)
-
-    mode_on, mode_off = [], []
-    for k, st in enumerate([0, 7, 12, 16]):
-        mix(mode_on, [v * (0.6 + 0.12 * k) for v in tone(st, 0.18, 0.06)], at=int(k * 0.045 * SR))
-    for k, st in enumerate([16, 12, 7, 0]):
-        mix(mode_off, [v * (0.95 - 0.12 * k) for v in tone(st, 0.18, 0.06)], at=int(k * 0.045 * SR))
-    s['mode_on'] = normalize(mode_on, 0.55)
-    s['mode_off'] = normalize(mode_off, 0.5)
-
-    sw = [v * 0.5 for v in air(0.22, rng)]
-    mix(sw, tone(12, 0.1, 0.035), at=int(0.02 * SR))
-    mix(sw, tone(7, 0.14, 0.05), at=int(0.11 * SR))
-    s['swap'] = normalize(sw, 0.5)
-
-    s['category'] = normalize(tone(12, 0.06, 0.018), 0.38)
-
-    pick = []
-    mix(pick, tone(7, 0.08, 0.025))
-    mix(pick, tone(12, 0.14, 0.05), at=int(0.05 * SR))
-    s['unit_pick'] = normalize(pick, 0.45)
-    return s
-
-
-# ─── Launch sound ─────────────────────────────────────────────────────────────
-# PopCalc's launch sound is the typewriter carriage-return "skrr" (the
-# typewriter pack's clear sound), played for every pack.
 
 def main():
     rng = random.Random(42)
     for name, builder in [('pop', pack_pop), ('mellow', pack_mellow), ('typewriter', pack_typewriter)]:
-        sounds = builder(rng)
-        for sfx, buf in sounds.items():
+        for sfx, buf in builder(rng).items():
             write_wav(os.path.join(ROOT, name, f'{sfx}.wav'), fade_edges(buf))
-        if name == 'typewriter':
-            shutil.copyfile(os.path.join(ROOT, name, 'clear.wav'),
-                            os.path.join(ROOT, 'launch.wav'))
         print(f'pack {name}: done')
+    shutil.copyfile(os.path.join(ROOT, 'typewriter', 'clear.wav'),
+                    os.path.join(ROOT, 'launch.wav'))
+    write_wav(os.path.join(ROOT, 'detent.wav'), fade_edges(detent(random.Random(9)), ms=1))
+    print('shared sounds: done')
 
 
 if __name__ == '__main__':

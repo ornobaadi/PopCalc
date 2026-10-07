@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
@@ -55,7 +54,6 @@ class TopBar extends ConsumerWidget {
                     active: scientificActive,
                     onChanged: (on) {
                       AppHaptics.mode(on);
-                      AppSounds.mode(on);
                       ref
                           .read(settingsProvider.notifier)
                           .setScientificActive(on);

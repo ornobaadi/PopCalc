@@ -71,13 +71,12 @@ class ConverterScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = ThemeColors.of(ref.watch(themeProvider));
 
-    // Leaving plays the mirror of the open sound, whether by the back
-    // button or the system back gesture.
+    // Leaving mirrors the open haptic, whether by the back button or the
+    // system back gesture.
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) return;
         AppHaptics.mode(false);
-        AppSounds.mode(false);
       },
       child: Scaffold(
         backgroundColor: colors.bg,
@@ -188,6 +187,36 @@ class _CategoryTabs extends ConsumerStatefulWidget {
 class _CategoryTabsState extends ConsumerState<_CategoryTabs> {
   final _keys = {for (final c in Units.categories) c.id: GlobalKey()};
 
+  /// Swiping the strip clicks like a slider: one detent per tab's worth of
+  /// travel, and a bump at either end. Only the user's own swipes (and
+  /// their fling) click, not the strip centring itself on a new tab.
+  static const _notch = 64.0;
+  bool _userScroll = false;
+  double _travel = 0.0;
+  bool _hitEnd = false;
+
+  bool _onScroll(ScrollNotification n) {
+    if (n is ScrollStartNotification) {
+      _userScroll = n.dragDetails != null;
+      _travel = 0.0;
+      _hitEnd = false;
+    } else if (n is ScrollUpdateNotification && _userScroll) {
+      final delta = n.scrollDelta ?? 0.0;
+      _travel += delta.abs();
+      if (_travel >= _notch) {
+        _travel %= _notch;
+        AppHaptics.detent();
+        AppSounds.detent(up: delta > 0);
+      }
+    } else if (n is OverscrollNotification && _userScroll && !_hitEnd) {
+      _hitEnd = true;
+      AppHaptics.detentEnd();
+    } else if (n is ScrollEndNotification) {
+      _userScroll = false;
+    }
+    return false;
+  }
+
   void _reveal(String id) {
     final ctx = _keys[id]?.currentContext;
     if (ctx == null) return;
@@ -232,63 +261,65 @@ class _CategoryTabsState extends ConsumerState<_CategoryTabs> {
           ],
           stops: [0.0, 0.06, 0.88, 1.0],
         ).createShader(rect),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 22.0),
-          child: Row(
-            children: [
-              for (final (i, category) in Units.categories.indexed)
-                Semantics(
-                  key: _keys[category.id],
-                  button: true,
-                  selected: category.id == selected.id,
-                  label: category.name,
-                  excludeSemantics: true,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      if (category.id == selected.id) return;
-                      AppHaptics.category();
-                      AppSounds.category(i);
-                      ref
-                          .read(converterProvider.notifier)
-                          .selectCategory(category);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 180),
-                            style: _display.copyWith(
-                              fontSize: category.id == selected.id
-                                  ? 21.0
-                                  : 18.0,
-                              letterSpacing: 1.2,
-                              color: category.id == selected.id
-                                  ? colors.ink
-                                  : colors.inkSoft.withValues(alpha: 0.55),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: _onScroll,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 22.0),
+            child: Row(
+              children: [
+                for (final category in Units.categories)
+                  Semantics(
+                    key: _keys[category.id],
+                    button: true,
+                    selected: category.id == selected.id,
+                    label: category.name,
+                    excludeSemantics: true,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        if (category.id == selected.id) return;
+                        AppHaptics.category();
+                        ref
+                            .read(converterProvider.notifier)
+                            .selectCategory(category);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 180),
+                              style: _display.copyWith(
+                                fontSize: category.id == selected.id
+                                    ? 21.0
+                                    : 18.0,
+                                letterSpacing: 1.2,
+                                color: category.id == selected.id
+                                    ? colors.ink
+                                    : colors.inkSoft.withValues(alpha: 0.55),
+                              ),
+                              child: Text(category.name.toUpperCase()),
                             ),
-                            child: Text(category.name.toUpperCase()),
-                          ),
-                          const SizedBox(height: 5.0),
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 220),
-                            curve: Curves.easeOutBack,
-                            width: category.id == selected.id ? 6.0 : 0.0,
-                            height: 6.0,
-                            decoration: BoxDecoration(
-                              color: colors.accent,
-                              shape: BoxShape.circle,
+                            const SizedBox(height: 5.0),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutBack,
+                              width: category.id == selected.id ? 6.0 : 0.0,
+                              height: 6.0,
+                              decoration: BoxDecoration(
+                                color: colors.accent,
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -313,9 +344,12 @@ class _Readout extends ConsumerWidget {
       child: Column(
         children: [
           const SizedBox(height: 6.0),
-          _UnitButton(
+          _UnitDial(
             colors: colors,
             unit: state.from,
+            units: state.category.units,
+            skip: state.to,
+            onChanged: controller.setFrom,
             onTap: () => _UnitSheet.show(
               context,
               colors,
@@ -335,9 +369,12 @@ class _Readout extends ConsumerWidget {
             ),
           ),
           _SwapDivider(colors: colors, onSwap: controller.swap),
-          _UnitButton(
+          _UnitDial(
             colors: colors,
             unit: state.to,
+            units: state.category.units,
+            skip: state.from,
+            onChanged: controller.setTo,
             onTap: () => _UnitSheet.show(
               context,
               colors,
@@ -394,52 +431,141 @@ class _Readout extends ConsumerWidget {
   }
 }
 
-/// "KILOMETRE  KM ⌄" — tap to pick another unit.
-class _UnitButton extends StatelessWidget {
+/// "KILOMETRE  KM ↕": tap to pick from the list, or swipe up and down
+/// across its row to step through the units like a slider, one detent
+/// per unit. The other side's unit is skipped so a swipe never swaps.
+class _UnitDial extends StatefulWidget {
   final ThemeColors colors;
   final Unit unit;
+  final List<Unit> units;
+  final Unit skip;
+  final ValueChanged<Unit> onChanged;
   final VoidCallback onTap;
 
-  const _UnitButton({
+  const _UnitDial({
     required this.colors,
     required this.unit,
+    required this.units,
+    required this.skip,
+    required this.onChanged,
     required this.onTap,
   });
 
   @override
+  State<_UnitDial> createState() => _UnitDialState();
+}
+
+class _UnitDialState extends State<_UnitDial> {
+  static const _notch = 34.0;
+  double _drag = 0.0;
+  bool _atEnd = false;
+  int _direction = 1;
+
+  /// Up the list for a swipe up, down for a swipe down.
+  void _step(int dir) {
+    final units = widget.units;
+    var i = units.indexWhere((u) => u.id == widget.unit.id);
+    do {
+      i += dir;
+    } while (i >= 0 && i < units.length && units[i].id == widget.skip.id);
+    if (i < 0 || i >= units.length) {
+      if (!_atEnd) AppHaptics.detentEnd();
+      _atEnd = true;
+      return;
+    }
+    _atEnd = false;
+    _direction = dir;
+    AppHaptics.detent();
+    AppSounds.detent(up: dir > 0);
+    widget.onChanged(units[i]);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final colors = widget.colors;
+    final unit = widget.unit;
     return Semantics(
       button: true,
       label: '${unit.name}. Change unit',
       excludeSemantics: true,
+      onIncrease: () => _step(1),
+      onDecrease: () => _step(-1),
       child: GestureDetector(
-        onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(14.0, 7.0, 8.0, 7.0),
-          decoration: BoxDecoration(
-            color: colors.ink.withValues(alpha: colors.isDark ? 0.08 : 0.05),
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                unit.name.toUpperCase(),
-                style: _display.copyWith(fontSize: 18.0, color: colors.inkSoft),
+        onTap: widget.onTap,
+        onVerticalDragStart: (_) {
+          _drag = 0.0;
+          _atEnd = false;
+        },
+        onVerticalDragUpdate: (d) {
+          _drag -= d.delta.dy;
+          while (_drag.abs() >= _notch) {
+            final dir = _drag > 0 ? 1 : -1;
+            _drag -= dir * _notch;
+            _step(dir);
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6.0),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(14.0, 7.0, 8.0, 7.0),
+              decoration: BoxDecoration(
+                color: colors.ink.withValues(
+                  alpha: colors.isDark ? 0.08 : 0.05,
+                ),
+                borderRadius: BorderRadius.circular(16.0),
               ),
-              const SizedBox(width: 8.0),
-              Text(
-                unit.symbol,
-                style: _display.copyWith(fontSize: 18.0, color: colors.accent),
+              child: ClipRect(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 160),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, anim) {
+                    final incoming = child.key == ValueKey(unit.id);
+                    final from = 0.6 * _direction * (incoming ? 1 : -1);
+                    return SlideTransition(
+                      position: Tween(
+                        begin: Offset(0.0, from),
+                        end: Offset.zero,
+                      ).animate(anim),
+                      child: FadeTransition(opacity: anim, child: child),
+                    );
+                  },
+                  layoutBuilder: (current, previous) => Stack(
+                    alignment: Alignment.center,
+                    children: [...previous, ?current],
+                  ),
+                  child: Row(
+                    key: ValueKey(unit.id),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        unit.name.toUpperCase(),
+                        style: _display.copyWith(
+                          fontSize: 18.0,
+                          color: colors.inkSoft,
+                        ),
+                      ),
+                      const SizedBox(width: 8.0),
+                      Text(
+                        unit.symbol,
+                        style: _display.copyWith(
+                          fontSize: 18.0,
+                          color: colors.accent,
+                        ),
+                      ),
+                      const SizedBox(width: 2.0),
+                      Icon(
+                        Icons.unfold_more_rounded,
+                        color: colors.inkSoft,
+                        size: 18.0,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(width: 2.0),
-              Icon(
-                Icons.expand_more_rounded,
-                color: colors.inkSoft,
-                size: 18.0,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -481,7 +607,6 @@ class _SwapDividerState extends State<_SwapDivider> {
             child: GestureDetector(
               onTapDown: (_) {
                 AppHaptics.swap();
-                AppSounds.swap();
                 setState(() => _pressed = true);
               },
               onTapCancel: () => setState(() => _pressed = false),
@@ -593,7 +718,6 @@ class _UnitSheet {
                         selected: unit.id == current.id,
                         onTap: () {
                           AppHaptics.unitPick();
-                          AppSounds.unitPick();
                           onPick(unit);
                           Navigator.of(sheetContext).pop();
                         },
@@ -766,7 +890,7 @@ class _ConverterKeypad extends ConsumerWidget {
               fontSize: 28.0,
               semanticLabel: 'Use the calculator answer',
               haptic: AppHaptics.constant,
-              sound: AppSounds.constant,
+              sound: AppSounds.utility,
               onTap: () {
                 final calc = ref.read(calculatorProvider);
                 if (calc.error == null) c.loadValue(calc.resultText);

@@ -167,6 +167,15 @@ class AppHaptics {
   static void unitPick() =>
       _play(const [_Hit('click', 0.7)], HapticFeedback.lightImpact);
 
+  /// One notch of a swipe-to-step control (units, categories): a crisp
+  /// tick, like a slider clicking into place.
+  static void detent() =>
+      _play(const [_Hit('tick', 0.85)], HapticFeedback.selectionClick);
+
+  /// Swiped past the last notch: a soft bump against the end stop.
+  static void detentEnd() =>
+      _play(const [_Hit('thud', 0.5)], HapticFeedback.lightImpact);
+
   // ─── Results ───────────────────────────────────────────────────────────────
 
   /// Answer lands: a rising swell into a strong click and a sparkle tick,

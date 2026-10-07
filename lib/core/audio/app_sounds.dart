@@ -35,32 +35,12 @@ enum Sfx {
   backspace,
   clear,
   success,
-  error,
-  // Scientific keys
-  function,
-  bracketOpen,
-  bracketClose,
-  constant,
-  power,
-  shiftOn,
-  shiftOff,
-  // Mode switches (scientific tray, converter screen)
-  modeOn,
-  modeOff,
-  // Unit converter
-  swap,
-  category,
-  unitPick;
+  error;
 
   bool get isDigit => index <= 9;
 
-  /// File name: "digit_3", "bracket_open", ...
-  String get file => isDigit
-      ? 'digit_$index'
-      : name.replaceAllMapped(
-          RegExp('[A-Z]'),
-          (m) => '_${m[0]!.toLowerCase()}',
-        );
+  /// File name: "digit_3", "clear", ...
+  String get file => isDigit ? 'digit_$index' : name;
 
   static Sfx digit(String d) => Sfx.values[int.parse(d)];
 }
@@ -84,6 +64,11 @@ class AppSounds {
   /// PopCalc's launch sound (the typewriter "skrr"), used for every pack.
   static AudioSource? _launch;
   static DateTime? _launchPendingAt;
+
+  /// Mechanical detent tick for swipe-to-step controls: one sound for
+  /// every pack, like a slider clicking into notches.
+  static AudioSource? _detent;
+  static DateTime _lastDetent = DateTime(0);
 
   /// A sound requested before it finished loading.
   /// Played as soon as it's ready, unless it has gone stale.
@@ -137,6 +122,9 @@ class AppSounds {
       if (at != null && DateTime.now().difference(at) <= _pendingTtl) {
         launch();
       }
+    } catch (_) {}
+    try {
+      _detent = await SoLoud.instance.loadAsset('assets/sounds/detent.wav');
     } catch (_) {}
     final order = [_pack, ...SoundPack.values.where((p) => p != _pack)];
     for (final pack in order) {
@@ -198,10 +186,7 @@ class AppSounds {
   /// Small random pitch drift keeps repeated non-melodic sounds from feeling
   /// robotic. Digits stay exact so typing still plays a clean melody.
   static double _pitchFor(Sfx sfx) {
-    if (sfx.isDigit ||
-        sfx == Sfx.success ||
-        sfx == Sfx.modeOn ||
-        sfx == Sfx.modeOff) {
+    if (sfx.isDigit || sfx == Sfx.success) {
       return 1.0;
     }
     if (sfx == Sfx.backspace) {
@@ -225,12 +210,20 @@ class AppSounds {
 
   /// Plays [sfx] [semitones] away from its recorded pitch, with no drift,
   /// so a series of taps can walk a scale.
-  static void playNote(Sfx sfx, int semitones) {
+  /// One notch of a swipe-to-step control. Stepping up clicks a touch
+  /// higher than stepping down; fast swipes are thinned out so the ticks
+  /// never blur into a buzz.
+  static void detent({bool up = true}) {
     if (!_canPlay) return;
-    final source = _sources[_pack]?[sfx];
-    if (source != null) {
-      _playSource(source, pitch: pow(2, semitones / 12).toDouble());
-    }
+    final source = _detent;
+    if (source == null) return;
+    final now = DateTime.now();
+    if (now.difference(_lastDetent) < const Duration(milliseconds: 40)) return;
+    _lastDetent = now;
+    _playSource(
+      source,
+      pitch: (up ? 1.05 : 0.95) + (_random.nextDouble() - 0.5) * 0.04,
+    );
   }
 
   /// Like [play], but if the sound is still loading (e.g. at app launch),
@@ -283,26 +276,4 @@ class AppSounds {
   static void clear() => play(Sfx.clear);
   static void success() => play(Sfx.success);
   static void error() => play(Sfx.error);
-
-  // Scientific keys
-  static void function() => play(Sfx.function);
-  static void bracketOpen() => play(Sfx.bracketOpen);
-  static void bracketClose() => play(Sfx.bracketClose);
-  static void constant() => play(Sfx.constant);
-  static void power() => play(Sfx.power);
-  static void shift(bool on) => play(on ? Sfx.shiftOn : Sfx.shiftOff);
-
-  /// Entering (on) or leaving (off) the scientific tray or converter.
-  static void mode(bool on) => play(on ? Sfx.modeOn : Sfx.modeOff);
-
-  // Unit converter
-  static void swap() => play(Sfx.swap);
-  static void unitPick() => play(Sfx.unitPick);
-
-  /// Category tabs walk the pentatonic scale left to right, so moving
-  /// across them plays a tiny run.
-  static void category(int index) {
-    const penta = [0, 2, 4, 7, 9];
-    playNote(Sfx.category, penta[index % 5] + 12 * (index ~/ 5) - 5);
-  }
 }

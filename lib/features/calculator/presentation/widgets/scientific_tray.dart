@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/engine/token.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
@@ -31,7 +30,6 @@ class _ScientificTrayState extends ConsumerState<ScientificTray> {
     final settings = ref.read(settingsProvider);
     if (settings.scientificExpanded == value) return;
     AppHaptics.shift(value);
-    AppSounds.shift(value);
     ref.read(settingsProvider.notifier).setScientificExpanded(value);
   }
 
@@ -274,26 +272,24 @@ class _ScientificTrayState extends ConsumerState<ScientificTray> {
   }
 }
 
-/// How a key sounds and feels: openers rise, closers fall, powers step
-/// up, constants sparkle, and 2nd climbs or drops with its state.
+/// How a key feels: openers rise, closers fall, powers step up,
+/// constants sparkle, and 2nd climbs or drops with its state. The tray is
+/// touch-only: sound stays with the main keypad.
 enum _Feel {
-  function(AppHaptics.function, AppSounds.function),
-  bracketOpen(AppHaptics.bracketOpen, AppSounds.bracketOpen),
-  bracketClose(AppHaptics.bracketClose, AppSounds.bracketClose),
-  constant(AppHaptics.constant, AppSounds.constant),
-  power(AppHaptics.power, AppSounds.power),
-  shiftOn(_shiftOnHaptic, _shiftOnSound),
-  shiftOff(_shiftOffHaptic, _shiftOffSound);
+  function(AppHaptics.function),
+  bracketOpen(AppHaptics.bracketOpen),
+  bracketClose(AppHaptics.bracketClose),
+  constant(AppHaptics.constant),
+  power(AppHaptics.power),
+  shiftOn(_shiftOnHaptic),
+  shiftOff(_shiftOffHaptic);
 
   final void Function() haptic;
-  final void Function() sound;
-  const _Feel(this.haptic, this.sound);
+  const _Feel(this.haptic);
 }
 
 void _shiftOnHaptic() => AppHaptics.shift(true);
 void _shiftOffHaptic() => AppHaptics.shift(false);
-void _shiftOnSound() => AppSounds.shift(true);
-void _shiftOffSound() => AppSounds.shift(false);
 
 /// Grab handle along the tray's top edge.
 class _Handle extends StatelessWidget {
@@ -376,11 +372,6 @@ class _TrayKeyState extends State<_TrayKey> {
 
   void _down(TapDownDetails details) {
     widget.feel.haptic();
-    final width = MediaQuery.sizeOf(context).width;
-    final pan = width > 0
-        ? (details.globalPosition.dx / width - 0.5) * 0.6
-        : 0.0;
-    AppSounds.panned(pan, widget.feel.sound);
     setState(() => _pressed = true);
   }
 

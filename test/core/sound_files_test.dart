@@ -13,14 +13,8 @@ void main() {
     }
   });
 
-  test('the launch sound ships outside the packs', () {
+  test('shared sounds ship outside the packs', () {
     expect(File('assets/sounds/launch.wav').existsSync(), isTrue);
-  });
-
-  test('file names are snake_case', () {
-    expect(Sfx.bracketOpen.file, 'bracket_open');
-    expect(Sfx.unitPick.file, 'unit_pick');
-    expect(Sfx.digit3.file, 'digit_3');
-    expect(Sfx.function.file, 'function');
+    expect(File('assets/sounds/detent.wav').existsSync(), isTrue);
   });
 }

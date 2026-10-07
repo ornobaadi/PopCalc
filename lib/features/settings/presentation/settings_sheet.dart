@@ -308,7 +308,6 @@ class SettingsSheet extends ConsumerWidget {
                               value: settings.advancedTools,
                               onChanged: (val) {
                                 AppHaptics.mode(val);
-                                AppSounds.mode(val);
                                 settingsNotifier.setAdvancedTools(val);
                               },
                               activeThumbColor: colors.accent,

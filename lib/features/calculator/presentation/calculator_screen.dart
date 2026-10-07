@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/engine/evaluator.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -94,7 +93,6 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                         colors: colors,
                         onConverterTap: () {
                           AppHaptics.mode(true);
-                          AppSounds.mode(true);
                           setState(() => _resultHighlighted = false);
                           ConverterScreen.open(context);
                         },
@@ -207,7 +205,6 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                                       final toRadians = settings.angleUnit ==
                                           AngleUnit.degrees;
                                       AppHaptics.shift(toRadians);
-                                      AppSounds.shift(toRadians);
                                       ref
                                           .read(settingsProvider.notifier)
                                           .setAngleUnit(
