@@ -31,6 +31,12 @@ class ConverterState {
     return NumberFormatter.format(Units.convert(value, from, to));
   }
 
+  /// One-unit reference line, e.g. "1 km = 0.621371192237334 mi".
+  String get referenceText {
+    final one = NumberFormatter.format(Units.convert(Decimal.one, from, to));
+    return '1 ${from.symbol} = $one ${to.symbol}';
+  }
+
   ConverterState copyWith({
     UnitCategory? category,
     Unit? from,

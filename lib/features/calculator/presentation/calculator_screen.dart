@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:popcalc/core/engine/evaluator.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/features/calculator/application/calculator_controller.dart';
-import 'package:popcalc/features/converter/presentation/converter_view.dart';
+import 'package:popcalc/features/converter/presentation/converter_screen.dart';
 import 'package:popcalc/features/history/presentation/history_sheet.dart';
-
 import 'widgets/celebration_burst.dart';
 import 'widgets/expression_line.dart';
 import 'widgets/grain_overlay.dart';
 import 'widgets/keypad.dart';
 import 'widgets/numeral_animator.dart';
-import 'widgets/scientific_strip.dart';
+import 'widgets/scientific_tray.dart';
 import 'widgets/top_bar.dart';
 
 class CalculatorScreen extends ConsumerStatefulWidget {
@@ -28,9 +28,6 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
   /// When true, the result zone is in "edit/highlight" mode.
   /// The next digit press will replace the entire current number.
   bool _resultHighlighted = false;
-
-  /// Advanced mode: unit converter instead of the calculator.
-  bool _showConverter = false;
 
   void _copyResult(BuildContext context, String text) {
     if (text.isEmpty) return;
@@ -51,8 +48,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
     final colors = ThemeColors.of(themeMode);
     final calcState = ref.watch(calculatorProvider);
     final settings = ref.watch(settingsProvider);
-    final advanced = settings.advancedMode;
-    final showConverter = advanced && _showConverter;
+    final scientific = settings.scientificMode;
 
     // Auto-clear highlight when state changes externally
     if (_resultHighlighted &&
@@ -72,7 +68,10 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                 gradient: RadialGradient(
                   center: const Alignment(0.2, -0.3),
                   radius: 1.3,
-                  colors: [colors.bgShade, colors.bg],
+                  colors: [
+                    colors.bgShade,
+                    colors.bg,
+                  ],
                 ),
               ),
             ),
@@ -92,12 +91,9 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                     RepaintBoundary(
                       child: TopBar(
                         colors: colors,
-                        showConverter: showConverter,
-                        onConverterChanged: (value) {
-                          setState(() {
-                            _showConverter = value;
-                            _resultHighlighted = false;
-                          });
+                        onConverterTap: () {
+                          setState(() => _resultHighlighted = false);
+                          ConverterScreen.open(context);
                         },
                         onHistoryTap: () {
                           AppHaptics.selectionClick();
@@ -115,149 +111,212 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                       ),
                     ),
 
-                    if (showConverter)
-                      Expanded(child: ConverterView(colors: colors)),
-
                     // Expression line with token tapping, square highlight, and conditional preview
-                    if (!showConverter)
-                      RepaintBoundary(
-                        child: ExpressionLine(
-                          expression: calcState.expression,
-                          previewText: calcState.previewText,
-                          colors: colors,
-                          justEvaluated: calcState.justEvaluated,
-                          editingTokenIndex: calcState.editingTokenIndex,
-                          showLivePreview: settings.showLivePreview,
-                          onTokenTap: (index) {
-                            setState(() => _resultHighlighted = false);
-                            ref
-                                .read(calculatorProvider.notifier)
-                                .selectToken(index);
-                          },
-                        ),
+                    RepaintBoundary(
+                      child: ExpressionLine(
+                        expression: calcState.expression,
+                        previewText: calcState.previewText,
+                        colors: colors,
+                        justEvaluated: calcState.justEvaluated,
+                        editingTokenIndex: calcState.editingTokenIndex,
+                        showLivePreview: settings.showLivePreview,
+                        onTokenTap: (index) {
+                          setState(() => _resultHighlighted = false);
+                          ref
+                              .read(calculatorProvider.notifier)
+                              .selectToken(index);
+                        },
                       ),
+                    ),
 
-                    // Hero 3D extruded numeral result zone (~44% of vertical space,
-                    // ~30% when the scientific strip takes its share)
+                    // Hero 3D extruded numeral result zone (~44% of vertical space)
                     // Interactive: users can rotate/move the 3D number in real-time with touch!
-                    if (!showConverter)
-                      Expanded(
-                        flex: advanced ? 30 : 44,
-                        child: RepaintBoundary(
-                          child: Container(
-                            width: double.infinity,
+                    // With the scientific tray open the keypad keeps its
+                    // finger-sized rows and the answer gives up the room.
+                    Expanded(
+                      flex: !scientific
+                          ? 44
+                          : settings.scientificExpanded
+                              ? 24
+                              : 34,
+                      child: RepaintBoundary(
+                        child: Container(
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                          child: Stack(
                             alignment: Alignment.center,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20.0,
-                            ),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              clipBehavior: Clip.none,
-                              children: [
-                                // Speed-line burst behind the answer
-                                Positioned.fill(
-                                  left: -40,
-                                  right: -40,
-                                  child: CelebrationBurst(
-                                    trigger: calcState.celebrationId,
-                                    color: colors.burst,
+                            clipBehavior: Clip.none,
+                            children: [
+                              // Speed-line burst behind the answer
+                              Positioned.fill(
+                                left: -40,
+                                right: -40,
+                                child: CelebrationBurst(
+                                  trigger: calcState.celebrationId,
+                                  color: colors.burst,
+                                ),
+                              ),
+                              AnimatedExtrudedNumber(
+                                text: calcState.resultText,
+                                isEvaluated: calcState.justEvaluated,
+                                hasError: calcState.error != null,
+                                colors: colors,
+                                isLite: settings.liteMode,
+                                isZero: calcState.isZeroState,
+                                celebrationId: calcState.celebrationId,
+                                onTap: () {
+                                  if (calcState.editingTokenIndex != null) {
+                                    ref
+                                        .read(calculatorProvider.notifier)
+                                        .deselectToken();
+                                  } else {
+                                    AppHaptics.selectionClick();
+                                    setState(() {
+                                      _resultHighlighted = !_resultHighlighted;
+                                    });
+                                  }
+                                },
+                                onLongPress: () {
+                                  setState(() => _resultHighlighted = false);
+                                  _copyResult(context, calcState.resultText);
+                                },
+                              ),
+                              // Angle unit badge, display-corner style
+                              if (scientific)
+                                Positioned(
+                                  top: 6,
+                                  left: 0,
+                                  child: _AngleBadge(
+                                    colors: colors,
+                                    unit: settings.angleUnit,
+                                    onTap: () {
+                                      AppHaptics.selectionClick();
+                                      ref
+                                          .read(settingsProvider.notifier)
+                                          .setAngleUnit(
+                                            settings.angleUnit ==
+                                                    AngleUnit.degrees
+                                                ? AngleUnit.radians
+                                                : AngleUnit.degrees,
+                                          );
+                                    },
                                   ),
                                 ),
-                                AnimatedExtrudedNumber(
-                                  text: calcState.resultText,
-                                  isEvaluated: calcState.justEvaluated,
-                                  hasError: calcState.error != null,
-                                  colors: colors,
-                                  isLite: settings.liteMode,
-                                  isZero: calcState.isZeroState,
-                                  celebrationId: calcState.celebrationId,
-                                  onTap: () {
-                                    if (calcState.editingTokenIndex != null) {
-                                      ref
-                                          .read(calculatorProvider.notifier)
-                                          .deselectToken();
-                                    } else {
-                                      AppHaptics.selectionClick();
-                                      setState(() {
-                                        _resultHighlighted =
-                                            !_resultHighlighted;
-                                      });
-                                    }
-                                  },
-                                  onLongPress: () {
-                                    setState(() => _resultHighlighted = false);
-                                    _copyResult(context, calcState.resultText);
-                                  },
-                                ),
-                                // Highlight overlay when in whole-result edit mode
-                                if (_resultHighlighted)
-                                  Positioned.fill(
-                                    child: IgnorePointer(
-                                      child: AnimatedContainer(
-                                        duration: const Duration(
-                                          milliseconds: 160,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: colors.accent.withValues(
-                                            alpha: 0.12,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                        ),
+                              // Highlight overlay when in whole-result edit mode
+                              if (_resultHighlighted)
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 160),
+                                      decoration: BoxDecoration(
+                                        color: colors.accent
+                                            .withValues(alpha: 0.12),
+                                        borderRadius:
+                                            BorderRadius.circular(16),
                                       ),
                                     ),
                                   ),
-                              ],
-                            ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
+                    ),
 
-                    // Scientific keys (Advanced mode)
-                    if (advanced && !showConverter)
-                      Expanded(
-                        flex: 16,
+                    // Scientific keys (Settings > Scientific Calculator)
+                    if (scientific)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(18.0, 0.0, 18.0, 6.0),
                         child: RepaintBoundary(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24.0,
-                            ),
-                            child: ScientificStrip(colors: colors),
-                          ),
+                          child: ScientificTray(colors: colors),
                         ),
                       ),
 
                     // Tactile Keypad (~52% of vertical space)
-                    if (!showConverter)
-                      Expanded(
-                        flex: 52,
-                        child: RepaintBoundary(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              24.0,
-                              0.0,
-                              24.0,
-                              20.0,
-                            ),
-                            child: Keypad(
-                              colors: colors,
-                              highlightMode:
-                                  _resultHighlighted ||
-                                  calcState.editingTokenIndex != null,
-                              onHighlightConsumed: () {
-                                setState(() => _resultHighlighted = false);
-                              },
-                            ),
+                    Expanded(
+                      flex: 52,
+                      child: RepaintBoundary(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                              24.0, 0.0, 24.0, 20.0),
+                          child: Keypad(
+                            colors: colors,
+                            highlightMode: _resultHighlighted ||
+                                calcState.editingTokenIndex != null,
+                            onHighlightConsumed: () {
+                              setState(() => _resultHighlighted = false);
+                            },
                           ),
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// DEG / RAD indicator in the display's corner; tap to switch.
+class _AngleBadge extends StatelessWidget {
+  final ThemeColors colors;
+  final AngleUnit unit;
+  final VoidCallback onTap;
+
+  const _AngleBadge({
+    required this.colors,
+    required this.unit,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDeg = unit == AngleUnit.degrees;
+    return Semantics(
+      button: true,
+      label: isDeg
+          ? 'Angles in degrees. Tap for radians'
+          : 'Angles in radians. Tap for degrees',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 160),
+            transitionBuilder: (child, anim) =>
+                FadeTransition(opacity: anim, child: child),
+            child: Container(
+              key: ValueKey(isDeg),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 9.0, vertical: 4.0),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: colors.accent.withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              child: Text(
+                isDeg ? 'DEG' : 'RAD',
+                style: TextStyle(
+                  fontFamily: 'BebasNeue',
+                  fontSize: 15.0,
+                  letterSpacing: 1.2,
+                  height: 1.0,
+                  color: colors.accent,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

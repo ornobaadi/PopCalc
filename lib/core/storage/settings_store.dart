@@ -12,8 +12,12 @@ class AppSettings {
   final bool soundEnabled;
   final double soundVolume;
   final SoundPack soundPack;
-  /// Unlocks the scientific keys and the unit converter.
-  final bool advancedMode;
+  /// Shows the scientific key tray on the calculator.
+  final bool scientificMode;
+  /// Whether the scientific tray shows both rows or just the first.
+  final bool scientificExpanded;
+  /// Adds the unit converter screen, opened from the top bar.
+  final bool converterEnabled;
   final AngleUnit angleUnit;
 
   const AppSettings({
@@ -24,7 +28,9 @@ class AppSettings {
     this.soundEnabled = true,
     this.soundVolume = 0.5,
     this.soundPack = SoundPack.pop,
-    this.advancedMode = false,
+    this.scientificMode = false,
+    this.scientificExpanded = true,
+    this.converterEnabled = false,
     this.angleUnit = AngleUnit.degrees,
   });
 
@@ -36,7 +42,9 @@ class AppSettings {
     bool? soundEnabled,
     double? soundVolume,
     SoundPack? soundPack,
-    bool? advancedMode,
+    bool? scientificMode,
+    bool? scientificExpanded,
+    bool? converterEnabled,
     AngleUnit? angleUnit,
   }) {
     return AppSettings(
@@ -47,7 +55,9 @@ class AppSettings {
       soundEnabled: soundEnabled ?? this.soundEnabled,
       soundVolume: soundVolume ?? this.soundVolume,
       soundPack: soundPack ?? this.soundPack,
-      advancedMode: advancedMode ?? this.advancedMode,
+      scientificMode: scientificMode ?? this.scientificMode,
+      scientificExpanded: scientificExpanded ?? this.scientificExpanded,
+      converterEnabled: converterEnabled ?? this.converterEnabled,
       angleUnit: angleUnit ?? this.angleUnit,
     );
   }
@@ -72,7 +82,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   // key resets test builds that saved the old louder default.
   static const _kSoundVolume = 'settings_sound_volume_v2';
   static const _kSoundPack = 'settings_sound_pack';
-  static const _kAdvancedMode = 'settings_advanced_mode';
+  static const _kScientificMode = 'settings_scientific_mode';
+  static const _kScientificExpanded = 'settings_scientific_expanded';
+  static const _kConverterEnabled = 'settings_converter_enabled';
   static const _kAngleUnit = 'settings_angle_unit';
 
   /// Starts the sound engine with saved settings before the first frame,
@@ -101,7 +113,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         soundEnabled: prefs.getBool(_kSoundEnabled) ?? true,
         soundVolume: prefs.getDouble(_kSoundVolume) ?? 0.5,
         soundPack: SoundPack.fromName(prefs.getString(_kSoundPack)),
-        advancedMode: prefs.getBool(_kAdvancedMode) ?? false,
+        scientificMode: prefs.getBool(_kScientificMode) ?? false,
+        scientificExpanded: prefs.getBool(_kScientificExpanded) ?? true,
+        converterEnabled: prefs.getBool(_kConverterEnabled) ?? false,
         angleUnit: AngleUnit.fromName(prefs.getString(_kAngleUnit)),
       );
       AppHaptics.enabled = state.hapticsEnabled;
@@ -180,9 +194,19 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     } catch (_) {}
   }
 
-  Future<void> setAdvancedMode(bool value) async {
-    state = state.copyWith(advancedMode: value);
-    await _persist((p) => p.setBool(_kAdvancedMode, value));
+  Future<void> setScientificMode(bool value) async {
+    state = state.copyWith(scientificMode: value);
+    await _persist((p) => p.setBool(_kScientificMode, value));
+  }
+
+  Future<void> setScientificExpanded(bool value) async {
+    state = state.copyWith(scientificExpanded: value);
+    await _persist((p) => p.setBool(_kScientificExpanded, value));
+  }
+
+  Future<void> setConverterEnabled(bool value) async {
+    state = state.copyWith(converterEnabled: value);
+    await _persist((p) => p.setBool(_kConverterEnabled, value));
   }
 
   Future<void> setAngleUnit(AngleUnit unit) async {

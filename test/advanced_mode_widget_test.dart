@@ -4,8 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popcalc/features/calculator/presentation/calculator_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<void> pumpScreen(WidgetTester tester, {required bool advanced}) async {
-  SharedPreferences.setMockInitialValues({'settings_advanced_mode': advanced});
+Future<void> pumpScreen(
+  WidgetTester tester, {
+  bool scientific = false,
+  bool converter = false,
+}) async {
+  SharedPreferences.setMockInitialValues({
+    'settings_scientific_mode': scientific,
+    'settings_converter_enabled': converter,
+  });
   tester.view.physicalSize = const Size(1080, 2340); // 360 × 780 dp phone
   tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);
@@ -24,19 +31,19 @@ Future<void> tapKey(WidgetTester tester, String label) async {
 }
 
 void main() {
-  testWidgets('Advanced mode off: no scientific keys or mode toggle',
-      (tester) async {
-    await pumpScreen(tester, advanced: false);
+  testWidgets('Both off: plain calculator', (tester) async {
+    await pumpScreen(tester);
     expect(find.text('sin'), findsNothing);
-    expect(find.text('CONVERT'), findsNothing);
     expect(find.text('DEG'), findsNothing);
+    expect(find.byTooltip('Unit converter'), findsNothing);
     expect(find.text('7'), findsOneWidget);
   });
 
-  testWidgets('Advanced mode on: scientific keys evaluate', (tester) async {
-    await pumpScreen(tester, advanced: true);
+  testWidgets('Scientific on: tray keys evaluate', (tester) async {
+    await pumpScreen(tester, scientific: true);
     expect(find.text('sin'), findsOneWidget);
     expect(find.text('DEG'), findsOneWidget);
+    expect(find.byTooltip('Unit converter'), findsNothing);
 
     await tapKey(tester, 'sin');
     await tapKey(tester, '3');
@@ -45,18 +52,36 @@ void main() {
     await tapKey(tester, '=');
     expect(find.text('sin('), findsOneWidget);
 
-    // 2nd flips the row to inverses
-    await tapKey(tester, '2nd');
+    // 2nd flips the keys to inverses
+    await tester.tap(find.bySemanticsLabel('Second functions'));
+    await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('-1'), findsNWidgets(3));
+
+    // DEG badge switches to radians
+    await tapKey(tester, 'DEG');
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('RAD'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Convert tab shows the unit converter', (tester) async {
-    await pumpScreen(tester, advanced: true);
-    await tapKey(tester, 'CONVERT');
-    expect(find.text('LENGTH'), findsOneWidget);
-    expect(find.text('ANS'), findsOneWidget);
+  testWidgets('Tray handle folds the second row away', (tester) async {
+    await pumpScreen(tester, scientific: true);
+    expect(find.text('log'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('Show fewer scientific keys'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('log'), findsNothing);
+    expect(find.text('π'), findsOneWidget);
+  });
+
+  testWidgets('Converter on: opens its own screen', (tester) async {
+    await pumpScreen(tester, converter: true);
     expect(find.text('sin'), findsNothing);
+    await tester.tap(find.byTooltip('Unit converter'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(find.text('CONVERT'), findsOneWidget);
+    expect(find.text('ANS'), findsOneWidget);
 
     await tapKey(tester, '1');
     await tapKey(tester, '0');
@@ -65,10 +90,13 @@ void main() {
     await tester.ensureVisible(find.text('TEMP'));
     await tester.pump();
     await tapKey(tester, 'TEMP');
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('50'), findsOneWidget); // 10 °C in °F
 
-    await tapKey(tester, 'CALC');
-    expect(find.text('sin'), findsOneWidget);
+    await tester.tap(find.byTooltip('Back to calculator'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('CONVERT'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }
