@@ -35,12 +35,31 @@ enum Sfx {
   backspace,
   clear,
   success,
-  error;
+  error,
+  // Scientific keys: one figure per kind of key
+  trig,
+  log,
+  power,
+  root,
+  bracketOpen,
+  bracketClose,
+  constant,
+  factorial,
+  shiftOn,
+  shiftOff;
 
   bool get isDigit => index <= 9;
 
-  /// File name: "digit_3", "clear", ...
-  String get file => isDigit ? 'digit_$index' : name;
+  /// Short melodic figures that should play at their exact pitch.
+  bool get isMelodic => isDigit || index > Sfx.error.index;
+
+  /// File name: "digit_3", "bracket_open", ...
+  String get file => isDigit
+      ? 'digit_$index'
+      : name.replaceAllMapped(
+          RegExp('[A-Z]'),
+          (m) => '_${m[0]!.toLowerCase()}',
+        );
 
   static Sfx digit(String d) => Sfx.values[int.parse(d)];
 }
@@ -186,7 +205,7 @@ class AppSounds {
   /// Small random pitch drift keeps repeated non-melodic sounds from feeling
   /// robotic. Digits stay exact so typing still plays a clean melody.
   static double _pitchFor(Sfx sfx) {
-    if (sfx.isDigit || sfx == Sfx.success) {
+    if (sfx.isMelodic || sfx == Sfx.success) {
       return 1.0;
     }
     if (sfx == Sfx.backspace) {

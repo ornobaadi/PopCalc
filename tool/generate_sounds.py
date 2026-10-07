@@ -212,6 +212,8 @@ def pack_pop(rng):
     mix(err, bloop(note_hz(2), dur=0.14, drop=0.3, decay=0.06, shape='tri'))
     mix(err, bloop(note_hz(1), dur=0.18, drop=0.3, decay=0.07, shape='tri'), at=int(0.12 * SR))
     s['error'] = normalize(err, 0.6)
+    s.update(scientific_sounds(
+        lambda st, dur, decay: bloop(note_hz(st), dur=dur, drop=0.5, decay=decay)))
     return s
 
 
@@ -236,6 +238,8 @@ def pack_mellow(rng):
     mix(err, marimba(note_hz(-6), dur=0.35, decay=0.1))
     mix(err, marimba(note_hz(-7), dur=0.35, decay=0.1), at=int(0.14 * SR))
     s['error'] = normalize(err, 0.6)
+    s.update(scientific_sounds(
+        lambda st, dur, decay: marimba(note_hz(st - 5), dur=dur * 2, decay=decay * 2)))
     return s
 
 
@@ -266,6 +270,42 @@ def pack_typewriter(rng):
     mix(err, key(900, weight=2.0))
     mix(err, key(860, weight=2.0), at=int(0.1 * SR))
     s['error'] = normalize(err, 0.55)
+    # Pitched key strikes; π and e ring the carriage bell.
+    sci = scientific_sounds(lambda st, dur, decay: key(1100 * 2 ** (st / 24)))
+    ping = key(1500)
+    mix(ping, [v * 0.7 for v in bell(2637, dur=0.5, decay=0.15)], at=int(0.02 * SR))
+    sci['constant'] = normalize(ping, 0.5)
+    s.update(sci)
+    return s
+
+
+# ─── Scientific keys ──────────────────────────────────────────────────────────
+# One short figure per kind of key, voiced by each pack, so the tray is
+# readable by ear: trig waves up and back, logs settle on a calm interval,
+# powers climb, roots step down, brackets open upward and close downward,
+# constants sparkle, ! knocks three times, and 2nd climbs or drops.
+
+def scientific_sounds(tone):
+    """[tone](semitone, dur, decay) is the pack's voice."""
+    def seq(notes, gap, dur=0.09, decay=0.03):
+        out = []
+        for k, (st, level) in enumerate(notes):
+            mix(out, [v * level for v in tone(st, dur, decay)], at=int(k * gap * SR))
+        return out
+
+    s = {}
+    s['trig'] = normalize(seq([(7, 0.8), (14, 1.0), (7, 0.7)], 0.034), 0.5)
+    log = tone(0, 0.14, 0.05)
+    mix(log, [v * 0.8 for v in tone(7, 0.14, 0.05)])
+    s['log'] = normalize(log, 0.5)
+    s['power'] = normalize(seq([(7, 0.7), (12, 0.85), (19, 1.0)], 0.028), 0.5)
+    s['root'] = normalize(seq([(19, 1.0), (12, 0.8)], 0.04, dur=0.11, decay=0.035), 0.5)
+    s['bracket_open'] = normalize(seq([(7, 0.75), (12, 1.0)], 0.024, dur=0.07, decay=0.022), 0.48)
+    s['bracket_close'] = normalize(seq([(12, 1.0), (7, 0.75)], 0.024, dur=0.07, decay=0.022), 0.48)
+    s['constant'] = normalize(seq([(24, 1.0), (31, 0.5), (36, 0.3)], 0.03, dur=0.2, decay=0.06), 0.5)
+    s['factorial'] = normalize(seq([(12, 0.6), (12, 0.75), (14, 1.0)], 0.03, dur=0.06, decay=0.018), 0.5)
+    s['shift_on'] = normalize(seq([(14, 0.8), (21, 1.0)], 0.035, dur=0.07, decay=0.022), 0.45)
+    s['shift_off'] = normalize(seq([(21, 1.0), (14, 0.8)], 0.035, dur=0.07, decay=0.022), 0.45)
     return s
 
 

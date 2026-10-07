@@ -10,6 +10,7 @@
 - Smart input: brackets close themselves on `=`, and `2π` or `2(3)` multiply automatically
 - Exact answers for everyday maths. Trig and logs are accurate to 15 digits
 - The second row of keys folds away with the handle when you want more room for the answer
+- Every kind of key has its own sound and feel: trig waves, logs settle, powers climb, roots step down, brackets open and close, constants sparkle
 
 ### 📏 Unit converter
 - A **ruler** button in the top bar opens a clean, dedicated converter screen
@@ -20,7 +21,8 @@
 
 ### 🔊 Sound & haptics
 - New launch sound: the Typewriter "skrr", whichever sound pack you use
-- Sound stays where it matters: keys, answers and converter notches. Everything else is haptics only
+- Sound stays where it matters: keys, answers and converter notches. Toggles and settings are haptics only
+- Scientific and converter haptics are as firm as the main keypad
 - **Stronger haptics on phones with weaker vibration motors**, while phones that already felt good stay about the same
 
 ---

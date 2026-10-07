@@ -889,7 +889,7 @@ class _ConverterKeypad extends ConsumerWidget {
               color: colors.accent,
               fontSize: 28.0,
               semanticLabel: 'Use the calculator answer',
-              haptic: AppHaptics.constant,
+              haptic: AppHaptics.utility,
               sound: AppSounds.utility,
               onTap: () {
                 final calc = ref.read(calculatorProvider);
