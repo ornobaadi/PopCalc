@@ -13,6 +13,10 @@ void main() {
     }
   });
 
+  test('the launch chime ships outside the packs', () {
+    expect(File('assets/sounds/launch.wav').existsSync(), isTrue);
+  });
+
   test('file names are snake_case', () {
     expect(Sfx.bracketOpen.file, 'bracket_open');
     expect(Sfx.unitPick.file, 'unit_pick');

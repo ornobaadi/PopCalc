@@ -348,12 +348,55 @@ def advanced_sounds(tone, rng, air):
     return s
 
 
+# ─── Launch chime ─────────────────────────────────────────────────────────────
+# PopCalc's sonic logo. The same in every pack, so it always sounds like the
+# app: a bubbly "pop", a quick two-note pickup, then a bright two-note chord
+# that rings together like the two bars of the "=" mark.
+
+def glass(freq, dur, decay, bright=1.0):
+    """Glassy FM bell: soft mallet, gently detuned for width."""
+    n = int(dur * SR)
+    out = []
+    for i in range(n):
+        t = i / SR
+        mod = 1.4 * bright * math.exp(-t / 0.06)
+        s = 0.0
+        for det in (-0.0018, 0.0, 0.0021):
+            f = freq * (1 + det)
+            s += math.sin(2 * math.pi * f * t + mod * math.sin(2 * math.pi * f * 2 * t))
+        s /= 3
+        s += 0.18 * math.sin(2 * math.pi * freq * 3 * t) * math.exp(-t / 0.04)
+        env = min(1.0, t / 0.0015) * math.exp(-t / decay)
+        out.append(s * env)
+    return out
+
+
+def launch_chime():
+    out = silence(1.25)
+    # The pop: a fat bubble with a little body underneath.
+    mix(out, [x * 0.9 for x in bloop(note_hz(-5), dur=0.14, drop=2.2, decay=0.05)])
+    mix(out, [x * 0.35 for x in bloop(note_hz(-17), dur=0.12, drop=1.0, decay=0.04)])
+    # Pickup: E6, G6.
+    mix(out, [x * 0.55 for x in glass(note_hz(16), 0.25, 0.07)], at=int(0.15 * SR))
+    mix(out, [x * 0.6 for x in glass(note_hz(19), 0.25, 0.08)], at=int(0.24 * SR))
+    # Landing: C7 and G6 together, with an octave-down bloom.
+    land = int(0.34 * SR)
+    mix(out, [x * 0.75 for x in glass(note_hz(24), 0.9, 0.32)], at=land)
+    mix(out, [x * 0.55 for x in glass(note_hz(19), 0.9, 0.36, bright=0.6)], at=land + int(0.012 * SR))
+    mix(out, [x * 0.3 for x in marimba(note_hz(12), dur=0.6, decay=0.2)], at=land)
+    # Gentler drive than the key blips so the chord rings out naturally.
+    m = max(abs(v) for v in out)
+    return [math.tanh(1.3 * v / m) / math.tanh(1.3) * 0.9 for v in out]
+
+
 def main():
     rng = random.Random(42)
     for name, builder in [('pop', pack_pop), ('mellow', pack_mellow), ('typewriter', pack_typewriter)]:
         for sfx, buf in builder(rng).items():
             write_wav(os.path.join(ROOT, name, f'{sfx}.wav'), fade_edges(buf))
         print(f'pack {name}: done')
+    write_wav(os.path.join(ROOT, 'launch.wav'), fade_edges(launch_chime()))
+    print('launch chime: done')
 
 
 if __name__ == '__main__':

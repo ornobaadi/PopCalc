@@ -53,14 +53,17 @@ class MainActivity : FlutterActivity() {
         if (!v.hasVibrator() || hits.isEmpty() || strength <= 0.0) return false
 
         // Best: rich composed primitives (Android 11+ with a capable motor).
+        // A primitive the motor lacks is swapped for its nearest supported
+        // cousin, so one missing effect doesn't drop the whole pattern to
+        // the plainer waveform.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val ids = hits.map { primitiveId(it.primitive) }
-            if (ids.all { it != null } && v.areAllPrimitivesSupported(*ids.map { it!! }.toIntArray())) {
+            val ids = hits.map { supportedPrimitive(v, it.primitive) }
+            if (ids.all { it != null }) {
                 val composition = VibrationEffect.startComposition()
                 hits.forEachIndexed { i, hit ->
                     composition.addPrimitive(
                         ids[i]!!,
-                        (hit.scale * strength).toFloat().coerceIn(0f, 1f),
+                        boost(hit.scale * strength).toFloat(),
                         hit.delayMs,
                     )
                 }
@@ -76,7 +79,8 @@ class MainActivity : FlutterActivity() {
             hits.forEach { hit ->
                 val (ms, amp) = pulseFor(hit.primitive)
                 timings += hit.delayMs.toLong(); amplitudes += 0
-                timings += ms; amplitudes += (amp * hit.scale * strength).toInt().coerceIn(1, 255)
+                // Below ~60 many budget motors never spin up at all.
+                timings += ms; amplitudes += (amp * boost(hit.scale * strength)).toInt().coerceIn(60, 255)
             }
             v.vibrate(VibrationEffect.createWaveform(timings.toLongArray(), amplitudes.toIntArray(), -1))
             return true
@@ -85,6 +89,33 @@ class MainActivity : FlutterActivity() {
         @Suppress("DEPRECATION")
         v.vibrate((hits.sumOf { pulseFor(it.primitive).first + it.delayMs }).coerceAtMost(300L))
         return true
+    }
+
+    /**
+     * Lifts soft and mid intensities so weaker motors still read them;
+     * full strength is unchanged (0.3 -> 0.42, 0.6 -> 0.73, 1.0 -> 1.0).
+     */
+    private fun boost(x: Double): Double =
+        (Math.pow(x.coerceIn(0.0, 1.0), 0.8) * 1.1).coerceIn(0.0, 1.0)
+
+    /** [name]'s primitive id, or a supported stand-in, or null. */
+    private fun supportedPrimitive(v: Vibrator, name: String): Int? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        val candidates = when (name) {
+            "thud" -> listOf("thud", "click")
+            "lowTick" -> listOf("lowTick", "tick", "click")
+            "spin" -> listOf("spin", "quickRise", "click")
+            "slowRise" -> listOf("slowRise", "quickRise", "click")
+            "quickRise" -> listOf("quickRise", "click")
+            "quickFall" -> listOf("quickFall", "click")
+            "tick" -> listOf("tick", "click")
+            else -> listOf(name)
+        }
+        for (candidate in candidates) {
+            val id = primitiveId(candidate) ?: continue
+            if (v.areAllPrimitivesSupported(id)) return id
+        }
+        return null
     }
 
     private fun primitiveId(name: String): Int? {
@@ -107,14 +138,15 @@ class MainActivity : FlutterActivity() {
 
     /** Duration (ms) and max amplitude used when primitives aren't available. */
     private fun pulseFor(name: String): Pair<Long, Int> = when (name) {
-        "click" -> 14L to 220
-        "tick" -> 8L to 150
-        "lowTick" -> 12L to 120
-        "thud" -> 35L to 255
-        "quickRise" -> 40L to 170
-        "slowRise" -> 80L to 150
-        "quickFall" -> 30L to 170
-        "spin" -> 60L to 180
-        else -> 12L to 180
+        // Long enough for slow-to-start motors to actually move.
+        "click" -> 20L to 240
+        "tick" -> 12L to 190
+        "lowTick" -> 16L to 165
+        "thud" -> 40L to 255
+        "quickRise" -> 45L to 200
+        "slowRise" -> 80L to 180
+        "quickFall" -> 35L to 200
+        "spin" -> 60L to 210
+        else -> 16L to 210
     }
 }

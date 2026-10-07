@@ -81,7 +81,11 @@ class AppSounds {
   /// is instant.
   static final Map<SoundPack, Map<Sfx, AudioSource>> _sources = {};
 
-  /// A sound requested before it finished loading (the launch sound).
+  /// PopCalc's launch chime: the same in every pack.
+  static AudioSource? _launch;
+  static DateTime? _launchPendingAt;
+
+  /// A sound requested before it finished loading.
   /// Played as soon as it's ready, unless it has gone stale.
   static Sfx? _pendingSfx;
   static DateTime? _pendingAt;
@@ -100,8 +104,8 @@ class AppSounds {
   static double get volume => _volume;
   static SoundPack get pack => _pack;
 
-  /// Starts the engine, then loads sounds in the background — the current
-  /// pack's launch sound first, so the splash can play it immediately.
+  /// Starts the engine, then loads sounds in the background — the
+  /// launch chime first, so the splash can play it immediately.
   static Future<void> init({
     required bool enabled,
     required double volume,
@@ -124,11 +128,19 @@ class AppSounds {
   }
 
   static Future<void> _loadAll() async {
-    // Current pack first (launch + key sounds), then the rest for previews.
+    // Launch chime first so the splash can play it, then the current pack,
+    // then the rest for previews.
+    try {
+      _launch = await SoLoud.instance.loadAsset('assets/sounds/launch.wav');
+      final at = _launchPendingAt;
+      _launchPendingAt = null;
+      if (at != null && DateTime.now().difference(at) <= _pendingTtl) {
+        launch();
+      }
+    } catch (_) {}
     final order = [_pack, ...SoundPack.values.where((p) => p != _pack)];
     for (final pack in order) {
-      final sfxOrder = [Sfx.clear, ...Sfx.values.where((s) => s != Sfx.clear)];
-      for (final sfx in sfxOrder) {
+      for (final sfx in Sfx.values) {
         try {
           final source = await SoLoud.instance.loadAsset(
             'assets/sounds/${pack.name}/${sfx.file}.wav',
@@ -230,6 +242,18 @@ class AppSounds {
     } else {
       _pendingSfx = sfx;
       _pendingAt = DateTime.now();
+    }
+  }
+
+  /// The launch chime, played the moment it's loaded if the splash asks
+  /// before it's ready.
+  static void launch() {
+    if (!_enabled || _volume == 0) return;
+    final source = _launch;
+    if (source != null && _ready) {
+      _playSource(source);
+    } else {
+      _launchPendingAt = DateTime.now();
     }
   }
 

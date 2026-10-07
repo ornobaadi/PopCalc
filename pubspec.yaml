@@ -54,6 +54,7 @@ flutter:
     - assets/textures/
     - assets/licenses/
     - assets/splash/
+    - assets/sounds/launch.wav
     - assets/sounds/pop/
     - assets/sounds/mellow/
     - assets/sounds/typewriter/
