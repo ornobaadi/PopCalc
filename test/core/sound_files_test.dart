@@ -13,7 +13,7 @@ void main() {
     }
   });
 
-  test('the launch chime ships outside the packs', () {
+  test('the launch sound ships outside the packs', () {
     expect(File('assets/sounds/launch.wav').existsSync(), isTrue);
   });
 

@@ -81,7 +81,7 @@ class AppSounds {
   /// is instant.
   static final Map<SoundPack, Map<Sfx, AudioSource>> _sources = {};
 
-  /// PopCalc's launch chime: the same in every pack.
+  /// PopCalc's launch sound: the same in every pack.
   static AudioSource? _launch;
   static DateTime? _launchPendingAt;
 
@@ -105,7 +105,7 @@ class AppSounds {
   static SoundPack get pack => _pack;
 
   /// Starts the engine, then loads sounds in the background — the
-  /// launch chime first, so the splash can play it immediately.
+  /// launch sound first, so the splash can play it immediately.
   static Future<void> init({
     required bool enabled,
     required double volume,
@@ -128,7 +128,7 @@ class AppSounds {
   }
 
   static Future<void> _loadAll() async {
-    // Launch chime first so the splash can play it, then the current pack,
+    // Launch sound first so the splash can play it, then the current pack,
     // then the rest for previews.
     try {
       _launch = await SoLoud.instance.loadAsset('assets/sounds/launch.wav');
@@ -245,13 +245,16 @@ class AppSounds {
     }
   }
 
-  /// The launch chime, played the moment it's loaded if the splash asks
-  /// before it's ready.
+  /// The launch sound, played the moment it's loaded if the splash asks
+  /// before it's ready. Plays at half the level of the key sounds, so
+  /// opening the app in a quiet room never startles anyone.
   static void launch() {
     if (!_enabled || _volume == 0) return;
     final source = _launch;
     if (source != null && _ready) {
-      _playSource(source);
+      try {
+        SoLoud.instance.play(source, volume: _gain * 0.5);
+      } catch (_) {}
     } else {
       _launchPendingAt = DateTime.now();
     }
