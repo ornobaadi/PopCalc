@@ -12,15 +12,17 @@ class AppSettings {
   final bool soundEnabled;
   final double soundVolume;
   final SoundPack soundPack;
-  /// Makes the scientific calculator available (Settings switch).
-  final bool scientificMode;
+
+  /// Advanced tools (one Settings switch): puts the scientific f(x)
+  /// toggle and the unit converter button in the top bar.
+  final bool advancedTools;
+
   /// Whether the scientific tray is showing right now; flipped from the
   /// top bar so users can hop between simple and scientific.
   final bool scientificActive;
+
   /// Whether the scientific tray shows both rows or just the first.
   final bool scientificExpanded;
-  /// Adds the unit converter screen, opened from the top bar.
-  final bool converterEnabled;
   final AngleUnit angleUnit;
 
   const AppSettings({
@@ -31,10 +33,9 @@ class AppSettings {
     this.soundEnabled = true,
     this.soundVolume = 0.5,
     this.soundPack = SoundPack.pop,
-    this.scientificMode = false,
+    this.advancedTools = false,
     this.scientificActive = true,
     this.scientificExpanded = true,
-    this.converterEnabled = false,
     this.angleUnit = AngleUnit.degrees,
   });
 
@@ -46,10 +47,9 @@ class AppSettings {
     bool? soundEnabled,
     double? soundVolume,
     SoundPack? soundPack,
-    bool? scientificMode,
+    bool? advancedTools,
     bool? scientificActive,
     bool? scientificExpanded,
-    bool? converterEnabled,
     AngleUnit? angleUnit,
   }) {
     return AppSettings(
@@ -60,17 +60,17 @@ class AppSettings {
       soundEnabled: soundEnabled ?? this.soundEnabled,
       soundVolume: soundVolume ?? this.soundVolume,
       soundPack: soundPack ?? this.soundPack,
-      scientificMode: scientificMode ?? this.scientificMode,
+      advancedTools: advancedTools ?? this.advancedTools,
       scientificActive: scientificActive ?? this.scientificActive,
       scientificExpanded: scientificExpanded ?? this.scientificExpanded,
-      converterEnabled: converterEnabled ?? this.converterEnabled,
       angleUnit: angleUnit ?? this.angleUnit,
     );
   }
 }
 
-final settingsProvider =
-    StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
+final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((
+  ref,
+) {
   return SettingsNotifier();
 });
 
@@ -88,10 +88,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   // key resets test builds that saved the old louder default.
   static const _kSoundVolume = 'settings_sound_volume_v2';
   static const _kSoundPack = 'settings_sound_pack';
-  static const _kScientificMode = 'settings_scientific_mode';
+  static const _kAdvancedTools = 'settings_advanced_tools';
   static const _kScientificActive = 'settings_scientific_active';
   static const _kScientificExpanded = 'settings_scientific_expanded';
-  static const _kConverterEnabled = 'settings_converter_enabled';
   static const _kAngleUnit = 'settings_angle_unit';
 
   /// Starts the sound engine with saved settings before the first frame,
@@ -120,10 +119,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         soundEnabled: prefs.getBool(_kSoundEnabled) ?? true,
         soundVolume: prefs.getDouble(_kSoundVolume) ?? 0.5,
         soundPack: SoundPack.fromName(prefs.getString(_kSoundPack)),
-        scientificMode: prefs.getBool(_kScientificMode) ?? false,
+        advancedTools: prefs.getBool(_kAdvancedTools) ?? false,
         scientificActive: prefs.getBool(_kScientificActive) ?? true,
         scientificExpanded: prefs.getBool(_kScientificExpanded) ?? true,
-        converterEnabled: prefs.getBool(_kConverterEnabled) ?? false,
         angleUnit: AngleUnit.fromName(prefs.getString(_kAngleUnit)),
       );
       AppHaptics.enabled = state.hapticsEnabled;
@@ -176,7 +174,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     await _persist((p) => p.setString(_kSoundPack, pack.name));
   }
 
-
   Future<void> setShowLivePreview(bool value) async {
     state = state.copyWith(showLivePreview: value);
     try {
@@ -202,15 +199,15 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     } catch (_) {}
   }
 
-  /// Turning the feature on also shows the tray, so the switch has a
-  /// visible effect straight away.
-  Future<void> setScientificMode(bool value) async {
+  /// Turning the tools on also shows the scientific tray, so the switch
+  /// has a visible effect straight away.
+  Future<void> setAdvancedTools(bool value) async {
     state = state.copyWith(
-      scientificMode: value,
+      advancedTools: value,
       scientificActive: value ? true : null,
     );
     await _persist((p) async {
-      await p.setBool(_kScientificMode, value);
+      await p.setBool(_kAdvancedTools, value);
       if (value) await p.setBool(_kScientificActive, true);
     });
   }
@@ -223,11 +220,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> setScientificExpanded(bool value) async {
     state = state.copyWith(scientificExpanded: value);
     await _persist((p) => p.setBool(_kScientificExpanded, value));
-  }
-
-  Future<void> setConverterEnabled(bool value) async {
-    state = state.copyWith(converterEnabled: value);
-    await _persist((p) => p.setBool(_kConverterEnabled, value));
   }
 
   Future<void> setAngleUnit(AngleUnit unit) async {

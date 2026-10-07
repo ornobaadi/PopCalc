@@ -20,12 +20,7 @@ class TopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final converter = ref.watch(
-      settingsProvider.select((s) => s.converterEnabled),
-    );
-    final scientificAvailable = ref.watch(
-      settingsProvider.select((s) => s.scientificMode),
-    );
+    final tools = ref.watch(settingsProvider.select((s) => s.advancedTools));
     final scientificActive = ref.watch(
       settingsProvider.select((s) => s.scientificActive),
     );
@@ -53,8 +48,8 @@ class TopBar extends ConsumerWidget {
                   onPressed: onHistoryTap,
                 ),
 
-                // Simple ↔ scientific (when enabled in settings)
-                if (scientificAvailable)
+                // Simple ↔ scientific (Settings > Scientific & Converter)
+                if (tools)
                   _ScientificToggle(
                     colors: colors,
                     active: scientificActive,
@@ -72,8 +67,8 @@ class TopBar extends ConsumerWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Unit converter (when enabled in settings)
-                if (converter)
+                // Unit converter (Settings > Scientific & Converter)
+                if (tools)
                   IconButton(
                     icon: Icon(
                       Icons.straighten_rounded,

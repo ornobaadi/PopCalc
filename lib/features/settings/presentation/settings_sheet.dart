@@ -296,38 +296,20 @@ class SettingsSheet extends ConsumerWidget {
 
                       return Column(
                         children: [
-                          // Scientific keys on the calculator
+                          // Scientific keys + unit converter, both
+                          // reached from the top bar
                           _SettingsRow(
                             icon: Icons.functions_rounded,
-                            label: 'Scientific Calculator',
+                            label: 'Scientific & Converter',
                             description:
-                                'Trig, powers, roots and logs. Switch from the top bar',
+                                'Adds f(x) and unit converter buttons to the top bar',
                             colors: colors,
                             trailing: Switch(
-                              value: settings.scientificMode,
+                              value: settings.advancedTools,
                               onChanged: (val) {
-                                AppHaptics.selectionClick();
-                                settingsNotifier.setScientificMode(val);
-                              },
-                              activeThumbColor: colors.accent,
-                              activeTrackColor: colors.accent.withValues(
-                                alpha: 0.35,
-                              ),
-                            ),
-                          ),
-
-                          // Unit converter screen
-                          _SettingsRow(
-                            icon: Icons.straighten_rounded,
-                            label: 'Unit Converter',
-                            description:
-                                'Its own screen, one tap from the top bar',
-                            colors: colors,
-                            trailing: Switch(
-                              value: settings.converterEnabled,
-                              onChanged: (val) {
-                                AppHaptics.selectionClick();
-                                settingsNotifier.setConverterEnabled(val);
+                                AppHaptics.mode(val);
+                                AppSounds.mode(val);
+                                settingsNotifier.setAdvancedTools(val);
                               },
                               activeThumbColor: colors.accent,
                               activeTrackColor: colors.accent.withValues(

@@ -49,7 +49,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
     final colors = ThemeColors.of(themeMode);
     final calcState = ref.watch(calculatorProvider);
     final settings = ref.watch(settingsProvider);
-    final scientific = settings.scientificMode && settings.scientificActive;
+    final scientific = settings.advancedTools && settings.scientificActive;
 
     // Auto-clear highlight when state changes externally
     if (_resultHighlighted &&

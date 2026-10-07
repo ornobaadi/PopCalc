@@ -4,15 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popcalc/features/calculator/presentation/calculator_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Future<void> pumpScreen(
-  WidgetTester tester, {
-  bool scientific = false,
-  bool converter = false,
-}) async {
-  SharedPreferences.setMockInitialValues({
-    'settings_scientific_mode': scientific,
-    'settings_converter_enabled': converter,
-  });
+Future<void> pumpScreen(WidgetTester tester, {bool tools = false}) async {
+  SharedPreferences.setMockInitialValues({'settings_advanced_tools': tools});
   tester.view.physicalSize = const Size(1080, 2340); // 360 × 780 dp phone
   tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);
@@ -33,7 +26,7 @@ Future<void> tapKey(WidgetTester tester, String label) async {
 }
 
 void main() {
-  testWidgets('Both off: plain calculator', (tester) async {
+  testWidgets('Tools off: plain calculator', (tester) async {
     await pumpScreen(tester);
     expect(find.text('sin'), findsNothing);
     expect(find.text('DEG'), findsNothing);
@@ -42,11 +35,12 @@ void main() {
     expect(find.text('7'), findsOneWidget);
   });
 
-  testWidgets('Scientific on: tray keys evaluate', (tester) async {
-    await pumpScreen(tester, scientific: true);
+  testWidgets('Tools on: both top-bar buttons and the tray', (tester) async {
+    await pumpScreen(tester, tools: true);
+    expect(find.bySemanticsLabel('Scientific keys'), findsOneWidget);
+    expect(find.byTooltip('Unit converter'), findsOneWidget);
     expect(find.text('sin'), findsOneWidget);
     expect(find.text('DEG'), findsOneWidget);
-    expect(find.byTooltip('Unit converter'), findsNothing);
 
     await tapKey(tester, 'sin');
     await tapKey(tester, '3');
@@ -70,7 +64,7 @@ void main() {
   testWidgets('Top-bar f(x) switches between simple and scientific', (
     tester,
   ) async {
-    await pumpScreen(tester, scientific: true);
+    await pumpScreen(tester, tools: true);
     final toggle = find.bySemanticsLabel('Scientific keys');
     expect(toggle, findsOneWidget);
     expect(find.text('sin'), findsOneWidget);
@@ -89,7 +83,7 @@ void main() {
   });
 
   testWidgets('Tray handle folds the second row away', (tester) async {
-    await pumpScreen(tester, scientific: true);
+    await pumpScreen(tester, tools: true);
     expect(find.text('log'), findsOneWidget);
     await tester.tap(find.bySemanticsLabel('Show fewer scientific keys'));
     await tester.pump();
@@ -98,9 +92,8 @@ void main() {
     expect(find.text('π'), findsOneWidget);
   });
 
-  testWidgets('Converter on: opens its own screen', (tester) async {
-    await pumpScreen(tester, converter: true);
-    expect(find.text('sin'), findsNothing);
+  testWidgets('Converter button opens its own screen', (tester) async {
+    await pumpScreen(tester, tools: true);
     await tester.tap(find.byTooltip('Unit converter'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
