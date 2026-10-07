@@ -81,7 +81,7 @@ class AppSounds {
   /// is instant.
   static final Map<SoundPack, Map<Sfx, AudioSource>> _sources = {};
 
-  /// PopCalc's launch sound: the same in every pack.
+  /// PopCalc's launch sound (the typewriter "skrr"), used for every pack.
   static AudioSource? _launch;
   static DateTime? _launchPendingAt;
 
@@ -245,16 +245,13 @@ class AppSounds {
     }
   }
 
-  /// The launch sound, played the moment it's loaded if the splash asks
-  /// before it's ready. Plays at half the level of the key sounds, so
-  /// opening the app in a quiet room never startles anyone.
+  /// The launch "skrr", played the moment it's loaded if the splash asks
+  /// before it's ready.
   static void launch() {
     if (!_enabled || _volume == 0) return;
     final source = _launch;
     if (source != null && _ready) {
-      try {
-        SoLoud.instance.play(source, volume: _gain * 0.5);
-      } catch (_) {}
+      _playSource(source);
     } else {
       _launchPendingAt = DateTime.now();
     }

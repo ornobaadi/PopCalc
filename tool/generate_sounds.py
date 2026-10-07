@@ -11,6 +11,7 @@ Output: assets/sounds/<pack>/*.wav
 import math
 import os
 import random
+import shutil
 import struct
 import wave
 
@@ -349,57 +350,19 @@ def advanced_sounds(tone, rng, air):
 
 
 # ─── Launch sound ─────────────────────────────────────────────────────────────
-# PopCalc's sonic logo, the same in every pack. An adding machine waking up:
-# its number wheels spin down in a soft ratchet (a calmer cousin of the
-# typewriter "skrr"), settle with a felted clunk, and a small rounded
-# two-note beep says it's ready. Mastered quiet and unsquashed so it never
-# startles anyone.
-
-def soft_beep(freq, dur, decay):
-    """Rounded calculator beep: sine with a hint of odd harmonic."""
-    n = int(dur * SR)
-    out = []
-    for i in range(n):
-        t = i / SR
-        s = math.sin(2 * math.pi * freq * t) + 0.08 * math.sin(2 * math.pi * freq * 3 * t)
-        env = min(1.0, t / 0.006) * math.exp(-t / decay)
-        out.append(s * env)
-    return out
-
-
-def launch_sound():
-    rng = random.Random(7)
-    out = silence(0.9)
-    # Wheels spinning down: clicks spread out and soften as they slow.
-    at, gap = 0.0, 0.016
-    for k in range(10):
-        tick = mix(noise_burst(0.02, 0.003, rng, hp=1800, lp=6500),
-                   [v * 0.5 for v in resonant_click(2400 - k * 60, 0.02, 0.004)])
-        mix(out, [v * (0.55 - k * 0.03) for v in tick], at=int(at * SR))
-        at += gap
-        gap *= 1.13
-    # Felted clunk as the wheels lock.
-    clunk_at = int((at + 0.01) * SR)
-    clunk = mix(resonant_click(520, 0.08, 0.018),
-                [v * 0.35 for v in noise_burst(0.03, 0.005, rng, hp=600, lp=3000)])
-    mix(out, [v * 0.6 for v in clunk], at=clunk_at)
-    # Ready: G6 then C7, soft and short.
-    beep_at = clunk_at + int(0.07 * SR)
-    mix(out, [v * 0.32 for v in soft_beep(note_hz(19), 0.16, 0.05)], at=beep_at)
-    mix(out, [v * 0.38 for v in soft_beep(note_hz(24), 0.35, 0.09)], at=beep_at + int(0.085 * SR))
-    out = lowpass(out, 7000)
-    m = max(abs(v) for v in out)
-    return [v / m * 0.7 for v in out]
-
+# PopCalc's launch sound is the typewriter carriage-return "skrr" (the
+# typewriter pack's clear sound), played for every pack.
 
 def main():
     rng = random.Random(42)
     for name, builder in [('pop', pack_pop), ('mellow', pack_mellow), ('typewriter', pack_typewriter)]:
-        for sfx, buf in builder(rng).items():
+        sounds = builder(rng)
+        for sfx, buf in sounds.items():
             write_wav(os.path.join(ROOT, name, f'{sfx}.wav'), fade_edges(buf))
+        if name == 'typewriter':
+            shutil.copyfile(os.path.join(ROOT, name, 'clear.wav'),
+                            os.path.join(ROOT, 'launch.wav'))
         print(f'pack {name}: done')
-    write_wav(os.path.join(ROOT, 'launch.wav'), fade_edges(launch_sound()))
-    print('launch sound: done')
 
 
 if __name__ == '__main__':
