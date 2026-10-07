@@ -7,6 +7,15 @@ enum TokenType {
   multiply,
   divide,
   percent,
+  // Advanced mode
+  power,
+  leftParen,
+  rightParen,
+  /// A function call opener; its text carries the "(" (e.g. "sin(").
+  function,
+  /// π or e.
+  constant,
+  factorial,
 }
 
 class Token {
@@ -19,10 +28,27 @@ class Token {
       type == TokenType.plus ||
       type == TokenType.minus ||
       type == TokenType.multiply ||
-      type == TokenType.divide;
+      type == TokenType.divide ||
+      type == TokenType.power;
 
   bool get isNumber => type == TokenType.number;
   bool get isPercent => type == TokenType.percent;
+
+  /// Opens a parenthesised group: "(" or a function like "sin(".
+  bool get isOpener =>
+      type == TokenType.leftParen || type == TokenType.function;
+
+  /// Can end an operand, so an operator, ")" or "!" may follow it.
+  bool get endsOperand =>
+      type == TokenType.number ||
+      type == TokenType.percent ||
+      type == TokenType.rightParen ||
+      type == TokenType.constant ||
+      type == TokenType.factorial;
+
+  /// Function name without its trailing "(" (e.g. "sin(" → "sin").
+  String get functionName =>
+      type == TokenType.function ? text.substring(0, text.length - 1) : text;
 
   @override
   bool operator ==(Object other) =>

@@ -98,17 +98,89 @@ class Expression {
       // Consecutive operator rule: replace the previous operator
       newTokens[newTokens.length - 1] = Token(op, symbol);
       return Expression(tokens: newTokens, currentNumber: '');
-    } else if (newTokens.isNotEmpty && (newTokens.last.isNumber || newTokens.last.isPercent)) {
+    } else if (newTokens.isNotEmpty && newTokens.last.endsOperand) {
       newTokens.add(Token(op, symbol));
       return Expression(tokens: newTokens, currentNumber: '');
-    } else if (newTokens.isEmpty) {
-      // If empty and operator is minus, treat as negative number input
+    } else if (newTokens.isEmpty || newTokens.last.isOpener) {
+      // At the start of the expression or a group, minus starts a negative number
       if (op == TokenType.minus) {
-        return const Expression(tokens: [], currentNumber: '-');
+        return Expression(tokens: newTokens, currentNumber: '-');
       }
     }
 
     return this;
+  }
+
+  /// Number of "(" (including function openers) not yet closed.
+  int get openParenDepth {
+    var depth = 0;
+    for (final t in tokens) {
+      if (t.isOpener) depth++;
+      if (t.type == TokenType.rightParen) depth--;
+    }
+    return depth;
+  }
+
+  /// Tokens with the number being typed committed. A lone "-" becomes a
+  /// minus token so "-sin(30)" and "-π" work.
+  List<Token> _committedTokens() {
+    final list = List<Token>.from(tokens);
+    if (currentNumber == '-') {
+      list.add(const Token(TokenType.minus, '-'));
+    } else if (currentNumber.isNotEmpty) {
+      var num = currentNumber;
+      if (num.endsWith('.')) num = num.substring(0, num.length - 1);
+      list.add(Token(TokenType.number, num));
+    }
+    return list;
+  }
+
+  /// Appends "(" or a function opener such as "sin(". After a number or
+  /// ")" this multiplies implicitly ("2(3)", "2sin(30)").
+  Expression appendOpener(Token opener) {
+    assert(opener.isOpener);
+    if (tokens.length >= maxTokens) return this;
+    return Expression(tokens: _committedTokens()..add(opener));
+  }
+
+  /// Appends ")" when there is an open group with something in it.
+  Expression appendRightParen() {
+    if (tokens.length >= maxTokens || openParenDepth <= 0) return this;
+    final list = _committedTokens();
+    if (list.isEmpty || !list.last.endsOperand) return this;
+    return Expression(
+        tokens: list..add(const Token(TokenType.rightParen, ')')));
+  }
+
+  /// Appends π or e. After a number this multiplies implicitly ("2π").
+  Expression appendConstant(String symbol) {
+    if (tokens.length >= maxTokens) return this;
+    return Expression(
+        tokens: _committedTokens()..add(Token(TokenType.constant, symbol)));
+  }
+
+  /// Appends "!" after a number, constant, ")" or another "!".
+  Expression appendFactorial() {
+    if (tokens.length >= maxTokens) return this;
+    final list = _committedTokens();
+    if (list.isEmpty || !list.last.endsOperand || list.last.isPercent) {
+      return this;
+    }
+    return Expression(
+        tokens: list..add(const Token(TokenType.factorial, '!')));
+  }
+
+  /// Appends "[base]^" (e.g. 10ˣ), multiplying by whatever came before.
+  Expression appendPowerOf(String base) {
+    if (tokens.length + 3 > maxTokens) return this;
+    final list = _committedTokens();
+    if (list.isNotEmpty && list.last.endsOperand) {
+      list.add(const Token(TokenType.multiply, '×'));
+    }
+    list
+      ..add(Token(TokenType.number, base))
+      ..add(const Token(TokenType.power, '^'));
+    return Expression(tokens: list);
   }
 
   /// Appends a percent '%'
@@ -282,7 +354,11 @@ class Expression {
     final buffer = StringBuffer();
     for (int i = 0; i < all.length; i++) {
       final token = all[i];
-      if (token.isOperator) {
+      final isUnaryMinus = token.type == TokenType.minus &&
+          (i == 0 || all[i - 1].isOpener || all[i - 1].isOperator);
+      if (token.type == TokenType.power || isUnaryMinus) {
+        buffer.write(token.text);
+      } else if (token.isOperator) {
         buffer.write(' ${token.text} ');
       } else {
         buffer.write(token.text);

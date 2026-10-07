@@ -32,3 +32,34 @@ class UnaryMinusNode extends AstNode {
   @override
   String toString() => 'UnaryMinusNode($operand)';
 }
+
+/// A function call such as sin(x) or √(x). [name] is the token's
+/// function name without "(" (see [Token.functionName]).
+class FunctionNode extends AstNode {
+  final String name;
+  final AstNode argument;
+
+  FunctionNode(this.name, this.argument);
+
+  @override
+  String toString() => 'FunctionNode($name, $argument)';
+}
+
+/// π or e.
+class ConstantNode extends AstNode {
+  final String symbol;
+
+  ConstantNode(this.symbol);
+
+  @override
+  String toString() => 'ConstantNode($symbol)';
+}
+
+class FactorialNode extends AstNode {
+  final AstNode operand;
+
+  FactorialNode(this.operand);
+
+  @override
+  String toString() => 'FactorialNode($operand)';
+}
