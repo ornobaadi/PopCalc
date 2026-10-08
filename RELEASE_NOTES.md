@@ -1,3 +1,33 @@
+# PopCalc v1.2.1 (build 6) — Currency, landscape & a clearer swap key
+
+## ✨ What's new
+
+### 💱 Currency converter
+- A new **Currency** tab in the unit converter, with 33 currencies
+- **Works with no connection:** exchange rates are built into the app
+- Tap **Update** to fetch today's rates. That is the only time the app goes online, and it shows the date of the rates it is using
+- Rates are indicative, rounded like money, and not meant for transactions
+
+### 🔄 Scientific mode
+- **Turn your phone sideways** in scientific mode to see every function at once, next to the keypad: no second layer to switch to
+- The **2nd** key is now a **⇄ swap** icon, so it is clearer that it shows more functions
+
+### 🔐 Permissions
+- PopCalc now asks for the **internet permission**, used only for the currency Update button. Nothing about you is sent
+
+---
+
+### Play Store "What's new" (under 500 chars)
+```
+New in 1.2.1:
+• Currency converter: 33 currencies, works offline with built-in rates. Tap Update for today's rates
+• Scientific mode in landscape: every function at once
+• The 2nd key is now a clearer swap icon
+• Internet permission added, used only when you tap Update for currency rates
+```
+
+---
+
 # PopCalc v1.2.0 (build 5) — Scientific & Converter
 
 ## ✨ What's new

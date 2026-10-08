@@ -44,7 +44,7 @@ Inspiration (from the reference images and hero video you shared):
 ### Non-goals for v1
 
 - Scientific mode, graphing, matrices, programmer mode.
-- Currency conversion or anything requiring internet.
+- ~~Currency conversion or anything requiring internet.~~ Added in 1.2.1: rates ship in the app and are refreshed only when the user asks.
 - Loan, mortgage, investment, or tax calculators. These pull the app toward the Finance category and its extra declarations. Revisit later with care.
 - Cloud sync, accounts, social sharing feeds.
 - Ads. Ads would change the Data Safety form and hurt the premium feel.
@@ -183,7 +183,7 @@ If you later add Firebase Crashlytics or Analytics, you must update the Data Saf
 | Privacy policy | Required. Host a short page (GitHub Pages works) and link it in the listing |
 | Target audience | 13+ and adults. Do not select under-13 to avoid the Families Policy |
 | Content rating | Complete the questionnaire. Expect "Everyone" |
-| Permissions | Vibrate (implicit), Billing. Sensors do not need a runtime prompt on Android. No internet permission needed unless a dependency adds it |
+| Permissions | Vibrate (implicit), Billing. Sensors do not need a runtime prompt on Android. Internet, used only for the user-requested currency rate update |
 | Target API | Meet the current requirement: Android 16 (API 36) from 31 August 2026 |
 | Format | Signed Android App Bundle (.aab) |
 | Impersonation | Do not use a name, icon, or screenshot that resembles Google, Apple, Casio, or other calculator brands |

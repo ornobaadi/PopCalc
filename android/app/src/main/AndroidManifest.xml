@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission
         android:name="android.permission.VIBRATE"/>
+    <!-- Used for one thing only: downloading currency rates when the user
+         taps Update in the converter. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="${appLabel}"
         android:name="${applicationName}"

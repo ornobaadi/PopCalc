@@ -828,7 +828,7 @@ class _SignatureFooterState extends State<_SignatureFooter> {
             const SizedBox(height: 8.0),
             line(['POPCALC', 'VERSION ${_SignatureFooter._appVersion}']),
             const SizedBox(height: 8.0),
-            line(['OFFLINE', 'NO ADS', 'NO TRACKING']),
+            line(['WORKS OFFLINE', 'NO ADS', 'NO TRACKING']),
           ],
         ),
       ),

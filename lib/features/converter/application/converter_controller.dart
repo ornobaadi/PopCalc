@@ -2,6 +2,8 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/engine/expression.dart';
 import 'package:popcalc/core/engine/formatter.dart';
+import 'package:popcalc/core/storage/rates_store.dart';
+import 'package:popcalc/core/units/currency.dart';
 import 'package:popcalc/core/units/units.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -28,12 +30,19 @@ class ConverterState {
         : input;
     final value = Decimal.tryParse(clean == '' || clean == '-' ? '0' : clean);
     if (value == null) return '0';
-    return NumberFormatter.format(Units.convert(value, from, to));
+    return NumberFormatter.format(_shown(Units.convert(value, from, to)));
   }
+
+  bool get isCurrency => category.id == Currency.categoryId;
+
+  /// Currency shows money-style precision; everything else is exact.
+  Decimal _shown(Decimal value) => isCurrency ? Currency.round(value) : value;
 
   /// One-unit reference line, e.g. "1 km = 0.621371192237334 mi".
   String get referenceText {
-    final one = NumberFormatter.format(Units.convert(Decimal.one, from, to));
+    final one = NumberFormatter.format(
+      _shown(Units.convert(Decimal.one, from, to)),
+    );
     return '1 ${from.symbol} = $one ${to.symbol}';
   }
 
@@ -62,7 +71,11 @@ class ConverterState {
 
 final converterProvider =
     StateNotifierProvider<ConverterController, ConverterState>((ref) {
-      return ConverterController();
+      final controller = ConverterController();
+      // Currency rates can change underneath the chosen units (saved rates
+      // loading, or a refresh); pick the units up again when they do.
+      ref.listen(ratesProvider, (_, _) => controller.reloadUnits());
+      return controller;
     });
 
 class ConverterController extends StateNotifier<ConverterState> {
@@ -122,6 +135,21 @@ class ConverterController extends StateNotifier<ConverterState> {
         ? state.copyWith(to: unit, from: state.to)
         : state.copyWith(to: unit);
     _save();
+  }
+
+  /// Looks the category and units up again by id, after currency rates
+  /// changed underneath them. The selection and the input stay as they are.
+  void reloadUnits() {
+    final category = Units.byId(state.category.id);
+    Unit pick(Unit old, String fallback) => category.units.firstWhere(
+      (u) => u.id == old.id,
+      orElse: () => category.unit(fallback),
+    );
+    state = state.copyWith(
+      category: category,
+      from: pick(state.from, category.defaultFrom),
+      to: pick(state.to, category.defaultTo),
+    );
   }
 
   /// Swaps the units and carries the converted value over as the new input.

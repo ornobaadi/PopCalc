@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
+import 'package:popcalc/core/storage/rates_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
@@ -424,7 +425,98 @@ class _Readout extends ConsumerWidget {
               color: colors.inkSoft.withValues(alpha: 0.7),
             ),
           ),
+          if (state.isCurrency) _RatesLine(colors: colors),
           const SizedBox(height: 6.0),
+        ],
+      ),
+    );
+  }
+}
+
+/// Under the currency result: how old the rates are, and the one button
+/// that takes the app online to fetch newer ones.
+class _RatesLine extends ConsumerWidget {
+  final ThemeColors colors;
+
+  const _RatesLine({required this.colors});
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rates = ref.watch(ratesProvider);
+    final d = rates.rates.date;
+    final date = '${d.day} ${_months[d.month - 1]} ${d.year}';
+
+    final (String text, String? action) = switch (rates.status) {
+      RatesStatus.idle => ('Indicative rates from $date', 'UPDATE'),
+      RatesStatus.refreshing => ('Updating rates...', null),
+      RatesStatus.updated => ('Indicative rates from $date', 'UP TO DATE'),
+      RatesStatus.failed => (
+        "Couldn't update. Using rates from $date",
+        'RETRY',
+      ),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'Antonio',
+                fontSize: 12.0,
+                letterSpacing: 0.4,
+                color: colors.inkSoft.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          if (action != null)
+            Semantics(
+              button: true,
+              label: 'Update currency rates',
+              excludeSemantics: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () async {
+                  AppHaptics.selectionClick();
+                  final ok = await ref.read(ratesProvider.notifier).refresh();
+                  ok ? AppHaptics.success() : AppHaptics.error();
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(left: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9.0,
+                    vertical: 3.0,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: colors.accent.withValues(alpha: 0.5),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(9.0),
+                  ),
+                  child: Text(
+                    action,
+                    style: TextStyle(
+                      fontFamily: 'BebasNeue',
+                      fontSize: 13.0,
+                      letterSpacing: 1.2,
+                      height: 1.1,
+                      color: colors.accent,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

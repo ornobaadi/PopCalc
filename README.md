@@ -9,7 +9,7 @@ PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, mus
 - Version: 1.2.1
 - Platform: Android
 - Built with: Flutter
-- 100% offline, no ads, no account, zero data collected
+- Works offline, no ads, no account, zero data collected
 
 ---
 
@@ -67,9 +67,10 @@ Prefer full quality? [Open the demo video](assets/mockup.mp4).
 - One switch in Settings adds two buttons to the top bar
 - **Scientific:** powers, roots, brackets, trig (DEG/RAD), logs, π, e and factorial, in a tray that folds away. Switch between simple and scientific with one tap
 - **Unit converter:** ten categories with exact factors, on its own screen. Swipe through units and categories like a slider
+- **Currency:** 33 currencies with rates built into the app, so it converts with no connection. Tap Update to fetch today's rates
 
 ### Privacy and performance
-- Fully offline, with no internet permission
+- Works fully offline. The only time the app goes online is when you tap Update for currency rates
 - No ads, no account, no data collected
 - Lite Effects mode for low-end devices
 
@@ -188,8 +189,8 @@ flutter build apk --release
 |---|---|
 | Android | Supported |
 | iOS | Planned |
-| Orientation | Portrait |
-| Network | None |
+| Orientation | Portrait; scientific mode also works in landscape |
+| Network | Only when you tap Update for currency rates |
 | Data collected | None ([privacy policy](docs/privacy-policy.html)) |
 
 ---

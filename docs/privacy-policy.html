@@ -31,7 +31,7 @@
 <body>
 
 <h1>Privacy Policy for Pop Calc</h1>
-<p class="updated">Last updated: September 25, 2026</p>
+<p class="updated">Last updated: October 8, 2026</p>
 
 <p>This Privacy Policy explains how Pop Calc ("the app," "we," "us") handles information.
 This policy applies only to Pop Calc and covers how the app collects, uses, and shares data.</p>
@@ -39,7 +39,9 @@ This policy applies only to Pop Calc and covers how the app collects, uses, and 
 <h2>Summary</h2>
 <p>Pop Calc does not collect, store, or transmit any personal or sensitive user data.
 The app has no account system, no user profiles, and no internet connection requirement for
-its core calculator features. All calculations and your calculation history stay on your device.</p>
+its core calculator features. All calculations and your calculation history stay on your device.
+The app connects to the internet in one case only: when you tap "Update" in the currency converter
+to download current exchange rates, as described below.</p>
 
 <h2>Information we collect</h2>
 <p><strong>None.</strong> Pop Calc does not collect:</p>
@@ -59,6 +61,7 @@ or to any third party, and we have no access to it:</p>
   <tr><th>Data</th><th>Purpose</th><th>Where it's stored</th></tr>
   <tr><td>Calculation history</td><td>Lets you review and reuse past calculations</td><td>Local app storage on your device</td></tr>
   <tr><td>App settings (theme, sound, haptics)</td><td>Remembers your preferences</td><td>Local app storage on your device</td></tr>
+  <tr><td>Currency exchange rates</td><td>Lets the currency converter work without a connection</td><td>Local app storage on your device</td></tr>
 </table>
 <p>Uninstalling the app permanently deletes this data. We do not back it up to any server we operate.</p>
 
@@ -70,19 +73,30 @@ are processed entirely by Google Play Billing. We do not receive or store your p
 We only receive confirmation from Google Play that a purchase was made, which is used solely to
 unlock Pro features on your device.</p>
 
+<h2>Currency exchange rates</h2>
+<p>The currency converter comes with exchange rates built into the app and works without an internet
+connection. Rates are only downloaded when you tap "Update". The app then fetches a public file of
+daily exchange rates from a content delivery network (jsDelivr, with Cloudflare Pages as a backup).
+The request contains no information about you, your device, or what you are converting. As with any
+request on the internet, the server that delivers the file can see the IP address the request came
+from; that is handled under those providers' own privacy policies, and we never receive it. The rates
+are indicative and are not intended for financial transactions.</p>
+
 <h2>Permissions the app uses</h2>
 <table>
   <tr><th>Permission</th><th>Why it's needed</th></tr>
   <tr><td>Vibration</td><td>Provides haptic feedback when you tap keys</td></tr>
   <tr><td>Billing</td><td>Enables the optional in-app Pro purchase through Google Play</td></tr>
+  <tr><td>Internet</td><td>Used only to download currency exchange rates when you tap "Update"</td></tr>
 </table>
 <p>Pop Calc does not request access to your camera, microphone, contacts, location, storage, or
 any other sensitive device permission.</p>
 
 <h2>Data sharing</h2>
 <p>We do not sell, rent, or share any user data with third parties, because we do not collect any
-user data in the first place. The only third party involved in the app at all is Google Play
-Billing, which processes optional purchases as described above.</p>
+user data in the first place. The only third parties involved in the app at all are Google Play
+Billing, which processes optional purchases as described above, and the content delivery network
+that serves the exchange-rate file when you choose to update rates.</p>
 
 <h2>Children's privacy</h2>
 <p>Pop Calc is not directed at children and is not designed to appeal primarily to children.
@@ -94,7 +108,7 @@ collects no data at all.</p>
 created by the app, uninstall it, or clear the app's storage from your device's system settings.</p>
 
 <h2>Security</h2>
-<p>Since no data leaves your device, there is no server-side data of yours to secure. Standard
+<p>Since none of your data leaves your device, there is no server-side data of yours to secure. Standard
 Android app sandboxing protects the app's local storage from other apps on your device.</p>
 
 <h2>Changes to this policy</h2>
