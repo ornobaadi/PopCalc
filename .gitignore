@@ -47,3 +47,15 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 .agents/*
+
+# Local tooling config
+.kilo/
+skills-lock.json
+
+# Signature source files the app does not bundle (only the bold PNGs ship)
+assets/ornob-aadi-signature/*
+!assets/ornob-aadi-signature/ornob-aadi-signature-bold-dark.png
+!assets/ornob-aadi-signature/ornob-aadi-signature-bold-light.png
+
+# Screen recordings dropped in for reference
+assets/screen-*.mp4

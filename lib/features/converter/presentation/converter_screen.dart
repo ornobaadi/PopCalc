@@ -418,8 +418,8 @@ class _Readout extends ConsumerWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontFamily: 'Antonio',
-              fontSize: 13.0,
+              fontFamily: 'Inter',
+              fontSize: 11.5,
               letterSpacing: 0.4,
               color: colors.inkSoft.withValues(alpha: 0.7),
             ),
@@ -796,8 +796,8 @@ class _UnitRow extends StatelessWidget {
                 child: Text(
                   unit.name,
                   style: TextStyle(
-                    fontFamily: 'Antonio',
-                    fontSize: 17.0,
+                    fontFamily: 'Inter',
+                    fontSize: 15.0,
                     color: selected ? colors.accent : colors.ink,
                   ),
                 ),

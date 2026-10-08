@@ -3,90 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:popcalc/core/storage/entitlement_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
+import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
-
-/// A skin (theme) descriptor used in the settings skin picker.
-class SkinOption {
-  final String id;
-  final String label;
-  final String badge; // e.g. "FREE" / "PRO"
-  final AppThemeMode mode;
-  final Color swatch; // hex blob colour for the tile
-  final bool locked;
-
-  const SkinOption({
-    required this.id,
-    required this.label,
-    required this.badge,
-    required this.mode,
-    required this.swatch,
-    this.locked = false,
-  });
-}
-
-const _skins = <SkinOption>[
-  SkinOption(
-    id: 'sunny',
-    label: 'MARIGOLD',
-    badge: 'FREE',
-    mode: AppThemeMode.sunny,
-    swatch: Color(0xFFFFAE00),
-  ),
-  SkinOption(
-    id: 'ink',
-    label: 'CHARCOAL',
-    badge: 'FREE',
-    mode: AppThemeMode.ink,
-    swatch: Color(0xFF1A1A1A),
-  ),
-  SkinOption(
-    id: 'peony',
-    label: 'PEONY',
-    badge: 'NEW',
-    mode: AppThemeMode.peony,
-    swatch: Color(0xFFF7E6E4),
-  ),
-  // Pro skins: free during launch — set `locked: true` to gate them.
-  SkinOption(
-    id: 'obsidian',
-    label: 'OBSIDIAN',
-    badge: 'PRO',
-    mode: AppThemeMode.obsidian,
-    swatch: Color(0xFF0B0B0C),
-  ),
-  SkinOption(
-    id: 'synthwave',
-    label: 'SYNTHWAVE',
-    badge: 'PRO',
-    mode: AppThemeMode.synthwave,
-    swatch: Color(0xFF120A2A),
-  ),
-  SkinOption(
-    id: 'matcha',
-    label: 'MATCHA',
-    badge: 'PRO',
-    mode: AppThemeMode.matcha,
-    swatch: Color(0xFFDDE4D0),
-  ),
-  SkinOption(
-    id: 'frost',
-    label: 'FROST',
-    badge: 'PRO',
-    mode: AppThemeMode.frost,
-    swatch: Color(0xFFE8EFF5),
-  ),
-  SkinOption(
-    id: 'velvet',
-    label: 'VELVET',
-    badge: 'PRO',
-    mode: AppThemeMode.velvet,
-    swatch: Color(0xFF3A0A1B),
-  ),
-];
+import 'package:popcalc/features/themes/presentation/theme_detail_sheet.dart';
+import 'package:popcalc/features/themes/presentation/theme_store_screen.dart';
 
 class SettingsSheet extends ConsumerWidget {
   const SettingsSheet({super.key, ThemeColors? colors});
@@ -104,6 +29,7 @@ class SettingsSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(themeProvider);
     final colors = AppTheme.colorsOf(currentMode);
+    final owned = ref.watch(entitlementProvider);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -165,28 +91,19 @@ class SettingsSheet extends ConsumerWidget {
                             crossAxisCount: 4,
                             crossAxisSpacing: 12.0,
                             mainAxisSpacing: 16.0,
-                            childAspectRatio: 0.75,
+                            childAspectRatio: 0.64,
                           ),
-                      itemCount: _skins.length,
+                      itemCount: kSkins.length,
                       itemBuilder: (context, index) {
-                        final skin = _skins[index];
-                        final isSelected =
-                            !skin.locked && skin.mode == currentMode;
+                        final skin = kSkins[index];
+                        final locked = !ownsSkin(owned, skin);
+                        final isSelected = !locked && skin.mode == currentMode;
 
                         return GestureDetector(
                           onTap: () {
-                            if (skin.locked) {
+                            if (locked) {
                               AppHaptics.lightImpact();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                    'Unlock Pro to access this skin',
-                                  ),
-                                  backgroundColor: colors.accent,
-                                  duration: const Duration(seconds: 2),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                              SkinDetailSheet.show(context, skin);
                               return;
                             }
                             AppHaptics.selectionClick();
@@ -202,7 +119,7 @@ class SettingsSheet extends ConsumerWidget {
                                 width: 62.0,
                                 height: 62.0,
                                 decoration: BoxDecoration(
-                                  color: skin.swatch,
+                                  color: skin.colors.bg,
                                   borderRadius: BorderRadius.circular(18.0),
                                   border: isSelected
                                       ? Border.all(
@@ -227,18 +144,26 @@ class SettingsSheet extends ConsumerWidget {
                                         ]
                                       : null,
                                 ),
-                                child: skin.locked
-                                    ? Icon(
-                                        Icons.lock_outline_rounded,
-                                        color: Colors.white.withValues(
-                                          alpha: 0.8,
-                                        ),
-                                        size: 22.0,
-                                      )
-                                    : _SkinPreview(
-                                        colors: ThemeColors.of(skin.mode),
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: _SkinPreview(
+                                        colors: skin.colors,
                                         selected: isSelected,
                                       ),
+                                    ),
+                                    if (locked)
+                                      Positioned(
+                                        left: 5.0,
+                                        bottom: 5.0,
+                                        child: Icon(
+                                          Icons.lock_rounded,
+                                          color: skin.colors.inkSoft,
+                                          size: 13.0,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 6.0),
                               // Name
@@ -248,7 +173,7 @@ class SettingsSheet extends ConsumerWidget {
                                   fontFamily: 'BebasNeue',
                                   fontSize: 13.0,
                                   letterSpacing: 0.5,
-                                  color: skin.locked
+                                  color: locked
                                       ? colors.inkSoft.withValues(alpha: 0.5)
                                       : colors.ink,
                                 ),
@@ -261,18 +186,22 @@ class SettingsSheet extends ConsumerWidget {
                                   vertical: 1.0,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: skin.locked
+                                  color: locked
                                       ? colors.inkSoft.withValues(alpha: 0.15)
                                       : colors.accent.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(4.0),
                                 ),
                                 child: Text(
-                                  skin.badge,
+                                  !skin.premium
+                                      ? 'FREE'
+                                      : locked
+                                      ? 'PRO'
+                                      : 'OWNED',
                                   style: TextStyle(
                                     fontFamily: 'BebasNeue',
                                     fontSize: 10.0,
                                     letterSpacing: 0.8,
-                                    color: skin.locked
+                                    color: locked
                                         ? colors.inkSoft
                                         : colors.accent,
                                   ),
@@ -282,6 +211,54 @@ class SettingsSheet extends ConsumerWidget {
                           ),
                         );
                       },
+                    ),
+                  ),
+
+                  const SizedBox(height: 16.0),
+                  // Skin store entry
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        AppHaptics.selectionClick();
+                        ThemeStoreScreen.open(context);
+                      },
+                      child: Container(
+                        height: 52.0,
+                        padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                        decoration: BoxDecoration(
+                          color: colors.accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(16.0),
+                          border: Border.all(
+                            color: colors.accent.withValues(alpha: 0.5),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.storefront_rounded,
+                              color: colors.accent,
+                              size: 22.0,
+                            ),
+                            const SizedBox(width: 12.0),
+                            Text(
+                              'SKIN STORE',
+                              style: TextStyle(
+                                fontFamily: 'BebasNeue',
+                                fontSize: 20.0,
+                                letterSpacing: 1.6,
+                                color: colors.ink,
+                              ),
+                            ),
+                            const Spacer(),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: colors.inkSoft,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
 
@@ -451,8 +428,8 @@ class _SettingsRow extends StatelessWidget {
                   Text(
                     description!,
                     style: TextStyle(
-                      fontFamily: 'Antonio',
-                      fontSize: 12.0,
+                      fontFamily: 'Inter',
+                      fontSize: 11.5,
                       color: colors.inkSoft.withValues(alpha: 0.8),
                     ),
                   ),
@@ -562,8 +539,8 @@ class _SoundSection extends ConsumerWidget {
           child: Text(
             settings.soundPack.description,
             style: TextStyle(
-              fontFamily: 'Antonio',
-              fontSize: 12.0,
+              fontFamily: 'Inter',
+              fontSize: 11.5,
               color: colors.inkSoft.withValues(alpha: 0.8),
             ),
           ),
@@ -782,9 +759,9 @@ class _SignatureFooterState extends State<_SignatureFooter> {
     final colors = widget.colors;
     final soft = colors.inkSoft.withValues(alpha: 0.75);
     final label = TextStyle(
-      fontFamily: 'Antonio',
-      fontSize: 14.0,
-      letterSpacing: 2.6,
+      fontFamily: 'Inter',
+      fontSize: 11.0,
+      letterSpacing: 2.0,
       color: soft,
     );
     final dot = Container(

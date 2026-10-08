@@ -54,6 +54,7 @@ flutter:
   assets:
     - assets/textures/
     - assets/licenses/
+    - assets/skins/
     - assets/ornob-aadi-signature/ornob-aadi-signature-bold-dark.png
     - assets/ornob-aadi-signature/ornob-aadi-signature-bold-light.png
     - assets/splash/
@@ -72,3 +73,6 @@ flutter:
     - family: Antonio
       fonts:
         - asset: assets/fonts/Antonio-VariableFont_wght.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-VariableFont_opsz,wght.ttf

@@ -12,9 +12,14 @@ final themeProvider =
 class ThemeNotifier extends StateNotifier<AppThemeMode> {
   static const _kThemeKey = 'settings_theme_mode';
 
-  ThemeNotifier() : super(AppThemeMode.sunny) {
+  ThemeNotifier() : _persist = true, super(AppThemeMode.sunny) {
     _loadTheme();
   }
+
+  /// Fixed skin for the hold-to-preview overlay: never loads or saves.
+  ThemeNotifier.preview(super.mode) : _persist = false;
+
+  final bool _persist;
 
   Future<void> _loadTheme() async {
     try {
@@ -37,6 +42,7 @@ class ThemeNotifier extends StateNotifier<AppThemeMode> {
   }
 
   Future<void> _saveTheme(AppThemeMode mode) async {
+    if (!_persist) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_kThemeKey, mode.index);
