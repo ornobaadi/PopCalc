@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
@@ -393,6 +396,9 @@ class SettingsSheet extends ConsumerWidget {
                   const SizedBox(height: 6.0),
                   Divider(color: colors.ink.withValues(alpha: 0.08), height: 1),
                   _SoundSection(colors: colors),
+                  const SizedBox(height: 8.0),
+                  Divider(color: colors.ink.withValues(alpha: 0.08), height: 1),
+                  _SignatureFooter(colors: colors),
                 ],
               ),
             ),
@@ -731,6 +737,101 @@ class _SkinPreview extends StatelessWidget {
                 color: colors.accent, size: 16.0),
           ),
       ],
+    );
+  }
+}
+
+/// Maker's mark: handwritten signature, version and a short note.
+/// Keep [_appVersion] in step with `version:` in pubspec.yaml.
+/// Tapping the signature five times quickly opens the portfolio (hidden).
+class _SignatureFooter extends StatefulWidget {
+  final ThemeColors colors;
+  const _SignatureFooter({required this.colors});
+
+  static const _appVersion = '1.2.0 (5)';
+
+  @override
+  State<_SignatureFooter> createState() => _SignatureFooterState();
+}
+
+class _SignatureFooterState extends State<_SignatureFooter> {
+  int _taps = 0;
+  Timer? _reset;
+
+  @override
+  void dispose() {
+    _reset?.cancel();
+    super.dispose();
+  }
+
+  void _onTap() {
+    _reset?.cancel();
+    _reset = Timer(const Duration(milliseconds: 1500), () => _taps = 0);
+    if (++_taps >= 5) {
+      _taps = 0;
+      AppHaptics.operatorKey();
+      launchUrl(
+        Uri.parse('https://ornobaadi.vercel.app'),
+        mode: LaunchMode.externalApplication,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors;
+    final soft = colors.inkSoft.withValues(alpha: 0.75);
+    final label = TextStyle(
+      fontFamily: 'Antonio',
+      fontSize: 14.0,
+      letterSpacing: 2.6,
+      color: soft,
+    );
+    final dot = Container(
+      width: 4.0,
+      height: 4.0,
+      margin: const EdgeInsets.symmetric(horizontal: 10.0),
+      decoration: BoxDecoration(color: soft, shape: BoxShape.circle),
+    );
+    Widget line(List<String> parts) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < parts.length; i++) ...[
+          if (i > 0) dot,
+          Text(parts[i], style: label),
+        ],
+      ],
+    );
+    final variant = colors.isDark ? 'light' : 'dark';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 32.0, 0, 32.0),
+      child: Center(
+        child: Column(
+          children: [
+            Text('HANDCRAFTED BY', style: label),
+            const SizedBox(height: 8.0),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _onTap,
+              child: Semantics(
+                label: 'Ornob Aadi',
+                child: Opacity(
+                  opacity: 0.95,
+                  child: Image.asset(
+                    'assets/ornob-aadi-signature/ornob-aadi-signature-bold-$variant.png',
+                    height: 104.0,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8.0),
+            line(['POPCALC', 'VERSION ${_SignatureFooter._appVersion}']),
+            const SizedBox(height: 8.0),
+            line(['OFFLINE', 'NO ADS', 'NO TRACKING']),
+          ],
+        ),
+      ),
     );
   }
 }

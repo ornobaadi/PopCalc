@@ -41,6 +41,7 @@ dependencies:
   # Stay on 4.x: 5.x compiles native code via build hooks, which needs a
   # host C++ toolchain (Visual Studio) just to run `flutter test`.
   flutter_soloud: ^4.1.7
+  url_launcher: ^6.3.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -53,6 +54,8 @@ flutter:
   assets:
     - assets/textures/
     - assets/licenses/
+    - assets/ornob-aadi-signature/ornob-aadi-signature-bold-dark.png
+    - assets/ornob-aadi-signature/ornob-aadi-signature-bold-light.png
     - assets/splash/
     - assets/sounds/launch.wav
     - assets/sounds/detent.wav

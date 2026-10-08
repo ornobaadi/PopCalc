@@ -15,9 +15,11 @@ PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, mus
 
 ## Demo
 
-<video src="https://github.com/ornobaadi/PopCalc/raw/main/assets/mockup.mp4" controls muted width="360"></video>
+<p align="center">
+  <img src="assets/readme/demo.gif" alt="PopCalc demo" width="320">
+</p>
 
-If the player doesn't load, [open the demo video](assets/mockup.mp4).
+Prefer full quality? [Open the demo video](assets/mockup.mp4).
 
 ---
 
