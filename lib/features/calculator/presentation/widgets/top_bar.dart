@@ -10,11 +10,15 @@ class TopBar extends ConsumerWidget {
   final VoidCallback? onHistoryTap;
   final VoidCallback? onConverterTap;
 
+  /// Tighter side padding, for the narrow display column when sideways.
+  final bool compact;
+
   const TopBar({
     super.key,
     required this.colors,
     this.onHistoryTap,
     this.onConverterTap,
+    this.compact = false,
   });
 
   @override
@@ -28,7 +32,7 @@ class TopBar extends ConsumerWidget {
     return SizedBox(
       height: 44.0,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+        padding: EdgeInsets.symmetric(horizontal: compact ? 4.0 : 20.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

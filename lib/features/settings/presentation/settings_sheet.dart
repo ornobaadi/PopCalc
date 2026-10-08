@@ -748,7 +748,7 @@ class _SignatureFooter extends StatefulWidget {
   final ThemeColors colors;
   const _SignatureFooter({required this.colors});
 
-  static const _appVersion = '1.2.0 (5)';
+  static const _appVersion = '1.2.1 (6)';
 
   @override
   State<_SignatureFooter> createState() => _SignatureFooterState();

@@ -6,7 +6,7 @@
 
 PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, musical sound effects and eight hand-crafted skins.
 
-- Version: 1.2.0
+- Version: 1.2.1
 - Platform: Android
 - Built with: Flutter
 - 100% offline, no ads, no account, zero data collected
