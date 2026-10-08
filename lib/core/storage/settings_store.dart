@@ -13,6 +13,9 @@ class AppSettings {
   final double soundVolume;
   final SoundPack soundPack;
 
+  /// Which switch the Mechanical material uses (a `MaterialFeel.id`).
+  final String mechSwitch;
+
   /// Advanced tools (one Settings switch): puts the scientific f(x)
   /// toggle and the unit converter button in the top bar.
   final bool advancedTools;
@@ -33,6 +36,7 @@ class AppSettings {
     this.soundEnabled = true,
     this.soundVolume = 0.5,
     this.soundPack = SoundPack.pop,
+    this.mechSwitch = 'clicky',
     this.advancedTools = false,
     this.scientificActive = true,
     this.scientificExpanded = true,
@@ -47,6 +51,7 @@ class AppSettings {
     bool? soundEnabled,
     double? soundVolume,
     SoundPack? soundPack,
+    String? mechSwitch,
     bool? advancedTools,
     bool? scientificActive,
     bool? scientificExpanded,
@@ -60,6 +65,7 @@ class AppSettings {
       soundEnabled: soundEnabled ?? this.soundEnabled,
       soundVolume: soundVolume ?? this.soundVolume,
       soundPack: soundPack ?? this.soundPack,
+      mechSwitch: mechSwitch ?? this.mechSwitch,
       advancedTools: advancedTools ?? this.advancedTools,
       scientificActive: scientificActive ?? this.scientificActive,
       scientificExpanded: scientificExpanded ?? this.scientificExpanded,
@@ -88,6 +94,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   // key resets test builds that saved the old louder default.
   static const _kSoundVolume = 'settings_sound_volume_v2';
   static const _kSoundPack = 'settings_sound_pack';
+  static const _kMechSwitch = 'settings_mech_switch';
   static const _kAdvancedTools = 'settings_advanced_tools';
   static const _kScientificActive = 'settings_scientific_active';
   static const _kScientificExpanded = 'settings_scientific_expanded';
@@ -119,6 +126,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         soundEnabled: prefs.getBool(_kSoundEnabled) ?? true,
         soundVolume: prefs.getDouble(_kSoundVolume) ?? 0.5,
         soundPack: SoundPack.fromName(prefs.getString(_kSoundPack)),
+        mechSwitch: prefs.getString(_kMechSwitch) ?? 'clicky',
         advancedTools: prefs.getBool(_kAdvancedTools) ?? false,
         scientificActive: prefs.getBool(_kScientificActive) ?? true,
         scientificExpanded: prefs.getBool(_kScientificExpanded) ?? true,
@@ -172,6 +180,11 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     state = state.copyWith(soundPack: pack);
     _applyAudio();
     await _persist((p) => p.setString(_kSoundPack, pack.name));
+  }
+
+  Future<void> setMechSwitch(String id) async {
+    state = state.copyWith(mechSwitch: id);
+    await _persist((p) => p.setString(_kMechSwitch, id));
   }
 
   Future<void> setShowLivePreview(bool value) async {

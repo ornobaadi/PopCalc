@@ -117,6 +117,73 @@ class _Layout {
 }
 
 const _layouts = <AppThemeMode, _Layout>{
+  // Materials
+  AppThemeMode.clay: _Layout(
+    78.0,
+    74.0,
+    -0.2,
+    0.96,
+    0.4,
+    Rect.fromLTWH(26.0, 34.0, 132.0, 532.0),
+    3,
+  ),
+  AppThemeMode.chrome: _Layout(
+    110.0,
+    186.0,
+    -0.34,
+    1.1,
+    -0.3,
+    Rect.fromLTWH(34.0, 30.0, 340.0, 132.0),
+    0,
+  ),
+  AppThemeMode.glass: _Layout(
+    0.0,
+    214.0,
+    0.0,
+    1.04,
+    0.0,
+    Rect.fromLTWH(40.0, 26.0, 520.0, 164.0),
+    0,
+    disc: Offset(300.0, 474.0),
+    discRadius: 272.0,
+  ),
+  AppThemeMode.wood: _Layout(
+    -110.0,
+    186.0,
+    0.34,
+    1.1,
+    0.3,
+    Rect.fromLTWH(226.0, 30.0, 340.0, 132.0),
+    0,
+  ),
+  AppThemeMode.candy: _Layout(
+    -78.0,
+    74.0,
+    0.2,
+    0.96,
+    -0.4,
+    Rect.fromLTWH(442.0, 34.0, 132.0, 532.0),
+    1,
+  ),
+  AppThemeMode.neon: _Layout(
+    -70.0,
+    168.0,
+    0.2,
+    1.2,
+    0.25,
+    Rect.fromLTWH(250.0, 30.0, 316.0, 118.0),
+    0,
+  ),
+  AppThemeMode.mechanical: _Layout(
+    20.0,
+    -400.0,
+    -0.12,
+    1.0,
+    0.28,
+    Rect.fromLTWH(40.0, 448.0, 520.0, 124.0),
+    0,
+  ),
+  // Premium skins
   AppThemeMode.obsidian: _Layout(
     110.0,
     186.0,

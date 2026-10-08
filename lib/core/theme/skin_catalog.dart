@@ -1,3 +1,5 @@
+import 'package:popcalc/core/haptics/app_haptics.dart';
+
 import 'theme_tokens.dart';
 
 /// When false every skin counts as owned ("free during launch").
@@ -6,8 +8,26 @@ import 'theme_tokens.dart';
 /// purchase service today is [FakePurchaseService], which grants for free.
 const bool kPremiumLocked = true;
 
-/// Product id of the bundle that unlocks every premium skin.
+/// Product id of the bundle that unlocks every premium skin and material.
 const String kAllThemesProductId = 'themes_all';
+
+/// The sound and haptics that come with a material. Most materials have one;
+/// Mechanical has one per switch type.
+class MaterialFeel {
+  final String id; // persisted for the switch choice
+  final String label;
+  final String description;
+  final String soundFolder; // under assets/sounds
+  final HapticFeel haptics;
+
+  const MaterialFeel({
+    required this.id,
+    required this.label,
+    required this.description,
+    required this.soundFolder,
+    required this.haptics,
+  });
+}
 
 /// A skin as it is presented and sold in the skin store.
 class SkinInfo {
@@ -18,6 +38,10 @@ class SkinInfo {
   final String modelCode; // short catalogue tag shown beside the price
   final String? productId; // null for free skins
 
+  /// Non-empty for a material: its look, sound and haptics are one set,
+  /// applied together and never mixed with other skins or sound packs.
+  final List<MaterialFeel> feels;
+
   const SkinInfo({
     required this.mode,
     required this.label,
@@ -25,9 +49,17 @@ class SkinInfo {
     required this.description,
     required this.modelCode,
     this.productId,
+    this.feels = const [],
   });
 
   bool get premium => productId != null;
+  bool get isMaterial => feels.isNotEmpty;
+
+  /// The feel to use, given the saved switch id (only Mechanical has a
+  /// choice; anything unknown falls back to the first).
+  MaterialFeel? feelFor(String? id) => feels.isEmpty
+      ? null
+      : feels.firstWhere((f) => f.id == id, orElse: () => feels.first);
   ThemeColors get colors => ThemeColors.of(mode);
 }
 
@@ -96,4 +128,169 @@ const kSkins = <SkinInfo>[
   ),
 ];
 
-SkinInfo skinOf(AppThemeMode mode) => kSkins.firstWhere((s) => s.mode == mode);
+/// Materials: exclusive sets of look, sound and haptics. Each is sold on its
+/// own, and the everything bundle includes them all.
+const kMaterials = <SkinInfo>[
+  SkinInfo(
+    mode: AppThemeMode.clay,
+    label: 'CLAY',
+    tagline: 'Soft, warm, hand-pressed.',
+    description:
+        'Matte terracotta numerals on putty. Keys land with a damp thump '
+        'and a soft press under your thumb.',
+    modelCode: 'M-CLY',
+    productId: 'material_clay',
+    feels: [
+      MaterialFeel(
+        id: 'clay',
+        label: 'CLAY',
+        description: 'Damp thumps, soft presses',
+        soundFolder: 'clay',
+        haptics: HapticFeel.clay,
+      ),
+    ],
+  ),
+  SkinInfo(
+    mode: AppThemeMode.chrome,
+    label: 'CHROME',
+    tagline: 'Cold, hard, mirror-bright.',
+    description:
+        'Polished steel numerals that catch a horizon. Bright metal pings '
+        'and a precise double tick on every key.',
+    modelCode: 'M-CRM',
+    productId: 'material_chrome',
+    feels: [
+      MaterialFeel(
+        id: 'chrome',
+        label: 'CHROME',
+        description: 'Metal pings, precise ticks',
+        soundFolder: 'chrome',
+        haptics: HapticFeel.chrome,
+      ),
+    ],
+  ),
+  SkinInfo(
+    mode: AppThemeMode.glass,
+    label: 'GLASS',
+    tagline: 'Light as a fingertip on crystal.',
+    description:
+        'Frosted aqua numerals, bright along the top edge. Ringing glass '
+        'taps and the lightest touch of the set.',
+    modelCode: 'M-GLS',
+    productId: 'material_glass',
+    feels: [
+      MaterialFeel(
+        id: 'glass',
+        label: 'GLASS',
+        description: 'Ringing taps, feather-light touch',
+        soundFolder: 'glass',
+        haptics: HapticFeel.glass,
+      ),
+    ],
+  ),
+  SkinInfo(
+    mode: AppThemeMode.wood,
+    label: 'WOOD',
+    tagline: 'Oak on walnut, dry and solid.',
+    description:
+        'Grained oak numerals on dark walnut. Hollow woodblock knocks and '
+        'a firm rap for every press.',
+    modelCode: 'M-WUD',
+    productId: 'material_wood',
+    feels: [
+      MaterialFeel(
+        id: 'wood',
+        label: 'WOOD',
+        description: 'Woodblock knocks, firm raps',
+        soundFolder: 'wood',
+        haptics: HapticFeel.wood,
+      ),
+    ],
+  ),
+  SkinInfo(
+    mode: AppThemeMode.candy,
+    label: 'CANDY',
+    tagline: 'Glossy, sweet, a little bouncy.',
+    description:
+        'Hot-pink hard-candy numerals with a wet shine. Bouncy blips and '
+        'a springy press that pops back.',
+    modelCode: 'M-CDY',
+    productId: 'material_candy',
+    feels: [
+      MaterialFeel(
+        id: 'candy',
+        label: 'CANDY',
+        description: 'Bouncy blips, springy presses',
+        soundFolder: 'candy',
+        haptics: HapticFeel.candy,
+      ),
+    ],
+  ),
+  SkinInfo(
+    mode: AppThemeMode.neon,
+    label: 'NEON',
+    tagline: 'A tube sign after dark.',
+    description:
+        'Glowing green tubes on a night wall. Buzzing synth zaps and a '
+        'short electric tingle on each key.',
+    modelCode: 'M-NEO',
+    productId: 'material_neon',
+    feels: [
+      MaterialFeel(
+        id: 'neon',
+        label: 'NEON',
+        description: 'Synth zaps, electric tingle',
+        soundFolder: 'neon',
+        haptics: HapticFeel.neon,
+      ),
+    ],
+  ),
+  SkinInfo(
+    mode: AppThemeMode.mechanical,
+    label: 'MECHANICAL',
+    tagline: 'Three switches. Pick your sound.',
+    description:
+        'Cream keycaps on a dark board, with clicky, tactile and linear '
+        'switches you can swap in settings.',
+    modelCode: 'M-MEC',
+    productId: 'material_mechanical',
+    feels: [
+      MaterialFeel(
+        id: 'clicky',
+        label: 'CLICKY',
+        description: 'Sharp click, then the bottom-out',
+        soundFolder: 'mech_clicky',
+        haptics: HapticFeel.mechClicky,
+      ),
+      MaterialFeel(
+        id: 'tactile',
+        label: 'TACTILE',
+        description: 'Soft bump into a deep thock',
+        soundFolder: 'mech_tactile',
+        haptics: HapticFeel.mechTactile,
+      ),
+      MaterialFeel(
+        id: 'linear',
+        label: 'LINEAR',
+        description: 'Smooth and quiet, one clean landing',
+        soundFolder: 'mech_linear',
+        haptics: HapticFeel.mechLinear,
+      ),
+    ],
+  ),
+];
+
+/// Everything the bundle unlocks, premium skins and materials alternating so
+/// the store carousel mixes the two.
+final List<SkinInfo> kBundleItems = () {
+  final skins = kSkins.where((s) => s.premium).toList();
+  return [
+    for (var i = 0; i < skins.length || i < kMaterials.length; i++) ...[
+      if (i < skins.length) skins[i],
+      if (i < kMaterials.length) kMaterials[i],
+    ],
+  ];
+}();
+
+SkinInfo skinOf(AppThemeMode mode) =>
+    [...kSkins, ...kMaterials].firstWhere((s) => s.mode == mode);

@@ -10,6 +10,27 @@ enum AppThemeMode {
   matcha,
   frost,
   velvet,
+  // Materials: look, sound and haptics sold as one set (see skin_catalog).
+  clay,
+  chrome,
+  glass,
+  wood,
+  candy,
+  neon,
+  mechanical,
+}
+
+/// Surface treatment of the 3D numerals (and, for keycaps, the keys).
+/// Only materials use anything but [standard].
+enum SkinFinish {
+  standard,
+  matte, // soft, lit from above, no hard edge
+  mirror, // chrome: sky-and-horizon reflection
+  glass, // frosted, brightest at the top edge
+  grain, // wood grain bands
+  gloss, // hard candy highlight across the top
+  glow, // neon tube with a halo
+  keycap, // plain numerals, keys drawn as keycaps
 }
 
 class ThemeColors {
@@ -24,6 +45,7 @@ class ThemeColors {
   final Color extrudeChamfer;
   final Color burst; // answer celebration speed-lines
   final bool isDark;
+  final SkinFinish finish;
 
   const ThemeColors({
     required this.bg,
@@ -37,30 +59,162 @@ class ThemeColors {
     required this.extrudeChamfer,
     required this.burst,
     required this.isDark,
+    this.finish = SkinFinish.standard,
   });
 
   static ThemeColors of(AppThemeMode mode) => switch (mode) {
-        AppThemeMode.ink => inkTheme,
-        AppThemeMode.sunny => sunnyTheme,
-        AppThemeMode.peony => peonyTheme,
-        AppThemeMode.obsidian => obsidianTheme,
-        AppThemeMode.synthwave => synthwaveTheme,
-        AppThemeMode.matcha => matchaTheme,
-        AppThemeMode.frost => frostTheme,
-        AppThemeMode.velvet => velvetTheme,
-      };
+    AppThemeMode.ink => inkTheme,
+    AppThemeMode.sunny => sunnyTheme,
+    AppThemeMode.peony => peonyTheme,
+    AppThemeMode.obsidian => obsidianTheme,
+    AppThemeMode.synthwave => synthwaveTheme,
+    AppThemeMode.matcha => matchaTheme,
+    AppThemeMode.frost => frostTheme,
+    AppThemeMode.velvet => velvetTheme,
+    AppThemeMode.clay => clayTheme,
+    AppThemeMode.chrome => chromeTheme,
+    AppThemeMode.glass => glassTheme,
+    AppThemeMode.wood => woodTheme,
+    AppThemeMode.candy => candyTheme,
+    AppThemeMode.neon => neonTheme,
+    AppThemeMode.mechanical => mechanicalTheme,
+  };
+
+  // ─── Materials ─────────────────────────────────────────────────────────────
+
+  /// Clay (hand-pressed terracotta on putty, matte and soft)
+  static const clayTheme = ThemeColors(
+    bg: Color(0xFFE9DCCB), // Putty
+    bgShade: Color(0xFFF1E6D7),
+    ink: Color(0xFF5A3A2E), // Fired-earth brown
+    inkSoft: Color(0xFF9A7B6A),
+    accent: Color(0xFFB8452E), // Terracotta operators and equals
+    extrudeTop: Color(0xFFD9694C), // Wet clay face
+    extrudeSide: Color(0xFF9E4530), // Darker fired side
+    extrudeShadow: Color(0x385A3A2E),
+    extrudeChamfer: Colors.transparent, // Matte: no catch light
+    burst: Color(0xFFD9694C),
+    isDark: false,
+    finish: SkinFinish.matte,
+  );
+
+  /// Chrome (polished steel on a dark bench, mirror finish)
+  static const chromeTheme = ThemeColors(
+    bg: Color(0xFF16181C), // Dark steel
+    bgShade: Color(0xFF22262C),
+    ink: Color(0xFFE6EAF0),
+    inkSoft: Color(0xFF8A93A0),
+    accent: Color(0xFF7FD4FF), // Ice-blue operators and equals
+    extrudeTop: Color(0xFFDDE3EA),
+    extrudeSide: Color(0xFF5B6470),
+    extrudeShadow: Color(0x99000000),
+    extrudeChamfer: Color(0xCCFFFFFF),
+    burst: Color(0xFFFFFFFF),
+    isDark: true,
+    finish: SkinFinish.mirror,
+  );
+
+  /// Glass (frosted aqua, bright along the top edge)
+  static const glassTheme = ThemeColors(
+    bg: Color(0xFFCFE6EA), // Aqua mist
+    bgShade: Color(0xFFDDF0F3),
+    ink: Color(0xFF14384A),
+    inkSoft: Color(0xFF4F7C8C),
+    accent: Color(0xFF0B7F96), // Deep teal operators and equals
+    extrudeTop: Color(0xFFA9DDE8), // Pale aqua pane
+    extrudeSide: Color(0xFF5FA9BB),
+    extrudeShadow: Color(0x3314384A),
+    extrudeChamfer: Color(0xFFFFFFFF),
+    burst: Color(0xFFFFFFFF),
+    isDark: false,
+    finish: SkinFinish.glass,
+  );
+
+  /// Wood (oak numerals on dark walnut, with grain)
+  static const woodTheme = ThemeColors(
+    bg: Color(0xFF2B1D14), // Walnut
+    bgShade: Color(0xFF362519),
+    ink: Color(0xFFF0DFC4),
+    inkSoft: Color(0xFFA98F6F),
+    accent: Color(0xFFE2A04A), // Honey operators and equals
+    extrudeTop: Color(0xFFC98F52), // Oak face
+    extrudeSide: Color(0xFF6E4424),
+    extrudeShadow: Color(0x99000000),
+    extrudeChamfer: Color(0x66FFE2B8),
+    burst: Color(0xFFE2A04A),
+    isDark: true,
+    finish: SkinFinish.grain,
+  );
+
+  /// Candy (hot-pink hard candy on bubblegum, glossy)
+  static const candyTheme = ThemeColors(
+    bg: Color(0xFFFFD9E8), // Bubblegum
+    bgShade: Color(0xFFFFE6F0),
+    ink: Color(0xFF6B1242),
+    inkSoft: Color(0xFFB05A86),
+    accent: Color(0xFF008577), // Mint operators and equals
+    extrudeTop: Color(0xFFFF4F9A), // Hot-pink face
+    extrudeSide: Color(0xFFB81F64),
+    extrudeShadow: Color(0x33B81F64),
+    extrudeChamfer: Color(0xFFFFFFFF),
+    burst: Color(0xFFFFFFFF),
+    isDark: false,
+    finish: SkinFinish.gloss,
+  );
+
+  /// Neon (a green tube sign on a night wall, glowing)
+  static const neonTheme = ThemeColors(
+    bg: Color(0xFF07070C), // Night wall
+    bgShade: Color(0xFF10101A),
+    ink: Color(0xFFE9FFF4),
+    inkSoft: Color(0xFF5E7A70),
+    accent: Color(0xFFFF2BD1), // Magenta operators and equals
+    extrudeTop: Color(0xFF39FF9E), // Lit tube
+    extrudeSide: Color(0xFF0B5F3A),
+    extrudeShadow: Color(0x99000000),
+    extrudeChamfer: Color(0xCCFFFFFF),
+    burst: Color(0xFF39FF9E),
+    isDark: true,
+    finish: SkinFinish.glow,
+  );
+
+  /// Mechanical (cream keycaps on a dark board, orange accents)
+  static const mechanicalTheme = ThemeColors(
+    bg: Color(0xFF2C2F36), // Keyboard case
+    bgShade: Color(0xFF383C45),
+    ink: Color(0xFFE8E4DA), // Cream legends
+    inkSoft: Color(0xFF9AA0AA),
+    accent: Color(0xFFFF7A1A), // Orange accent keys
+    extrudeTop: Color(0xFFEDE8DC), // Cream keycap
+    extrudeSide: Color(0xFF8E8A80),
+    extrudeShadow: Color(0x99000000),
+    extrudeChamfer: Color(0x66FFFFFF),
+    burst: Color(0xFFFF7A1A),
+    isDark: true,
+    finish: SkinFinish.keycap,
+  );
 
   /// Marigold (radiant golden marigold & punchy vermilion with high contrast legibility)
   static const sunnyTheme = ThemeColors(
     bg: Color(0xFFFFAE00), // Vibrant golden marigold
     bgShade: Color(0xFFFFB818), // Subtle radiant highlight
-    ink: Color(0xFF140F0B), // Deep espresso black for crisp, high-contrast numerals
-    inkSoft: Color(0xFF2E1C0A), // Rich dark bronze-espresso (crisp readability on gold)
-    accent: Color(0xFFD61800), // Vivid punchy vermilion red for operators and equals
+    ink: Color(
+      0xFF140F0B,
+    ), // Deep espresso black for crisp, high-contrast numerals
+    inkSoft: Color(
+      0xFF2E1C0A,
+    ), // Rich dark bronze-espresso (crisp readability on gold)
+    accent: Color(
+      0xFFD61800,
+    ), // Vivid punchy vermilion red for operators and equals
     extrudeTop: Color(0xFF221A12), // Deep warm charcoal front face
-    extrudeSide: Color(0xFF483220), // Solid warm dimensional caramel-bronze block
+    extrudeSide: Color(
+      0xFF483220,
+    ), // Solid warm dimensional caramel-bronze block
     extrudeShadow: Color(0x35000000), // Soft ambient contact shadow
-    extrudeChamfer: Color(0xFFFFDF88), // Barely-visible cool white rim — not a border, just a catch light
+    extrudeChamfer: Color(
+      0xFFFFDF88,
+    ), // Barely-visible cool white rim — not a border, just a catch light
     burst: Color(0xFFFFFFFF),
     isDark: false,
   );

@@ -7,7 +7,7 @@ import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'theme_card.dart';
 import 'theme_detail_sheet.dart';
 
-/// Product sheet for the all-skins bundle, drawn in the colours of the skin
+/// Product sheet for the everything bundle (premium skins and materials), drawn in the colours of the skin
 /// that was at the front of the carousel. Tapping a skin opens its own sheet.
 class BundleDetailSheet extends ConsumerStatefulWidget {
   final SkinInfo tone;
@@ -42,7 +42,9 @@ class _BundleDetailSheetState extends ConsumerState<BundleDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final c = widget.tone.colors;
-    final skins = kSkins.where((s) => s.premium).toList();
+    final skins = kBundleItems;
+    final skinCount = skins.where((s) => !s.isMaterial).length;
+    final materialCount = skins.length - skinCount;
     final owned = ref.watch(entitlementProvider);
     final ownsAll = skins.every((s) => ownsSkin(owned, s));
 
@@ -67,29 +69,31 @@ class _BundleDetailSheetState extends ConsumerState<BundleDetailSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              GridView.count(
+                crossAxisCount: 6,
+                crossAxisSpacing: 6.0,
+                mainAxisSpacing: 6.0,
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  for (var i = 0; i < skins.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 8.0),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          AppHaptics.selectionClick();
-                          SkinDetailSheet.show(context, skins[i]);
-                        },
-                        child: SkinMockup(
-                          skin: skins[i],
-                          borderColor: c.ink.withValues(alpha: 0.2),
-                          radius: 12.0,
-                        ),
+                  for (final skin in skins)
+                    GestureDetector(
+                      onTap: () {
+                        AppHaptics.selectionClick();
+                        SkinDetailSheet.show(context, skin);
+                      },
+                      child: SkinMockup(
+                        skin: skin,
+                        borderColor: c.ink.withValues(alpha: 0.2),
+                        radius: 10.0,
                       ),
                     ),
-                  ],
                 ],
               ),
               const SizedBox(height: 14.0),
               Text(
-                '${skins.length} PREMIUM SKINS',
+                '$skinCount SKINS + $materialCount MATERIALS',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 10.5,
@@ -98,7 +102,7 @@ class _BundleDetailSheetState extends ConsumerState<BundleDetailSheet> {
                 ),
               ),
               Text(
-                'ALL SKINS BUNDLE',
+                'EVERYTHING BUNDLE',
                 style: TextStyle(
                   fontFamily: 'BebasNeue',
                   fontSize: 34.0,
@@ -108,7 +112,7 @@ class _BundleDetailSheetState extends ConsumerState<BundleDetailSheet> {
                 ),
               ),
               Text(
-                'Every premium skin, one price.',
+                'Every skin and every material, one price.',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 15.0,
@@ -118,9 +122,9 @@ class _BundleDetailSheetState extends ConsumerState<BundleDetailSheet> {
               ),
               const SizedBox(height: 8.0),
               Text(
-                '${skins.map((s) => _title(s.label)).join(', ')}. '
-                'Tap any of them above for a closer look and a full-screen '
-                'preview.',
+                'All $skinCount premium skins, plus all $materialCount '
+                'materials with their own sounds and haptics. Tap any of '
+                'them above for a closer look.',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12.5,
@@ -183,7 +187,4 @@ class _BundleDetailSheetState extends ConsumerState<BundleDetailSheet> {
       ),
     );
   }
-
-  static String _title(String label) =>
-      label[0] + label.substring(1).toLowerCase();
 }

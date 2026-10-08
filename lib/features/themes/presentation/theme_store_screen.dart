@@ -13,8 +13,10 @@ import 'theme_bundle_sheet.dart';
 import 'theme_card.dart';
 import 'theme_detail_sheet.dart';
 
-/// The skin store: a carousel of the premium skins with the all-skins bundle,
-/// then each premium skin as a card. Free skins live in the settings sheet.
+/// The skin store: a carousel of everything in the bundle (premium skins and
+/// materials),
+/// then the materials and the premium skins as cards. Free skins live in the
+/// settings sheet.
 class ThemeStoreScreen extends ConsumerWidget {
   const ThemeStoreScreen({super.key});
 
@@ -60,6 +62,61 @@ class ThemeStoreScreen extends ConsumerWidget {
 
     final skins = kSkins.where((s) => s.premium).toList();
 
+    List<Widget> section(String title, String hint, List<SkinInfo> items) => [
+      const SizedBox(height: 20.0),
+      Text(
+        title,
+        style: TextStyle(
+          fontFamily: 'BebasNeue',
+          fontSize: 18.0,
+          letterSpacing: 1.6,
+          color: colors.ink,
+        ),
+      ),
+      Text(
+        hint,
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 11.5,
+          height: 1.35,
+          color: colors.inkSoft,
+        ),
+      ),
+      const SizedBox(height: 12.0),
+      LayoutBuilder(
+        builder: (context, constraints) {
+          const gap = 14.0;
+          final tile = (constraints.maxWidth - gap) / 2;
+          return GridView.builder(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: gap,
+              mainAxisSpacing: 12.0,
+              mainAxisExtent: tile + SkinCard.captionHeight,
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final skin = items[index];
+              return SkinCard(
+                skin: skin,
+                colors: colors,
+                status: statusOf(skin),
+                locked: !ownsSkin(owned, skin),
+                active: skin.mode == currentMode,
+                onTap: () {
+                  AppHaptics.selectionClick();
+                  SkinDetailSheet.show(context, skin);
+                },
+              );
+            },
+          );
+        },
+      ),
+    ];
+
     return Scaffold(
       backgroundColor: colors.bg,
       body: Center(
@@ -102,63 +159,22 @@ class ThemeStoreScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8.0),
                 BundleCarousel(
-                  skins: skins,
+                  skins: kBundleItems,
                   onTap: (front) {
                     AppHaptics.selectionClick();
                     BundleDetailSheet.show(context, front);
                   },
                 ),
-                const SizedBox(height: 20.0),
-                Text(
+                ...section(
+                  'MATERIALS',
+                  'Look, sound and haptics, made as one set. Tap one to '
+                      'hear and feel it.',
+                  kMaterials,
+                ),
+                ...section(
                   'PREMIUM SKINS',
-                  style: TextStyle(
-                    fontFamily: 'BebasNeue',
-                    fontSize: 18.0,
-                    letterSpacing: 1.6,
-                    color: colors.ink,
-                  ),
-                ),
-                Text(
                   'Tap a skin for a closer look and a full-screen preview.',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11.5,
-                    height: 1.35,
-                    color: colors.inkSoft,
-                  ),
-                ),
-                const SizedBox(height: 12.0),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    const gap = 14.0;
-                    final tile = (constraints.maxWidth - gap) / 2;
-                    return GridView.builder(
-                      shrinkWrap: true,
-                      padding: EdgeInsets.zero,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: gap,
-                        mainAxisSpacing: 12.0,
-                        mainAxisExtent: tile + SkinCard.captionHeight,
-                      ),
-                      itemCount: skins.length,
-                      itemBuilder: (context, index) {
-                        final skin = skins[index];
-                        return SkinCard(
-                          skin: skin,
-                          colors: colors,
-                          status: statusOf(skin),
-                          locked: !ownsSkin(owned, skin),
-                          active: skin.mode == currentMode,
-                          onTap: () {
-                            AppHaptics.selectionClick();
-                            SkinDetailSheet.show(context, skin);
-                          },
-                        );
-                      },
-                    );
-                  },
+                  skins,
                 ),
                 const SizedBox(height: 12.0),
                 Center(
@@ -187,7 +203,8 @@ class ThemeStoreScreen extends ConsumerWidget {
   }
 }
 
-/// "Everything" bundle banner: the premium skins fanned on an endless wheel
+/// "Everything" bundle banner: every premium skin and material fanned on an
+/// endless wheel
 /// that turns by itself, one skin at a time. The box takes on the colours of
 /// the skin at the front. Swiping also steps it; tapping opens the bundle.
 class BundleCarousel extends StatefulWidget {
@@ -210,8 +227,8 @@ class BundleCarouselState extends State<BundleCarousel>
   // All as fractions of the box width, so the fan keeps its shape.
   static const _aspect = 1.72; // the banner is a wide rectangle
   static const _frontSize = 0.3; // the front card
-  static const _sideScale = 0.6; // its neighbours, relative to the front
-  static const _slotFraction = 0.25; // front card to its neighbour
+  static const _sideScale = 0.64; // its neighbours, relative to the front
+  static const _slotFraction = 0.205; // front card to its neighbour
   static const _drop = 0.1; // how far each step sinks down the curve
 
   /// Position on the wheel in cards. Unbounded, so it never runs out:
@@ -338,7 +355,7 @@ class BundleCarouselState extends State<BundleCarousel>
                         child: Column(
                           children: [
                             Text(
-                              'ALL SKINS',
+                              'EVERYTHING',
                               style: TextStyle(
                                 fontFamily: 'BebasNeue',
                                 fontSize: width * 0.075,
@@ -348,7 +365,7 @@ class BundleCarouselState extends State<BundleCarousel>
                               ),
                             ),
                             Text(
-                              'Everything bundle',
+                              'All skins and materials',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: width * 0.036,
@@ -375,7 +392,7 @@ class BundleCarouselState extends State<BundleCarousel>
   Widget _wheel(double position, double width) {
     final card = width * _frontSize;
     final nearest = position.round();
-    final indices = [for (var k = -3; k <= 3; k++) nearest + k]
+    final indices = [for (var k = -4; k <= 4; k++) nearest + k]
       // Furthest first, so the front card is painted on top.
       ..sort((a, b) => (b - position).abs().compareTo((a - position).abs()));
 
@@ -389,9 +406,13 @@ class BundleCarouselState extends State<BundleCarousel>
             // Shrinks quickly over the first step, gently after it.
             final scale = d <= 1.0
                 ? 1.0 - (1.0 - _sideScale) * Curves.easeOut.transform(d)
-                : _sideScale - 0.07 * (d - 1.0);
-            // Cards bunch up slightly towards the edges.
-            final x = delta.sign * width * (0.25 * d - 0.022 * d * (d - 1.0));
+                : _sideScale - 0.06 * (d - 1.0);
+            // Packed close, each card tucked a little behind the one in
+            // front of it, and bunching up slightly towards the edges.
+            final x =
+                delta.sign *
+                width *
+                (_slotFraction * d - 0.012 * d * (d - 1.0));
             // Rounded at the top of the curve, straighter down the sides.
             final y = width * _drop * (math.sqrt(d * d + 0.2) - math.sqrt(0.2));
             return Positioned(
@@ -400,7 +421,7 @@ class BundleCarouselState extends State<BundleCarousel>
               width: card,
               height: card,
               child: Transform.rotate(
-                angle: delta * 0.21,
+                angle: delta * 0.17,
                 child: Transform.scale(
                   scale: scale,
                   child: SkinMockup(

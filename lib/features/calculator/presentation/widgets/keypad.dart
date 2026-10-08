@@ -39,7 +39,9 @@ class Keypad extends ConsumerWidget {
       controller.onDecimal();
     }
 
-    return Column(
+    return KeycapScope.wrap(
+      colors: colors,
+      child: Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         // Row 1: C, %, Backspace, ÷
@@ -279,6 +281,7 @@ class Keypad extends ConsumerWidget {
           ),
         ),
       ],
+    ),
     );
   }
 }

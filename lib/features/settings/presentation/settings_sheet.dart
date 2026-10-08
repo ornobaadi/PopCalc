@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/entitlement_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
+import 'package:popcalc/core/theme/material_feel.dart';
 import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
@@ -30,6 +31,8 @@ class SettingsSheet extends ConsumerWidget {
     final currentMode = ref.watch(themeProvider);
     final colors = AppTheme.colorsOf(currentMode);
     final owned = ref.watch(entitlementProvider);
+    // Free and premium skins always show; a material only once it's owned.
+    final skins = [...kSkins, ...kMaterials.where((m) => ownsSkin(owned, m))];
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -93,9 +96,9 @@ class SettingsSheet extends ConsumerWidget {
                             mainAxisSpacing: 16.0,
                             childAspectRatio: 0.64,
                           ),
-                      itemCount: kSkins.length,
+                      itemCount: skins.length,
                       itemBuilder: (context, index) {
-                        final skin = kSkins[index];
+                        final skin = skins[index];
                         final locked = !ownsSkin(owned, skin);
                         final isSelected = !locked && skin.mode == currentMode;
 
@@ -167,15 +170,19 @@ class SettingsSheet extends ConsumerWidget {
                               ),
                               const SizedBox(height: 6.0),
                               // Name
-                              Text(
-                                skin.label,
-                                style: TextStyle(
-                                  fontFamily: 'BebasNeue',
-                                  fontSize: 13.0,
-                                  letterSpacing: 0.5,
-                                  color: locked
-                                      ? colors.inkSoft.withValues(alpha: 0.5)
-                                      : colors.ink,
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  skin.label,
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    fontFamily: 'BebasNeue',
+                                    fontSize: 13.0,
+                                    letterSpacing: 0.5,
+                                    color: locked
+                                        ? colors.inkSoft.withValues(alpha: 0.5)
+                                        : colors.ink,
+                                  ),
                                 ),
                               ),
                               // Badge
@@ -281,8 +288,7 @@ class SettingsSheet extends ConsumerWidget {
                           _SettingsRow(
                             icon: Icons.functions_rounded,
                             label: 'Scientific & Converter',
-                            description:
-                                'Adds f(x) and unit converter buttons to the top bar',
+                            description: 'Adds f(x) and unit converter buttons to the top bar',
                             colors: colors,
                             trailing: Switch(
                               value: settings.advancedTools,
@@ -463,6 +469,9 @@ class _SoundSection extends ConsumerWidget {
       activeTrackColor: colors.accent.withValues(alpha: 0.35),
     );
 
+    final skin = skinOf(ref.watch(themeProvider));
+    final material = ref.watch(materialFeelProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -502,42 +511,76 @@ class _SoundSection extends ConsumerWidget {
           },
         ),
 
-        // Sound pack picker
-        AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
-          opacity: settings.soundEnabled ? 1.0 : 0.4,
-          child: IgnorePointer(
-            ignoring: !settings.soundEnabled,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 6.0),
-              child: Row(
-                children: [
-                  for (final pack in SoundPack.values) ...[
-                    if (pack != SoundPack.values.first)
-                      const SizedBox(width: 10.0),
-                    Expanded(
-                      child: _PackChip(
-                        pack: pack,
-                        selected: settings.soundPack == pack,
-                        colors: colors,
-                        onTap: () {
-                          AppHaptics.selectionClick();
-                          // Instant preview from the preloaded sample.
-                          AppSounds.previewPack(pack);
-                          notifier.setSoundPack(pack);
-                        },
+        // Sound pack picker. A material brings its own sound and haptics
+        // as one set, so the packs step aside; Mechanical offers its
+        // switches here instead.
+        if (material == null)
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: settings.soundEnabled ? 1.0 : 0.4,
+            child: IgnorePointer(
+              ignoring: !settings.soundEnabled,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 6.0),
+                child: Row(
+                  children: [
+                    for (final pack in SoundPack.values) ...[
+                      if (pack != SoundPack.values.first)
+                        const SizedBox(width: 10.0),
+                      Expanded(
+                        child: _PackChip(
+                          label: pack.label,
+                          semantics: '${pack.label} sound pack',
+                          selected: settings.soundPack == pack,
+                          colors: colors,
+                          onTap: () {
+                            AppHaptics.selectionClick();
+                            // Instant preview from the preloaded sample.
+                            AppSounds.previewPack(pack);
+                            notifier.setSoundPack(pack);
+                          },
+                        ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
+          )
+        else if (skin.feels.length > 1)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24.0, 4.0, 24.0, 6.0),
+            child: Row(
+              children: [
+                for (final feel in skin.feels) ...[
+                  if (feel != skin.feels.first) const SizedBox(width: 10.0),
+                  Expanded(
+                    child: _PackChip(
+                      label: feel.label,
+                      semantics: '${feel.label} switch',
+                      selected: material.id == feel.id,
+                      colors: colors,
+                      onTap: () {
+                        // Hear and feel the switch you just picked.
+                        AppSounds.previewMaterial(feel.soundFolder, Sfx.digit5);
+                        AppHaptics.demo(feel.haptics);
+                        notifier.setMechSwitch(feel.id);
+                      },
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Text(
-            settings.soundPack.description,
+            material == null
+                ? settings.soundPack.description
+                : skin.feels.length > 1
+                ? material.description
+                : 'Sound and haptics come with ${skin.label}: '
+                      '${material.description.toLowerCase()}.',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 11.5,
@@ -545,7 +588,6 @@ class _SoundSection extends ConsumerWidget {
             ),
           ),
         ),
-
       ],
     );
   }
@@ -618,13 +660,15 @@ class _VolumeSlider extends StatelessWidget {
 }
 
 class _PackChip extends StatelessWidget {
-  final SoundPack pack;
+  final String label;
+  final String semantics;
   final bool selected;
   final ThemeColors colors;
   final VoidCallback onTap;
 
   const _PackChip({
-    required this.pack,
+    required this.label,
+    required this.semantics,
     required this.selected,
     required this.colors,
     required this.onTap,
@@ -635,7 +679,7 @@ class _PackChip extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: '${pack.label} sound pack',
+      label: semantics,
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
@@ -655,7 +699,7 @@ class _PackChip extends StatelessWidget {
             ),
           ),
           child: Text(
-            pack.label.toUpperCase(),
+            label.toUpperCase(),
             style: TextStyle(
               fontFamily: 'BebasNeue',
               fontSize: 17.0,
@@ -710,8 +754,11 @@ class _SkinPreview extends StatelessWidget {
           Positioned(
             right: 4.0,
             bottom: 4.0,
-            child: Icon(Icons.check_circle_rounded,
-                color: colors.accent, size: 16.0),
+            child: Icon(
+              Icons.check_circle_rounded,
+              color: colors.accent,
+              size: 16.0,
+            ),
           ),
       ],
     );

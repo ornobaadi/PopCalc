@@ -20,6 +20,23 @@ class _Hit {
 /// amplitude-scaled pulses as a fallback. That's far crisper and stronger
 /// than Flutter's [HapticFeedback], which is used on other platforms or if
 /// the native call fails.
+/// Key feels that ship with material skins. Changing a pattern here needs no
+/// native change: they are built from the same primitives as the rest.
+enum HapticFeel {
+  standard,
+  clay,
+  chrome,
+  glass,
+  wood,
+  candy,
+  neon,
+  mechClicky,
+  mechTactile,
+  mechLinear,
+}
+
+enum _Key { digit, operator, utility, backspace }
+
 class AppHaptics {
   static bool enabled = true;
 
@@ -71,25 +88,118 @@ class AppHaptics {
   static void heavyImpact() =>
       _play(const [_Hit('thud', 1.0)], HapticFeedback.heavyImpact);
 
+  // ─── Material feels ────────────────────────────────────────────────────────
+
+  /// The active material's key feel. [HapticFeel.standard] is the app's own
+  /// patterns; a material swaps the four everyday keys for its own.
+  static HapticFeel feel = HapticFeel.standard;
+
+  static const Map<HapticFeel, Map<_Key, List<_Hit>>> _feels = {
+    // Clay: soft, damp presses with no snap.
+    HapticFeel.clay: {
+      _Key.digit: [_Hit('thud', 0.55)],
+      _Key.operator: [_Hit('thud', 0.85), _Hit('lowTick', 0.5, 45)],
+      _Key.utility: [_Hit('lowTick', 0.8)],
+      _Key.backspace: [_Hit('lowTick', 0.65)],
+    },
+    // Chrome: hard and precise, with a tiny ring after each hit.
+    HapticFeel.chrome: {
+      _Key.digit: [_Hit('tick', 1.0), _Hit('tick', 0.45, 18)],
+      _Key.operator: [
+        _Hit('click', 1.0),
+        _Hit('tick', 0.8, 22),
+        _Hit('tick', 0.4, 22),
+      ],
+      _Key.utility: [_Hit('tick', 0.8)],
+      _Key.backspace: [_Hit('tick', 0.6)],
+    },
+    // Glass: the lightest touch of the set.
+    HapticFeel.glass: {
+      _Key.digit: [_Hit('tick', 0.7)],
+      _Key.operator: [_Hit('tick', 1.0), _Hit('tick', 0.5, 30)],
+      _Key.utility: [_Hit('tick', 0.5)],
+      _Key.backspace: [_Hit('lowTick', 0.5)],
+    },
+    // Wood: a dry knock.
+    HapticFeel.wood: {
+      _Key.digit: [_Hit('click', 0.9)],
+      _Key.operator: [_Hit('thud', 0.9), _Hit('click', 0.5, 40)],
+      _Key.utility: [_Hit('click', 0.5)],
+      _Key.backspace: [_Hit('lowTick', 0.9)],
+    },
+    // Candy: springy, bouncing up into each press.
+    HapticFeel.candy: {
+      _Key.digit: [_Hit('quickRise', 0.5), _Hit('tick', 0.7, 25)],
+      _Key.operator: [_Hit('quickRise', 0.7), _Hit('click', 0.9, 30)],
+      _Key.utility: [_Hit('tick', 0.8)],
+      _Key.backspace: [_Hit('quickFall', 0.5)],
+    },
+    // Neon: a short electric buzz.
+    HapticFeel.neon: {
+      _Key.digit: [_Hit('tick', 0.9), _Hit('lowTick', 0.5, 14)],
+      _Key.operator: [_Hit('quickFall', 0.8), _Hit('tick', 0.8, 30)],
+      _Key.utility: [_Hit('tick', 0.7)],
+      _Key.backspace: [_Hit('quickFall', 0.5)],
+    },
+    // Clicky switch: the click on the way down, then the bottom-out.
+    HapticFeel.mechClicky: {
+      _Key.digit: [_Hit('tick', 1.0), _Hit('click', 0.9, 24)],
+      _Key.operator: [
+        _Hit('tick', 1.0),
+        _Hit('click', 1.0, 24),
+        _Hit('tick', 0.5, 45),
+      ],
+      _Key.utility: [_Hit('tick', 0.9), _Hit('click', 0.6, 24)],
+      _Key.backspace: [_Hit('tick', 0.9), _Hit('click', 0.75, 24)],
+    },
+    // Tactile switch: a rounded bump, then a deep thock.
+    HapticFeel.mechTactile: {
+      _Key.digit: [_Hit('lowTick', 0.8), _Hit('thud', 0.7, 26)],
+      _Key.operator: [_Hit('lowTick', 1.0), _Hit('thud', 1.0, 26)],
+      _Key.utility: [_Hit('lowTick', 0.7), _Hit('thud', 0.5, 26)],
+      _Key.backspace: [_Hit('lowTick', 0.8), _Hit('thud', 0.6, 26)],
+    },
+    // Linear switch: nothing on the way down, one smooth landing.
+    HapticFeel.mechLinear: {
+      _Key.digit: [_Hit('thud', 0.8)],
+      _Key.operator: [_Hit('thud', 1.0)],
+      _Key.utility: [_Hit('thud', 0.6)],
+      _Key.backspace: [_Hit('thud', 0.6)],
+    },
+  };
+
+  /// One digit press in [which] feel, for the store's "feel it" demo.
+  static void demo(HapticFeel which) => _play(
+    _feels[which]?[_Key.digit] ?? const [_Hit('click', 0.75)],
+    HapticFeedback.lightImpact,
+  );
+
   // ─── Keypad ────────────────────────────────────────────────────────────────
 
   /// Digits & decimal: a firm, crisp key click.
-  static void digit() =>
-      _play(const [_Hit('click', 0.75)], HapticFeedback.lightImpact);
+  static void digit() => _play(
+    _feels[feel]?[_Key.digit] ?? const [_Hit('click', 0.75)],
+    HapticFeedback.lightImpact,
+  );
 
   /// Operators: a heavier double "clack" so they feel different by touch.
   static void operatorKey() => _play(
+    _feels[feel]?[_Key.operator] ??
         const [_Hit('click', 1.0), _Hit('tick', 0.6, 35)],
-        HapticFeedback.mediumImpact,
-      );
+    HapticFeedback.mediumImpact,
+  );
 
   /// %, +/-: a light tick.
-  static void utility() =>
-      _play(const [_Hit('tick', 0.9)], HapticFeedback.selectionClick);
+  static void utility() => _play(
+    _feels[feel]?[_Key.utility] ?? const [_Hit('tick', 0.9)],
+    HapticFeedback.selectionClick,
+  );
 
   /// Backspace: a soft low tick, like something being taken away.
-  static void backspace() =>
-      _play(const [_Hit('lowTick', 1.0)], HapticFeedback.selectionClick);
+  static void backspace() => _play(
+    _feels[feel]?[_Key.backspace] ?? const [_Hit('lowTick', 1.0)],
+    HapticFeedback.selectionClick,
+  );
 
   /// Clear: a ratcheting "skrrr" that fades out, then lands — in sync with
   /// the clear sound's sweep.

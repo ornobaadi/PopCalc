@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
+import 'package:popcalc/core/theme/material_feel.dart';
 import 'package:popcalc/features/splash/presentation/splash_screen.dart';
 
 Future<void> main() async {
@@ -42,6 +43,9 @@ class PopCalcApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
+    // A material brings its own sound and haptics; keep the engines in step
+    // with whichever skin is active.
+    applyMaterialFeel(ref.watch(materialFeelProvider));
 
     return MaterialApp(
       title: 'PopCalc',

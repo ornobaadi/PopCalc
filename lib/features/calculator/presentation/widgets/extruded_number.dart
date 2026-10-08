@@ -180,6 +180,22 @@ class _ExtrudedNumberPainter extends CustomPainter {
 
     final frontOffset = Offset(startX, startY);
 
+    // ─── 0. Neon halo behind everything ───────────────────────────────────────
+    if (colors.finish == SkinFinish.glow && !isLite) {
+      _paintGlyphs(
+        canvas,
+        size,
+        frontOffset,
+        cache.fontSize,
+        Paint()
+          ..color = colors.extrudeTop.withValues(alpha: 0.6)
+          ..maskFilter = MaskFilter.blur(
+            BlurStyle.normal,
+            cache.fontSize * 0.14,
+          ),
+      );
+    }
+
     // ─── 1. Soft ambient contact drop shadow ──────────────────────────────────
     if (!isLite && depth > 0.05) {
       cache.shadowPainter.paint(
@@ -229,6 +245,18 @@ class _ExtrudedNumberPainter extends CustomPainter {
     // ─── 3. Crisp front face numeral ──────────────────────────────────────────
     cache.frontPainter.paint(canvas, frontOffset);
 
+    // ─── 3b. Material finish over the face ────────────────────────────────────
+    final finish = _finishShader(frontOffset & Size(textWidth, textHeight));
+    if (finish != null) {
+      _paintGlyphs(
+        canvas,
+        size,
+        frontOffset,
+        cache.fontSize,
+        Paint()..shader = finish,
+      );
+    }
+
     // ─── 4. Subtle bevel highlight at face rim ────────────────────────────────
     if (!isLite && colors.extrudeChamfer != Colors.transparent) {
       final chamferPainter = TextPainter(
@@ -250,6 +278,112 @@ class _ExtrudedNumberPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout(maxWidth: size.width);
       chamferPainter.paint(canvas, frontOffset);
+    }
+  }
+
+  /// Paints the numeral's glyphs once more with [paint], exactly over the
+  /// front face (for finishes and glows).
+  void _paintGlyphs(
+    Canvas canvas,
+    Size size,
+    Offset offset,
+    double fontSize,
+    Paint paint,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontFamily: 'BebasNeue',
+          fontFamilyFallback: const ['Antonio', 'sans-serif'],
+          fontWeight: FontWeight.w400,
+          letterSpacing: 1.0,
+          height: 1.0,
+          fontSize: fontSize,
+          foreground: paint,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: size.width);
+    painter.paint(canvas, offset);
+  }
+
+  /// What a material's surface does to the flat face colour, as a gradient
+  /// laid over the glyphs. Null for skins without a face finish.
+  Shader? _finishShader(Rect face) {
+    const clear = Color(0x00FFFFFF);
+    switch (colors.finish) {
+      case SkinFinish.matte:
+        // Soft light from the top left, falling into shade: no hard edge.
+        return const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0x40FFFFFF), clear, Color(0x30000000)],
+          stops: [0.0, 0.45, 1.0],
+        ).createShader(face);
+      case SkinFinish.mirror:
+        // Chrome: bright sky, a dark horizon line, then lit ground.
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFFFFFFF),
+            Color(0xFFAFC0D4),
+            Color(0xFF252C38),
+            Color(0xFF8792A0),
+            Color(0xFFF4F7FA),
+          ],
+          stops: [0.0, 0.47, 0.5, 0.64, 1.0],
+        ).createShader(face);
+      case SkinFinish.glass:
+        // Frosted pane: brightest along the top edge, a faint lift below.
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xE6FFFFFF),
+            Color(0x55FFFFFF),
+            clear,
+            Color(0x38FFFFFF),
+          ],
+          stops: [0.0, 0.2, 0.62, 1.0],
+        ).createShader(face);
+      case SkinFinish.grain:
+        // Wood grain: thin dark bands, slightly off level, repeating.
+        return const LinearGradient(
+          begin: Alignment(-0.12, -1.0),
+          end: Alignment(0.12, 1.0),
+          colors: [
+            Color(0x003B1F0A),
+            Color(0x473B1F0A),
+            Color(0x003B1F0A),
+            Color(0x263B1F0A),
+            Color(0x003B1F0A),
+          ],
+          stops: [0.0, 0.3, 0.55, 0.8, 1.0],
+          tileMode: TileMode.repeated,
+        ).createShader(
+          Rect.fromLTWH(face.left, face.top, face.width, face.height * 0.085),
+        );
+      case SkinFinish.gloss:
+        // Hard candy: a wet highlight across the top that stops dead.
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xA6FFFFFF), Color(0x40FFFFFF), clear, clear],
+          stops: [0.0, 0.4, 0.41, 1.0],
+        ).createShader(face);
+      case SkinFinish.glow:
+        // Lit tube: white-hot through the middle, coloured at the edges.
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [clear, Color(0x8CFFFFFF), clear],
+          stops: [0.12, 0.5, 0.88],
+        ).createShader(face);
+      case SkinFinish.standard:
+      case SkinFinish.keycap:
+        return null;
     }
   }
 

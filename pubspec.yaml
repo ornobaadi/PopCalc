@@ -63,6 +63,15 @@ flutter:
     - assets/sounds/pop/
     - assets/sounds/mellow/
     - assets/sounds/typewriter/
+    - assets/sounds/clay/
+    - assets/sounds/chrome/
+    - assets/sounds/glass/
+    - assets/sounds/wood/
+    - assets/sounds/candy/
+    - assets/sounds/neon/
+    - assets/sounds/mech_clicky/
+    - assets/sounds/mech_tactile/
+    - assets/sounds/mech_linear/
     - assets/brand_assets/logo/pop_calc_mark_2048.png
     - assets/brand_assets/logo/pop_calc_mark_dark_2048.png
 

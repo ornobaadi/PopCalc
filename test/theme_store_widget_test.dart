@@ -8,7 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 Future<ProviderContainer> pumpStore(WidgetTester tester) async {
   SharedPreferences.setMockInitialValues({});
-  tester.view.physicalSize = const Size(1080, 2340); // 360 × 780 dp phone
+  // Tall enough that the whole store (materials, then skins) is built.
+  tester.view.physicalSize = const Size(1080, 7800); // 360 × 2600 dp
   tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);
 
@@ -81,18 +82,20 @@ void main() {
     await pumpStore(tester);
     expect(find.text(r'$0.99'), findsNWidgets(5));
     // The banner itself carries no price or buy button.
-    expect(find.text(r'$2.99'), findsNothing);
+    expect(find.text(r'$9.99'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('bundle-wheel')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('ALL SKINS BUNDLE'), findsOneWidget);
+    expect(find.text('EVERYTHING BUNDLE'), findsOneWidget);
 
-    await tester.tap(find.text(r'$2.99'));
+    await tester.tap(find.text(r'$9.99'));
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.text(r'$0.99'), findsNothing);
-    expect(find.text('OWNED'), findsNWidgets(6)); // 5 skins + the sheet
+    expect(find.text(r'$1.99'), findsNothing);
+    // 5 skins + 7 materials + the sheet
+    expect(find.text('OWNED'), findsNWidgets(13));
   });
 
   group('Bundle carousel', () {
@@ -104,15 +107,15 @@ void main() {
 
     testWidgets('one skin per swipe, however hard', (tester) async {
       await pumpStore(tester);
-      expect(front(tester), AppThemeMode.matcha);
+      expect(front(tester), AppThemeMode.frost);
 
       await tester.fling(wheel, const Offset(-300, 0), 3000);
       await tester.pumpAndSettle();
-      expect(front(tester), AppThemeMode.frost);
+      expect(front(tester), AppThemeMode.wood);
 
       await tester.fling(wheel, const Offset(300, 0), 3000);
       await tester.pumpAndSettle();
-      expect(front(tester), AppThemeMode.matcha);
+      expect(front(tester), AppThemeMode.frost);
     });
 
     testWidgets('turns by itself and wraps round forever', (tester) async {
@@ -130,14 +133,15 @@ void main() {
         );
         seen.add(front(tester));
       }
+      // Skins and materials alternate; after Mechanical it wraps round.
       expect(seen, [
-        AppThemeMode.matcha,
         AppThemeMode.frost,
+        AppThemeMode.wood,
         AppThemeMode.velvet,
+        AppThemeMode.candy,
+        AppThemeMode.neon,
+        AppThemeMode.mechanical,
         AppThemeMode.obsidian, // wrapped
-        AppThemeMode.synthwave,
-        AppThemeMode.matcha,
-        AppThemeMode.frost,
       ]);
     });
 

@@ -1,6 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
+import 'package:popcalc/core/theme/theme_tokens.dart';
+
+/// Put above a group of [KeyButton]s to draw them as keycaps in [colors]
+/// (the Mechanical material). Without it keys are bare legends.
+class KeycapScope extends InheritedWidget {
+  final ThemeColors colors;
+
+  const KeycapScope({super.key, required this.colors, required super.child});
+
+  /// Wraps [child] only when [colors] asks for keycaps.
+  static Widget wrap({required ThemeColors colors, required Widget child}) =>
+      colors.finish == SkinFinish.keycap
+      ? KeycapScope(colors: colors, child: child)
+      : child;
+
+  static ThemeColors? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<KeycapScope>()?.colors;
+
+  @override
+  bool updateShouldNotify(KeycapScope oldWidget) => colors != oldWidget.colors;
+}
 
 class KeyButton extends StatefulWidget {
   final Widget? child;
@@ -80,8 +101,44 @@ class _KeyButtonState extends State<KeyButton> with SingleTickerProviderStateMix
     _controller.reverse();
   }
 
+  /// A keycap: a dark skirt with a lighter top face that sinks when pressed.
+  Widget _keycap(ThemeColors colors, Widget legend) {
+    final top = Color.lerp(colors.bg, colors.ink, 0.16)!;
+    final skirt = Color.lerp(colors.bg, Colors.black, 0.5)!;
+    return Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: skirt,
+          borderRadius: BorderRadius.circular(13.0),
+        ),
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 60),
+          padding: EdgeInsets.fromLTRB(
+            3.0,
+            _isPressed ? 5.0 : 2.0,
+            3.0,
+            _isPressed ? 3.0 : 7.0,
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10.0),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color.lerp(top, Colors.white, 0.1)!, top],
+              ),
+            ),
+            child: Center(child: legend),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final keycap = KeycapScope.maybeOf(context);
     return Semantics(
       label: widget.semanticLabel ?? widget.label,
       button: true,
@@ -93,6 +150,7 @@ class _KeyButtonState extends State<KeyButton> with SingleTickerProviderStateMix
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
+            if (keycap != null) return _keycap(keycap, child!);
             return Transform.scale(
               scale: _scaleAnimation.value,
               child: Container(

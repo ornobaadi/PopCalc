@@ -42,8 +42,11 @@ class FakePurchaseService implements PurchaseService {
   Future<Set<String>> restore() => loadOwned();
 
   @override
-  String priceFor(String productId) =>
-      productId == kAllThemesProductId ? r'$2.99' : r'$0.99';
+  String priceFor(String productId) => productId == kAllThemesProductId
+      ? r'$9.99'
+      : productId.startsWith('material_')
+      ? r'$1.99'
+      : r'$0.99';
 }
 
 final purchaseServiceProvider = Provider<PurchaseService>(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:popcalc/core/storage/entitlement_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
@@ -30,6 +31,7 @@ class SkinDetailSheet extends ConsumerStatefulWidget {
 class _SkinDetailSheetState extends ConsumerState<SkinDetailSheet> {
   final _preview = ThemePreview();
   bool _buying = false;
+  int _demoTaps = 0;
 
   @override
   void dispose() {
@@ -45,6 +47,13 @@ class _SkinDetailSheetState extends ConsumerState<SkinDetailSheet> {
     if (!mounted) return;
     setState(() => _buying = false);
     ok ? AppHaptics.success() : AppHaptics.error();
+  }
+
+  // Each tap plays the next digit, so a few taps give a feel for typing.
+  void _demo(MaterialFeel feel) {
+    final digit = Sfx.values[_demoTaps++ % 10];
+    AppSounds.previewMaterial(feel.soundFolder, digit);
+    AppHaptics.demo(feel.haptics);
   }
 
   void _apply() {
@@ -158,6 +167,57 @@ class _SkinDetailSheetState extends ConsumerState<SkinDetailSheet> {
                       color: c.inkSoft,
                     ),
                   ),
+                  if (skin.isMaterial) ...[
+                    const SizedBox(height: 14.0),
+                    Text(
+                      skin.feels.length > 1
+                          ? 'TAP A SWITCH TO HEAR AND FEEL IT'
+                          : 'TAP TO HEAR AND FEEL IT',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 10.5,
+                        letterSpacing: 1.6,
+                        color: c.inkSoft,
+                      ),
+                    ),
+                    const SizedBox(height: 6.0),
+                    Row(
+                      children: [
+                        for (final feel in skin.feels) ...[
+                          if (feel != skin.feels.first)
+                            const SizedBox(width: 8.0),
+                          Expanded(
+                            child: GestureDetector(
+                              onTapDown: (_) => _demo(feel),
+                              child: Container(
+                                height: 46.0,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: c.accent.withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(14.0),
+                                  border: Border.all(
+                                    color: c.accent.withValues(alpha: 0.7),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Text(
+                                  skin.feels.length > 1
+                                      ? feel.label
+                                      : 'PRESS A KEY',
+                                  style: TextStyle(
+                                    fontFamily: 'BebasNeue',
+                                    fontSize: 17.0,
+                                    letterSpacing: 1.6,
+                                    color: c.accent,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 16.0),
                   // Hold to preview: finger down shows the calculator in
                   // this skin, lifting brings the sheet back.

@@ -76,9 +76,17 @@ class AppSounds {
   static double _volume = 0.5;
   static SoundPack _pack = SoundPack.pop;
 
-  /// All packs stay loaded (~1 MB total) so switching and previewing packs
-  /// is instant.
-  static final Map<SoundPack, Map<Sfx, AudioSource>> _sources = {};
+  /// Sounds by folder under assets/sounds. The selectable packs all stay
+  /// loaded (~1 MB total) so switching and previewing them is instant;
+  /// material folders load the first time they are needed.
+  static final Map<String, Map<Sfx, AudioSource>> _sources = {};
+
+  /// Folder of the active material's exclusive sounds. While set it
+  /// replaces the user's chosen pack; see [setMaterial].
+  static String? _material;
+  static final Set<String> _loadingFolders = {};
+
+  static String get _folder => _material ?? _pack.name;
 
   /// PopCalc's launch sound (the typewriter "skrr"), used for every pack.
   static AudioSource? _launch;
@@ -145,20 +153,57 @@ class AppSounds {
     try {
       _detent = await SoLoud.instance.loadAsset('assets/sounds/detent.wav');
     } catch (_) {}
-    final order = [_pack, ...SoundPack.values.where((p) => p != _pack)];
-    for (final pack in order) {
-      for (final sfx in Sfx.values) {
-        try {
-          final source = await SoLoud.instance.loadAsset(
-            'assets/sounds/${pack.name}/${sfx.file}.wav',
-          );
-          (_sources[pack] ??= {})[sfx] = source;
-          if (pack == _pack && _pendingSfx == sfx) _flushPending();
-        } catch (_) {
-          // A missing/corrupt file only silences that one sound.
-        }
+    final material = _material;
+    final order = [
+      ?material,
+      _pack.name,
+      for (final p in SoundPack.values)
+        if (p != _pack) p.name,
+    ];
+    for (final folder in order) {
+      await _loadFolder(folder);
+    }
+  }
+
+  static Future<void> _loadFolder(String folder) async {
+    if (!_ready || !_loadingFolders.add(folder)) return;
+    for (final sfx in Sfx.values) {
+      if (_sources[folder]?[sfx] != null) continue;
+      try {
+        final source = await SoLoud.instance.loadAsset(
+          'assets/sounds/$folder/${sfx.file}.wav',
+        );
+        (_sources[folder] ??= {})[sfx] = source;
+        if (folder == _folder && _pendingSfx == sfx) _flushPending();
+      } catch (_) {
+        // A missing/corrupt file only silences that one sound.
       }
     }
+  }
+
+  /// Switches to a material's exclusive sounds ([folder] under
+  /// assets/sounds), or back to the user's chosen pack with null.
+  static void setMaterial(String? folder) {
+    _material = folder;
+    if (folder != null) unawaited(_loadFolder(folder));
+  }
+
+  /// Plays one sound from a material the user may not own yet (store
+  /// demo), loading just that file if needed.
+  static Future<void> previewMaterial(String folder, Sfx sfx) async {
+    if (!_canPlay) return;
+    var source = _sources[folder]?[sfx];
+    if (source == null) {
+      try {
+        source = await SoLoud.instance.loadAsset(
+          'assets/sounds/$folder/${sfx.file}.wav',
+        );
+        (_sources[folder] ??= {})[sfx] = source;
+      } catch (_) {
+        return;
+      }
+    }
+    _playSource(source);
   }
 
   static void configure({bool? enabled, double? volume, SoundPack? pack}) {
@@ -223,7 +268,7 @@ class AppSounds {
 
   static void play(Sfx sfx) {
     if (!_canPlay) return;
-    final source = _sources[_pack]?[sfx];
+    final source = _sources[_folder]?[sfx];
     if (source != null) _playSource(source, pitch: _pitchFor(sfx));
   }
 
@@ -249,7 +294,7 @@ class AppSounds {
   /// plays it the moment it's ready.
   static void playWhenReady(Sfx sfx) {
     if (!_enabled || _volume == 0) return;
-    if (_sources[_pack]?[sfx] != null && _ready) {
+    if (_sources[_folder]?[sfx] != null && _ready) {
       play(sfx);
     } else {
       _pendingSfx = sfx;
@@ -272,7 +317,7 @@ class AppSounds {
   /// Instantly previews [pack] (all packs are preloaded).
   static void previewPack(SoundPack pack) {
     if (!_canPlay) return;
-    final source = _sources[pack]?[Sfx.success];
+    final source = _sources[pack.name]?[Sfx.success];
     if (source != null) _playSource(source);
   }
 
