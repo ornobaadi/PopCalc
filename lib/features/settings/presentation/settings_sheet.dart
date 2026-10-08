@@ -5,6 +5,7 @@ import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
+import 'package:popcalc/features/settings/presentation/widgets/signature_footer.dart';
 
 /// A skin (theme) descriptor used in the settings skin picker.
 class SkinOption {
@@ -393,6 +394,7 @@ class SettingsSheet extends ConsumerWidget {
                   const SizedBox(height: 6.0),
                   Divider(color: colors.ink.withValues(alpha: 0.08), height: 1),
                   _SoundSection(colors: colors),
+                  SignatureFooter(colors: colors),
                 ],
               ),
             ),

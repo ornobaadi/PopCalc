@@ -41,6 +41,7 @@ dependencies:
   # Stay on 4.x: 5.x compiles native code via build hooks, which needs a
   # host C++ toolchain (Visual Studio) just to run `flutter test`.
   flutter_soloud: ^4.1.7
+  package_info_plus: ^9.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -61,6 +62,7 @@ flutter:
     - assets/sounds/typewriter/
     - assets/brand_assets/logo/pop_calc_mark_2048.png
     - assets/brand_assets/logo/pop_calc_mark_dark_2048.png
+    - assets/ornob-aadi-signature.png
 
   fonts:
     - family: BebasNeue

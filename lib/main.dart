@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,12 @@ import 'package:popcalc/features/splash/presentation/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Bundled font licence, shown on the licenses page from settings.
+  LicenseRegistry.addLicense(() async* {
+    final ofl = await rootBundle.loadString('assets/licenses/Antonio-OFL.txt');
+    yield LicenseEntryWithLineBreaks(const ['Antonio'], ofl);
+  });
 
   // Load sounds with the saved settings so the splash can play right away.
   // Capped so a slow audio device can never hold up app launch.
