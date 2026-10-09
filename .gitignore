@@ -59,3 +59,6 @@ assets/ornob-aadi-signature/*
 
 # Screen recordings dropped in for reference
 assets/screen-*.mp4
+
+# Kotlin compiler session files written during Android builds
+android/.kotlin/

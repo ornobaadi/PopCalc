@@ -11,6 +11,8 @@ import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
+import 'package:popcalc/features/themes/presentation/store_widgets.dart';
+import 'package:popcalc/features/themes/presentation/theme_card.dart';
 import 'package:popcalc/features/themes/presentation/theme_detail_sheet.dart';
 import 'package:popcalc/features/themes/presentation/theme_store_screen.dart';
 
@@ -33,6 +35,8 @@ class SettingsSheet extends ConsumerWidget {
     final owned = ref.watch(entitlementProvider);
     // Free and premium skins always show; a material only once it's owned.
     final skins = [...kSkins, ...kMaterials.where((m) => ownsSkin(owned, m))];
+    final ownsAll = kBundleItems.every((s) => ownsSkin(owned, s));
+    final saving = ref.watch(purchasesProvider.select((s) => s.bundleSaving));
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -88,21 +92,24 @@ class SettingsSheet extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: GridView.builder(
                       shrinkWrap: true,
+                      padding: EdgeInsets.zero,
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 4,
-                            crossAxisSpacing: 12.0,
-                            mainAxisSpacing: 16.0,
-                            childAspectRatio: 0.64,
+                            crossAxisSpacing: 8.0,
+                            mainAxisSpacing: 12.0,
+                            mainAxisExtent: _SkinTile.height,
                           ),
                       itemCount: skins.length,
                       itemBuilder: (context, index) {
                         final skin = skins[index];
                         final locked = !ownsSkin(owned, skin);
-                        final isSelected = !locked && skin.mode == currentMode;
-
-                        return GestureDetector(
+                        return _SkinTile(
+                          skin: skin,
+                          colors: colors,
+                          locked: locked,
+                          selected: !locked && skin.mode == currentMode,
                           onTap: () {
                             if (locked) {
                               AppHaptics.lightImpact();
@@ -114,108 +121,6 @@ class SettingsSheet extends ConsumerWidget {
                                 .read(themeProvider.notifier)
                                 .setTheme(skin.mode);
                           },
-                          child: Column(
-                            children: [
-                              // Hex tile
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                width: 62.0,
-                                height: 62.0,
-                                decoration: BoxDecoration(
-                                  color: skin.colors.bg,
-                                  borderRadius: BorderRadius.circular(18.0),
-                                  border: isSelected
-                                      ? Border.all(
-                                          color: colors.accent,
-                                          width: 3.0,
-                                        )
-                                      : Border.all(
-                                          color: colors.ink.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                          width: 1.5,
-                                        ),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: colors.accent.withValues(
-                                              alpha: 0.4,
-                                            ),
-                                            blurRadius: 12,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                child: Stack(
-                                  children: [
-                                    Positioned.fill(
-                                      child: _SkinPreview(
-                                        colors: skin.colors,
-                                        selected: isSelected,
-                                      ),
-                                    ),
-                                    if (locked)
-                                      Positioned(
-                                        left: 5.0,
-                                        bottom: 5.0,
-                                        child: Icon(
-                                          Icons.lock_rounded,
-                                          color: skin.colors.inkSoft,
-                                          size: 13.0,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 6.0),
-                              // Name
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  skin.label,
-                                  maxLines: 1,
-                                  style: TextStyle(
-                                    fontFamily: 'BebasNeue',
-                                    fontSize: 13.0,
-                                    letterSpacing: 0.5,
-                                    color: locked
-                                        ? colors.inkSoft.withValues(alpha: 0.5)
-                                        : colors.ink,
-                                  ),
-                                ),
-                              ),
-                              // Badge
-                              Container(
-                                margin: const EdgeInsets.only(top: 2.0),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6.0,
-                                  vertical: 1.0,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: locked
-                                      ? colors.inkSoft.withValues(alpha: 0.15)
-                                      : colors.accent.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(4.0),
-                                ),
-                                child: Text(
-                                  !skin.premium
-                                      ? 'FREE'
-                                      : locked
-                                      ? 'PRO'
-                                      : 'OWNED',
-                                  style: TextStyle(
-                                    fontFamily: 'BebasNeue',
-                                    fontSize: 10.0,
-                                    letterSpacing: 0.8,
-                                    color: locked
-                                        ? colors.inkSoft
-                                        : colors.accent,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         );
                       },
                     ),
@@ -225,47 +130,14 @@ class SettingsSheet extends ConsumerWidget {
                   // Skin store entry
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: GestureDetector(
+                    child: _StoreBanner(
+                      colors: colors,
+                      ownsAll: ownsAll,
+                      saving: ownsAll ? null : saving,
                       onTap: () {
                         AppHaptics.selectionClick();
                         ThemeStoreScreen.open(context);
                       },
-                      child: Container(
-                        height: 52.0,
-                        padding: const EdgeInsets.symmetric(horizontal: 18.0),
-                        decoration: BoxDecoration(
-                          color: colors.accent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(16.0),
-                          border: Border.all(
-                            color: colors.accent.withValues(alpha: 0.5),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.storefront_rounded,
-                              color: colors.accent,
-                              size: 22.0,
-                            ),
-                            const SizedBox(width: 12.0),
-                            Text(
-                              'SKIN STORE',
-                              style: TextStyle(
-                                fontFamily: 'BebasNeue',
-                                fontSize: 20.0,
-                                letterSpacing: 1.6,
-                                color: colors.ink,
-                              ),
-                            ),
-                            const Spacer(),
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              color: colors.inkSoft,
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
                   ),
 
@@ -715,52 +587,263 @@ class _PackChip extends StatelessWidget {
 
 /// Tiny numeral + accent dot rendered in a skin's own colours so dark
 /// skins are distinguishable at a glance.
-class _SkinPreview extends StatelessWidget {
-  final ThemeColors colors;
-  final bool selected;
+/// One skin in the picker: a hexagon in the skin's own colours with its
+/// name underneath. A lock marks one that has to be bought first.
+class _SkinTile extends StatelessWidget {
+  static const _hexWidth = 62.0;
+  static const _hexHeight = 68.0;
 
-  const _SkinPreview({required this.colors, required this.selected});
+  /// The hexagon, the gap and one line of name.
+  static const height = _hexHeight + 6.0 + 18.0;
+
+  final SkinInfo skin;
+  final ThemeColors colors;
+  final bool locked;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SkinTile({
+    required this.skin,
+    required this.colors,
+    required this.locked,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Text(
-          '7',
-          style: TextStyle(
-            fontFamily: 'BebasNeue',
-            fontSize: 34.0,
-            height: 1.0,
-            color: colors.extrudeTop,
-            shadows: [
-              Shadow(color: colors.extrudeSide, offset: const Offset(2, 2)),
-            ],
-          ),
-        ),
-        Positioned(
-          right: 8.0,
-          top: 8.0,
-          child: Container(
-            width: 9.0,
-            height: 9.0,
-            decoration: BoxDecoration(
-              color: colors.accent,
-              shape: BoxShape.circle,
+    final own = skin.colors;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        children: [
+          SizedBox(
+            width: _hexWidth,
+            height: _hexHeight,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    alignment: Alignment.center,
+                    decoration: ShapeDecoration(
+                      color: own.bg,
+                      shape: StarBorder.polygon(
+                        sides: 6,
+                        pointRounding: 0.4,
+                        side: selected
+                            ? BorderSide(color: colors.accent, width: 3.0)
+                            : BorderSide(
+                                color: colors.ink.withValues(alpha: 0.15),
+                                width: 1.5,
+                              ),
+                      ),
+                      shadows: selected
+                          ? [
+                              BoxShadow(
+                                color: colors.accent.withValues(alpha: 0.4),
+                                blurRadius: 12.0,
+                                offset: const Offset(0.0, 4.0),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Text(
+                      '7',
+                      style: TextStyle(
+                        fontFamily: 'BebasNeue',
+                        fontSize: 32.0,
+                        height: 1.0,
+                        color: own.extrudeTop,
+                        shadows: [
+                          Shadow(
+                            color: own.extrudeSide,
+                            offset: const Offset(2.0, 2.0),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 14.0,
+                  top: 16.0,
+                  child: Container(
+                    width: 8.0,
+                    height: 8.0,
+                    decoration: BoxDecoration(
+                      color: own.accent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                if (locked)
+                  Positioned(
+                    left: 0.0,
+                    right: 0.0,
+                    bottom: 6.0,
+                    child: Icon(
+                      Icons.lock_rounded,
+                      color: own.inkSoft,
+                      size: 12.0,
+                    ),
+                  ),
+                if (selected)
+                  Positioned(
+                    right: -2.0,
+                    bottom: 4.0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: colors.bg,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.check_circle_rounded,
+                        color: colors.accent,
+                        size: 18.0,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-        ),
-        if (selected)
-          Positioned(
-            right: 4.0,
-            bottom: 4.0,
-            child: Icon(
-              Icons.check_circle_rounded,
-              color: colors.accent,
-              size: 16.0,
+          const SizedBox(height: 6.0),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              skin.label,
+              maxLines: 1,
+              style: TextStyle(
+                fontFamily: 'BebasNeue',
+                fontSize: 13.0,
+                letterSpacing: 0.6,
+                height: 1.2,
+                color: locked ? colors.inkSoft : colors.ink,
+              ),
             ),
           ),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The way into the skin store: a few of its skins fanned out, how much
+/// there is, and what the everything bundle saves.
+class _StoreBanner extends StatelessWidget {
+  final ThemeColors colors;
+  final bool ownsAll;
+  final int? saving;
+  final VoidCallback onTap;
+
+  const _StoreBanner({
+    required this.colors,
+    required this.ownsAll,
+    required this.saving,
+    required this.onTap,
+  });
+
+  static const _fan = [
+    (AppThemeMode.synthwave, -24.0, 6.0, -0.2),
+    (AppThemeMode.frost, 24.0, 6.0, 0.2),
+    (AppThemeMode.clay, 0.0, 0.0, 0.0),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final skinCount = kSkins.where((s) => s.premium).length;
+    return Pressable(
+      onTap: onTap,
+      child: Container(
+        height: 84.0,
+        padding: const EdgeInsets.only(left: 10.0, right: 10.0),
+        decoration: BoxDecoration(
+          color: colors.ink.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(24.0),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 98.0,
+              height: 60.0,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  for (final (mode, dx, dy, angle) in _fan)
+                    Transform.translate(
+                      offset: Offset(dx, dy),
+                      child: Transform.rotate(
+                        angle: angle,
+                        child: SizedBox(
+                          width: 46.0,
+                          child: SkinMockup(
+                            skin: skinOf(mode),
+                            borderColor: Colors.white,
+                            borderWidth: 2.0,
+                            radius: 11.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10.0),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      children: [
+                        Text(
+                          'SKIN STORE',
+                          style: TextStyle(
+                            fontFamily: 'BebasNeue',
+                            fontSize: 22.0,
+                            letterSpacing: 1.6,
+                            height: 1.15,
+                            color: colors.ink,
+                          ),
+                        ),
+                        if (saving != null) ...[
+                          const SizedBox(width: 8.0),
+                          SavingChip(
+                            percent: saving!,
+                            color: colors.accent,
+                            onColor: colors.bg,
+                            fontSize: 12.0,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 2.0),
+                  Text(
+                    ownsAll
+                        ? 'Everything unlocked'
+                        : '$skinCount skins and ${kMaterials.length} materials',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11.5,
+                      height: 1.3,
+                      color: colors.inkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: colors.inkSoft),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -772,7 +855,7 @@ class _SignatureFooter extends StatefulWidget {
   final ThemeColors colors;
   const _SignatureFooter({required this.colors});
 
-  static const _appVersion = '1.2.0 (5)';
+  static const _appVersion = '1.3.0 (8)';
 
   @override
   State<_SignatureFooter> createState() => _SignatureFooterState();

@@ -41,8 +41,8 @@ void main() {
     final first = ProviderContainer();
     addTearDown(first.dispose);
     expect(
-      await first.read(entitlementProvider.notifier).buy(obsidian.productId!),
-      isTrue,
+      await first.read(purchasesProvider.notifier).buy(obsidian.productId!),
+      BuyOutcome.purchased,
     );
     expect(first.read(entitlementProvider), contains(obsidian.productId));
 

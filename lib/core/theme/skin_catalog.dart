@@ -2,10 +2,9 @@ import 'package:popcalc/core/haptics/app_haptics.dart';
 
 import 'theme_tokens.dart';
 
-/// When false every skin counts as owned ("free during launch").
-///
-/// Keep this false in any release until real billing exists: the only
-/// purchase service today is [FakePurchaseService], which grants for free.
+/// Master switch for the paid store. When false every skin counts as owned
+/// and nothing needs buying ("free during launch"); when true, premium skins
+/// and materials need a purchase from Google Play.
 const bool kPremiumLocked = true;
 
 /// Product id of the bundle that unlocks every premium skin and material.
@@ -291,6 +290,14 @@ final List<SkinInfo> kBundleItems = () {
     ],
   ];
 }();
+
+/// Every product id the store sells. Each needs a one-time product with the
+/// same id in Play Console; one that is missing there simply shows as not
+/// available.
+final Set<String> kProductIds = {
+  kAllThemesProductId,
+  for (final skin in kBundleItems) skin.productId!,
+};
 
 SkinInfo skinOf(AppThemeMode mode) =>
     [...kSkins, ...kMaterials].firstWhere((s) => s.mode == mode);

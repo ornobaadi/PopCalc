@@ -1,3 +1,39 @@
+# PopCalc v1.3.0 (build 8) — Skin Store & Materials
+
+## ✨ What's new
+
+### 🛍️ Skin store
+- A new **Skin Store** in Settings, with a turning carousel of everything in it
+- **Hold to preview:** press and hold on any skin to see the whole calculator wearing it before you buy
+- Five premium skins: Obsidian, Synthwave, Matcha, Frost and Velvet
+- Marigold, Charcoal and Peony stay free. Nothing needed to do math is ever locked
+
+### 🧱 Materials
+- Seven materials where the look, the key sound and the haptics are made as one set: Clay, Chrome, Glass, Wood, Candy, Neon and Mechanical
+- Mechanical comes with three switches (clicky, tactile, linear) that you can swap in Settings
+- Tap a material in the store to hear and feel it first
+
+### 💳 Purchases
+- One-time purchases through Google Play: a single skin or material, or the **Everything bundle** for all of them
+- Buy once and it is yours on every phone signed in to the same Google account. **Restore purchases** is at the bottom of the store
+- What you own keeps working offline
+
+### ✍️ Also
+- A second typeface, Inter, for descriptions and small labels
+
+---
+
+### Play Store "What's new" (under 500 chars)
+```
+New in 1.3.0: Skin Store & Materials
+• Skin Store in Settings: five premium skins, with hold to preview
+• Materials: Clay, Chrome, Glass, Wood, Candy, Neon and Mechanical, each with its own key sound and haptics
+• Buy one, or everything in a single bundle. One-time purchases through Google Play
+• Marigold, Charcoal and Peony stay free
+```
+
+---
+
 # PopCalc v1.2.0 (build 5) — Scientific & Converter
 
 ## ✨ What's new

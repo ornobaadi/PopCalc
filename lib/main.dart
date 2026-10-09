@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:popcalc/core/storage/entitlement_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/material_feel.dart';
+import 'package:popcalc/core/theme/skin_catalog.dart';
+import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/features/splash/presentation/splash_screen.dart';
 
 Future<void> main() async {
@@ -46,6 +49,20 @@ class PopCalcApp extends ConsumerWidget {
     // A material brings its own sound and haptics; keep the engines in step
     // with whichever skin is active.
     applyMaterialFeel(ref.watch(materialFeelProvider));
+
+    // A premium skin that is not owned (refunded, or the phone is on another
+    // Google account now) cannot stay on. Listening here also starts the
+    // store at launch, which is when it checks the Play account.
+    void keepToOwnedSkin() {
+      final purchases = ref.read(purchasesProvider);
+      final skin = skinOf(ref.read(themeProvider));
+      if (purchases.loaded && !ownsSkin(purchases.owned, skin)) {
+        ref.read(themeProvider.notifier).setTheme(AppThemeMode.sunny);
+      }
+    }
+
+    ref.listen(purchasesProvider, (_, _) => keepToOwnedSkin());
+    ref.listen(themeProvider, (_, _) => keepToOwnedSkin());
 
     return MaterialApp(
       title: 'PopCalc',

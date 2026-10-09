@@ -9,15 +9,17 @@ import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 
+import 'purchase_feedback.dart';
+import 'store_widgets.dart';
 import 'theme_bundle_sheet.dart';
 import 'theme_card.dart';
 import 'theme_detail_sheet.dart';
 
 /// The skin store: a carousel of everything in the bundle (premium skins and
 /// materials),
-/// then the materials and the premium skins as cards. Free skins live in the
-/// settings sheet.
-class ThemeStoreScreen extends ConsumerWidget {
+/// then the materials and the premium skins, each a row of cards that
+/// scrolls sideways. Free skins live in the settings sheet.
+class ThemeStoreScreen extends ConsumerStatefulWidget {
   const ThemeStoreScreen({super.key});
 
   static Future<void> open(BuildContext context) {
@@ -48,72 +50,135 @@ class ThemeStoreScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ThemeStoreScreen> createState() => _ThemeStoreScreenState();
+}
+
+class _ThemeStoreScreenState extends ConsumerState<ThemeStoreScreen> {
+  bool _restoring = false;
+  String? _restoreNote;
+
+  @override
+  void initState() {
+    super.initState();
+    recheckPrices(ref, kProductIds);
+  }
+
+  // Play has no separate restore: asking the account what it holds is it.
+  Future<void> _restore() async {
+    AppHaptics.selectionClick();
+    setState(() {
+      _restoring = true;
+      _restoreNote = null;
+    });
+    final reached = await ref.read(purchasesProvider.notifier).refresh();
+    if (!mounted) return;
+    final owned = ref.read(purchasesProvider).owned;
+    setState(() {
+      _restoring = false;
+      _restoreNote = !reached
+          ? 'Could not reach Google Play. Try again in a moment.'
+          : owned.isEmpty
+          ? 'No purchases found for this Google account.'
+          : 'Your purchases are restored.';
+    });
+  }
+
+  static const _gutter = 20.0;
+
+  @override
+  Widget build(BuildContext context) {
     final currentMode = ref.watch(themeProvider);
     final colors = ThemeColors.of(currentMode);
-    final owned = ref.watch(entitlementProvider);
-    final entitlements = ref.read(entitlementProvider.notifier);
+    final purchases = ref.watch(purchasesProvider);
+    final owned = purchases.owned;
+    final ownsAll = kBundleItems.every((s) => ownsSkin(owned, s));
 
-    String statusOf(SkinInfo skin) {
-      if (skin.mode == currentMode) return 'ACTIVE';
-      if (ownsSkin(owned, skin)) return 'OWNED';
-      return entitlements.priceFor(skin.productId!);
+    Widget card(SkinInfo skin) {
+      final SkinStanding standing;
+      final String status;
+      if (skin.mode == currentMode) {
+        standing = SkinStanding.active;
+        status = 'ACTIVE';
+      } else if (ownsSkin(owned, skin)) {
+        standing = SkinStanding.owned;
+        status = 'OWNED';
+      } else {
+        final productId = skin.productId!;
+        standing = purchases.canBuy(productId)
+            ? SkinStanding.forSale
+            : SkinStanding.notForSale;
+        status = priceTag(purchases, productId, unavailable: 'SOON');
+      }
+      return SkinCard(
+        skin: skin,
+        colors: colors,
+        status: status,
+        standing: standing,
+        onTap: () {
+          AppHaptics.selectionClick();
+          SkinDetailSheet.show(context, skin);
+        },
+      );
     }
 
-    final skins = kSkins.where((s) => s.premium).toList();
-
-    List<Widget> section(String title, String hint, List<SkinInfo> items) => [
-      const SizedBox(height: 20.0),
-      Text(
-        title,
-        style: TextStyle(
-          fontFamily: 'BebasNeue',
-          fontSize: 18.0,
-          letterSpacing: 1.6,
-          color: colors.ink,
-        ),
-      ),
-      Text(
-        hint,
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 11.5,
-          height: 1.35,
-          color: colors.inkSoft,
-        ),
-      ),
-      const SizedBox(height: 12.0),
-      LayoutBuilder(
-        builder: (context, constraints) {
-          const gap = 14.0;
-          final tile = (constraints.maxWidth - gap) / 2;
-          return GridView.builder(
-            shrinkWrap: true,
-            padding: EdgeInsets.zero,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: gap,
-              mainAxisSpacing: 12.0,
-              mainAxisExtent: tile + SkinCard.captionHeight,
+    // A section is one row of cards that scrolls sideways.
+    List<Widget> section(
+      String title,
+      String hint,
+      List<SkinInfo> items,
+      double cardWidth,
+    ) => [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(_gutter, 32.0, _gutter, 0.0),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text.rich(
+            TextSpan(
+              text: title,
+              children: [
+                TextSpan(
+                  text: '  ${items.length}',
+                  style: TextStyle(
+                    color: colors.inkSoft.withValues(alpha: 0.55),
+                  ),
+                ),
+              ],
             ),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final skin = items[index];
-              return SkinCard(
-                skin: skin,
-                colors: colors,
-                status: statusOf(skin),
-                locked: !ownsSkin(owned, skin),
-                active: skin.mode == currentMode,
-                onTap: () {
-                  AppHaptics.selectionClick();
-                  SkinDetailSheet.show(context, skin);
-                },
-              );
-            },
-          );
-        },
+            style: TextStyle(
+              fontFamily: 'BebasNeue',
+              fontSize: 26.0,
+              letterSpacing: 1.8,
+              height: 1.1,
+              color: colors.ink,
+            ),
+          ),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(_gutter, 2.0, _gutter, 14.0),
+        child: Text(
+          hint,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.0,
+            height: 1.35,
+            color: colors.inkSoft,
+          ),
+        ),
+      ),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: _gutter),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final skin in items) ...[
+              if (skin != items.first) const SizedBox(width: 12.0),
+              SizedBox(width: cardWidth, child: card(skin)),
+            ],
+          ],
+        ),
       ),
     ];
 
@@ -123,78 +188,113 @@ class ThemeStoreScreen extends ConsumerWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440.0),
           child: SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20.0, 4.0, 20.0, 24.0),
-              children: [
-                Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // So many cards across, the last one cut off at the edge
+                // to show there are more.
+                double cardWidth(double across) =>
+                    (constraints.maxWidth - _gutter - 12.0 * across.floor()) /
+                    across;
+
+                return ListView(
+                  padding: const EdgeInsets.only(top: 4.0, bottom: 28.0),
                   children: [
-                    IconButton(
-                      tooltip: 'Back',
-                      onPressed: () {
-                        AppHaptics.selectionClick();
-                        Navigator.of(context).pop();
-                      },
-                      icon: Icon(
-                        Icons.arrow_back_rounded,
-                        color: colors.ink,
-                        size: 22.0,
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0, right: _gutter),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'Back',
+                            onPressed: () {
+                              AppHaptics.selectionClick();
+                              Navigator.of(context).pop();
+                            },
+                            icon: Icon(
+                              Icons.arrow_back_rounded,
+                              color: colors.ink,
+                              size: 22.0,
+                            ),
+                          ),
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'SKIN STORE',
+                                style: TextStyle(
+                                  fontFamily: 'BebasNeue',
+                                  fontSize: 24.0,
+                                  letterSpacing: 1.8,
+                                  color: colors.ink,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Expanded(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        _gutter,
+                        8.0,
+                        _gutter,
+                        0.0,
+                      ),
+                      child: BundleCarousel(
+                        skins: kBundleItems,
+                        saving: ownsAll ? null : purchases.bundleSaving,
+                        onTap: (front) {
+                          AppHaptics.selectionClick();
+                          BundleDetailSheet.show(context, front);
+                        },
+                      ),
+                    ),
+                    ...section(
+                      'MATERIALS',
+                      'Look, sound and haptics, made as one set.',
+                      kMaterials,
+                      cardWidth(1.75),
+                    ),
+                    ...section(
+                      'PREMIUM SKINS',
+                      'A new face for every numeral and key.',
+                      kSkins.where((s) => s.premium).toList(),
+                      cardWidth(2.3),
+                    ),
+                    const SizedBox(height: 22.0),
+                    Center(
+                      child: TextButton(
+                        onPressed: _restoring ? null : _restore,
                         child: Text(
-                          'SKIN STORE',
+                          _restoring ? 'CHECKING...' : 'RESTORE PURCHASES',
                           style: TextStyle(
                             fontFamily: 'BebasNeue',
-                            fontSize: 24.0,
-                            letterSpacing: 1.8,
-                            color: colors.ink,
+                            fontSize: 14.0,
+                            letterSpacing: 1.6,
+                            color: colors.inkSoft,
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8.0),
-                BundleCarousel(
-                  skins: kBundleItems,
-                  onTap: (front) {
-                    AppHaptics.selectionClick();
-                    BundleDetailSheet.show(context, front);
-                  },
-                ),
-                ...section(
-                  'MATERIALS',
-                  'Look, sound and haptics, made as one set. Tap one to '
-                      'hear and feel it.',
-                  kMaterials,
-                ),
-                ...section(
-                  'PREMIUM SKINS',
-                  'Tap a skin for a closer look and a full-screen preview.',
-                  skins,
-                ),
-                const SizedBox(height: 12.0),
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      AppHaptics.selectionClick();
-                      entitlements.restore();
-                    },
-                    child: Text(
-                      'RESTORE PURCHASES',
-                      style: TextStyle(
-                        fontFamily: 'BebasNeue',
-                        fontSize: 14.0,
-                        letterSpacing: 1.6,
-                        color: colors.inkSoft,
+                    if (_restoreNote != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: _gutter,
+                        ),
+                        child: Text(
+                          _restoreNote!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11.5,
+                            height: 1.35,
+                            color: colors.inkSoft,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -213,10 +313,18 @@ class BundleCarousel extends StatefulWidget {
 
   final List<SkinInfo> skins;
 
+  /// The percent the bundle saves, shown in the corner; null hides it.
+  final int? saving;
+
   /// Tapping the banner; gets the skin at the front at that moment.
   final ValueChanged<SkinInfo> onTap;
 
-  const BundleCarousel({super.key, required this.skins, required this.onTap});
+  const BundleCarousel({
+    super.key,
+    required this.skins,
+    required this.onTap,
+    this.saving,
+  });
 
   @override
   State<BundleCarousel> createState() => BundleCarouselState();
@@ -348,6 +456,17 @@ class BundleCarouselState extends State<BundleCarousel>
                   return Stack(
                     children: [
                       Positioned.fill(child: _wheel(position, width)),
+                      if (widget.saving != null)
+                        Positioned(
+                          top: width * 0.04,
+                          right: width * 0.04,
+                          child: SavingChip(
+                            percent: widget.saving!,
+                            color: accent,
+                            onColor: box,
+                            fontSize: width * 0.044,
+                          ),
+                        ),
                       Positioned(
                         left: 0.0,
                         right: 0.0,
