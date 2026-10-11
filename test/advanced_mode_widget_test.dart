@@ -49,8 +49,8 @@ void main() {
     await tapKey(tester, '=');
     expect(find.text('sin('), findsOneWidget);
 
-    // 2nd flips the keys to inverses
-    await tester.tap(find.bySemanticsLabel('Second functions'));
+    // The swap key flips the keys to inverses
+    await tester.tap(find.bySemanticsLabel('More functions'));
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('-1'), findsNWidgets(3));
 
@@ -131,5 +131,63 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(from, findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Sideways: every scientific key at once, no swap key', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'settings_advanced_tools': true});
+    tester.view.physicalSize = const Size(2400, 1080); // 800 × 360 dp
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: CalculatorScreen())),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // Both layers are laid out together.
+    for (final label in [
+      'Sine',
+      'Inverse sine',
+      'Square',
+      'Power',
+      'Square root',
+      'Cube root',
+      'Natural log',
+      'e to the power',
+      'Pi',
+      'Euler number',
+      'Factorial',
+    ]) {
+      expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
+    }
+    expect(find.bySemanticsLabel('More functions'), findsNothing);
+    expect(find.text('7'), findsOneWidget);
+
+    // An inverse works straight away, and the angle key switches units.
+    await tester.tap(find.bySemanticsLabel('Inverse sine'));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('sin⁻¹('), findsOneWidget);
+
+    await tester.tap(find.text('DEG'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('RAD'), findsOneWidget);
+  });
+
+  testWidgets('Sideways without scientific mode keeps the upright layout', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(2400, 1080);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: CalculatorScreen())),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.bySemanticsLabel('Sine'), findsNothing);
+    expect(find.text('7'), findsOneWidget);
   });
 }

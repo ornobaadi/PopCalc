@@ -1,13 +1,16 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:popcalc/main.dart';
+import 'package:popcalc/features/calculator/presentation/calculator_screen.dart';
 
 void main() {
   testWidgets('Calculator smoke test - keys present and functional',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: PopCalcApp(),
+        child: MaterialApp(
+          home: CalculatorScreen(),
+        ),
       ),
     );
     await tester.pump(const Duration(milliseconds: 100));

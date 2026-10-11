@@ -107,6 +107,23 @@ class HistoryNotifier extends StateNotifier<List<HistoryEntry>> {
     } catch (_) {}
   }
 
+  /// Saves in-progress expression with live preview when user exits/pauses the app.
+  /// Ignores if empty or already identical to the most recent entry.
+  Future<void> savePendingPreview(String expression, String result) async {
+    final expr = expression.trim();
+    final res = result.trim();
+    if (expr.isEmpty || res.isEmpty) return;
+
+    if (state.isNotEmpty) {
+      final latest = state.first;
+      if (latest.expression == expr && latest.result == res) {
+        return;
+      }
+    }
+
+    await addEntry(expr, res);
+  }
+
   Future<void> removeEntry(String id) async {
     state = state.where((e) => e.id != id).toList();
     _saveAll();

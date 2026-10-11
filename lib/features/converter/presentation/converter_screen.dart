@@ -37,7 +37,7 @@ void _copyToClipboard(BuildContext context, String text) {
 
 /// The unit converter: its own screen, same skin and keys as the
 /// calculator, with one number in and one number out.
-class ConverterScreen extends ConsumerWidget {
+class ConverterScreen extends ConsumerStatefulWidget {
   const ConverterScreen({super.key});
 
   static Future<void> open(BuildContext context) {
@@ -68,7 +68,45 @@ class ConverterScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConverterScreen> createState() => _ConverterScreenState();
+}
+
+class _ConverterScreenState extends ConsumerState<ConverterScreen> {
+  bool _wasScientific = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Unit converter is strictly portrait-only. Instantly force portrait.
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final settings = ref.read(settingsProvider);
+    _wasScientific = settings.advancedTools && settings.scientificActive;
+  }
+
+  @override
+  void dispose() {
+    // When returning to calculator, restore orientations based on scientific mode.
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      if (_wasScientific) ...[
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ],
+    ]);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = ThemeColors.of(ref.watch(themeProvider));
 
     // Leaving mirrors the open haptic, whether by the back button or the

@@ -319,6 +319,16 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
               ? 0.0
               : sin(c * pi * 3) * (1.0 - c) * 0.06;
 
+          final extruded = ExtrudedNumber(
+            text: widget.text,
+            depth: currentDepth,
+            colors: widget.colors,
+            tilt: dynamicTilt,
+            isLite: widget.isLite,
+            isZero: widget.isZero,
+            textAlign: TextAlign.center,
+          );
+
           return Transform.translate(
             offset: Offset(shakeOffsetX, typeOffsetY),
             child: Transform(
@@ -328,22 +338,16 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
                 typeScaleY * celebrateScale * _scaleAnimation.value,
                 1.0,
               )..rotateZ(celebrateTilt),
-              child: Transform(
-                alignment: Alignment.center,
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.0010) // Natural camera perspective
-                  ..rotateX(rotateX)
-                  ..rotateY(rotateY),
-                child: ExtrudedNumber(
-                  text: widget.text,
-                  depth: currentDepth,
-                  colors: widget.colors,
-                  tilt: dynamicTilt,
-                  isLite: widget.isLite,
-                  isZero: widget.isZero,
-                  textAlign: TextAlign.center,
-                ),
-              ),
+              child: widget.isLite
+                  ? extruded
+                  : Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.0010) // Natural camera perspective
+                        ..rotateX(rotateX)
+                        ..rotateY(rotateY),
+                      child: extruded,
+                    ),
             ),
           );
         },

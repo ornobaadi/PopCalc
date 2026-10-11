@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
+import 'package:popcalc/core/engine/evaluator.dart';
 import 'package:popcalc/core/engine/token.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
@@ -9,13 +10,17 @@ import 'package:popcalc/features/calculator/application/calculator_controller.da
 
 /// Scientific keys in a soft tray above the keypad.
 ///
-/// Row one holds the everyday keys (2nd, xʸ, √, brackets, π) and stays
+/// Row one holds the everyday keys (swap, xʸ, √, brackets, π) and stays
 /// visible; row two (trig, logs, !) folds away with the handle so the
-/// answer keeps its room. "2nd" flips every key to its inverse.
+/// answer keeps its room. The swap key (⇄) flips every key to its inverse.
+///
+/// With [grid] (the sideways layout) there is room for everything, so both
+/// layers are laid out at once in a 4 × 5 block and nothing needs swapping.
 class ScientificTray extends ConsumerStatefulWidget {
   final ThemeColors colors;
+  final bool grid;
 
-  const ScientificTray({super.key, required this.colors});
+  const ScientificTray({super.key, required this.colors, this.grid = false});
 
   /// Height of one key row, shared with the screen's layout maths.
   static const double rowHeight = 46.0;
@@ -26,6 +31,154 @@ class ScientificTray extends ConsumerStatefulWidget {
 
 class _ScientificTrayState extends ConsumerState<ScientificTray> {
   bool _second = false;
+
+  /// Sideways layout: every function on show, primary and inverse together,
+  /// plus the angle unit, so there is no second layer to swap to.
+  Widget _grid(
+    _KeyBuilder key,
+    void Function(String name) fn,
+    CalculatorController controller,
+  ) {
+    final colors = widget.colors;
+    final unit = ref.watch(settingsProvider.select((s) => s.angleUnit));
+    final isDeg = unit == AngleUnit.degrees;
+
+    final rows = <List<Widget>>[
+      [
+        key(
+          '(',
+          () => controller.onOpener(const Token(TokenType.leftParen, '(')),
+          semantic: 'Open bracket',
+          feel: _Feel.bracketOpen,
+        ),
+        key(
+          ')',
+          controller.onRightParen,
+          semantic: 'Close bracket',
+          feel: _Feel.bracketClose,
+        ),
+        key(
+          'π',
+          () => controller.onConstant('π'),
+          semantic: 'Pi',
+          feel: _Feel.constant,
+        ),
+        key(
+          'e',
+          () => controller.onConstant('e'),
+          semantic: 'Euler number',
+          feel: _Feel.constant,
+        ),
+      ],
+      [
+        key(
+          'x',
+          controller.onSquare,
+          sup: '2',
+          semantic: 'Square',
+          feel: _Feel.power,
+          accent: true,
+        ),
+        key(
+          'x',
+          () => controller.onOperator(TokenType.power, '^'),
+          sup: 'y',
+          semantic: 'Power',
+          feel: _Feel.power,
+          accent: true,
+        ),
+        key('√', () => fn('√'), semantic: 'Square root', feel: _Feel.root),
+        key(
+          '√',
+          () => fn('∛'),
+          index: '3',
+          semantic: 'Cube root',
+          feel: _Feel.root,
+        ),
+      ],
+      [
+        key('sin', () => fn('sin'), semantic: 'Sine', feel: _Feel.trig),
+        key('cos', () => fn('cos'), semantic: 'Cosine', feel: _Feel.trig),
+        key('tan', () => fn('tan'), semantic: 'Tangent', feel: _Feel.trig),
+        _TrayKey(
+          label: isDeg ? 'DEG' : 'RAD',
+          feel: isDeg ? _Feel.shiftOn : _Feel.shiftOff,
+          semantic: isDeg
+              ? 'Angles in degrees. Tap for radians'
+              : 'Angles in radians. Tap for degrees',
+          color: colors.accent,
+          pressColor: colors.accent,
+          outlined: true,
+          onTap: () => ref
+              .read(settingsProvider.notifier)
+              .setAngleUnit(isDeg ? AngleUnit.radians : AngleUnit.degrees),
+        ),
+      ],
+      [
+        key(
+          'sin',
+          () => fn('sin⁻¹'),
+          sup: '-1',
+          semantic: 'Inverse sine',
+          feel: _Feel.trig,
+        ),
+        key(
+          'cos',
+          () => fn('cos⁻¹'),
+          sup: '-1',
+          semantic: 'Inverse cosine',
+          feel: _Feel.trig,
+        ),
+        key(
+          'tan',
+          () => fn('tan⁻¹'),
+          sup: '-1',
+          semantic: 'Inverse tangent',
+          feel: _Feel.trig,
+        ),
+        key(
+          '!',
+          controller.onFactorial,
+          semantic: 'Factorial',
+          feel: _Feel.factorial,
+        ),
+      ],
+      [
+        key('ln', () => fn('ln'), semantic: 'Natural log', feel: _Feel.log),
+        key('log', () => fn('log'), semantic: 'Log base ten', feel: _Feel.log),
+        key(
+          'e',
+          controller.onExpE,
+          sup: 'x',
+          semantic: 'e to the power',
+          feel: _Feel.power,
+        ),
+        key(
+          '10',
+          controller.onExp10,
+          sup: 'x',
+          semantic: 'Ten to the power',
+          feel: _Feel.power,
+        ),
+      ],
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.ink.withValues(alpha: colors.isDark ? 0.07 : 0.04),
+        borderRadius: BorderRadius.circular(24.0),
+      ),
+      padding: const EdgeInsets.all(6.0),
+      child: Column(
+        children: [
+          for (final keys in rows)
+            Expanded(
+              child: Row(children: [for (final k in keys) Expanded(child: k)]),
+            ),
+        ],
+      ),
+    );
+  }
 
   void _setExpanded(bool value) {
     final settings = ref.read(settingsProvider);
@@ -70,10 +223,13 @@ class _ScientificTrayState extends ConsumerState<ScientificTray> {
       onTap: onTap,
     );
 
+    if (widget.grid) return _grid(key, fn, controller);
+
     final secondKey = _TrayKey(
-      label: '2nd',
+      label: '',
+      icon: Icons.swap_horiz_rounded,
       feel: _second ? _Feel.shiftOff : _Feel.shiftOn,
-      semantic: _second ? 'Primary functions' : 'Second functions',
+      semantic: _second ? 'Primary functions' : 'More functions',
       color: _second ? colors.accent : colors.inkSoft,
       pressColor: colors.accent,
       selected: _second,
@@ -253,6 +409,17 @@ class _ScientificTrayState extends ConsumerState<ScientificTray> {
   }
 }
 
+/// Signature of the tray's key factory, shared by both layouts.
+typedef _KeyBuilder = _TrayKey Function(
+  String label,
+  VoidCallback onTap, {
+  required String semantic,
+  String? sup,
+  String? index,
+  bool accent,
+  required _Feel feel,
+});
+
 /// How a key sounds and feels. Each kind of key has its own short figure
 /// (trig waves, logs settle, powers climb, roots step down, brackets open
 /// up and close down, constants sparkle, ! knocks), with a matching haptic.
@@ -329,6 +496,12 @@ class _TrayKey extends StatefulWidget {
 
   /// Raised root index before the label (∛).
   final String? index;
+
+  /// Drawn instead of [label]; turns half a circle while [selected].
+  final IconData? icon;
+
+  /// A thin border, for a key that shows a setting (DEG / RAD).
+  final bool outlined;
   final String semantic;
   final _Feel feel;
   final Color color;
@@ -340,6 +513,8 @@ class _TrayKey extends StatefulWidget {
     required this.label,
     this.sup,
     this.index,
+    this.icon,
+    this.outlined = false,
     required this.semantic,
     required this.feel,
     required this.color,
@@ -405,28 +580,41 @@ class _TrayKeyState extends State<_TrayKey> {
                   ? widget.pressColor.withValues(alpha: 0.16)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(14.0),
+              border: widget.outlined
+                  ? Border.all(
+                      color: widget.color.withValues(alpha: 0.5),
+                      width: 1.5,
+                    )
+                  : null,
             ),
             alignment: Alignment.center,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (widget.index != null)
-                    Transform.translate(
-                      offset: const Offset(2.0, -5.0),
-                      child: Text(widget.index!, style: style(13.0)),
+            child: widget.icon != null
+                ? AnimatedRotation(
+                    turns: widget.selected ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    child: Icon(widget.icon, color: widget.color, size: 26.0),
+                  )
+                : FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (widget.index != null)
+                          Transform.translate(
+                            offset: const Offset(2.0, -5.0),
+                            child: Text(widget.index!, style: style(13.0)),
+                          ),
+                        Text(widget.label, style: style(22.0)),
+                        if (widget.sup != null)
+                          Transform.translate(
+                            offset: const Offset(1.0, -5.0),
+                            child: Text(widget.sup!, style: style(13.0)),
+                          ),
+                      ],
                     ),
-                  Text(widget.label, style: style(22.0)),
-                  if (widget.sup != null)
-                    Transform.translate(
-                      offset: const Offset(1.0, -5.0),
-                      child: Text(widget.sup!, style: style(13.0)),
-                    ),
-                ],
-              ),
-            ),
+                  ),
           ),
         ),
       ),

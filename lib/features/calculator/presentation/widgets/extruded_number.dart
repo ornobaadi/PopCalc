@@ -157,18 +157,41 @@ class _ExtrudedNumberPainter extends CustomPainter {
     final textHeight = cache.frontPainter.height;
 
     // ── Extrusion direction ──
+    // In lite mode, render completely flat with no 3D offset or extrusion.
+    if (isLite) {
+      final double startX = (textAlign == TextAlign.center)
+          ? (size.width - textWidth) / 2
+          : size.width - textWidth - 20.0;
+      final double startY = (size.height - textHeight) / 2;
+      final frontOffset = Offset(startX, startY);
+
+      cache.frontPainter.paint(canvas, frontOffset);
+
+      final finish = _finishShader(frontOffset & Size(textWidth, textHeight));
+      if (finish != null) {
+        _paintGlyphs(
+          canvas,
+          size,
+          frontOffset,
+          cache.fontSize,
+          Paint()..shader = finish,
+        );
+      }
+      return;
+    }
+
     // Base direction: lower-right (classic block-letter look).
     // tilt.dx / tilt.dy are in [-12, 12] range from touch+sensor combined.
     // Tilt shifts the direction so as you tilt the device, the "light source"
     // appears to shift naturally — left/right and up/down.
-    final double maxOffset = (isLite ? 10.0 : 18.0) * depth;
+    final double maxOffset = 18.0 * depth;
 
     // Natural base direction at rest: lower-right shadow
     final double baseDirX = maxOffset * 0.55;
     final double baseDirY = maxOffset * 0.82;
 
     // Tilt shifts the direction — normalised so tilt of ±12 ≈ ±half offset
-    final double tiltInfluence = isLite ? 0.4 : 0.55;
+    const double tiltInfluence = 0.55;
     final double dirX = baseDirX + (tilt.dx * tiltInfluence);
     final double dirY = baseDirY + (tilt.dy * tiltInfluence);
 
@@ -181,7 +204,7 @@ class _ExtrudedNumberPainter extends CustomPainter {
     final frontOffset = Offset(startX, startY);
 
     // ─── 0. Neon halo behind everything ───────────────────────────────────────
-    if (colors.finish == SkinFinish.glow && !isLite) {
+    if (colors.finish == SkinFinish.glow) {
       _paintGlyphs(
         canvas,
         size,
@@ -197,7 +220,7 @@ class _ExtrudedNumberPainter extends CustomPainter {
     }
 
     // ─── 1. Soft ambient contact drop shadow ──────────────────────────────────
-    if (!isLite && depth > 0.05) {
+    if (depth > 0.05) {
       cache.shadowPainter.paint(
         canvas,
         Offset(startX + dirX * 1.5, startY + dirY * 1.5),
@@ -209,7 +232,7 @@ class _ExtrudedNumberPainter extends CustomPainter {
     // t=0 (far layers): deep shadow colour  
     // t=1 (near face):  slightly lighter rim, mimicking a real thick block edge
     final double dist = sqrt(dirX * dirX + dirY * dirY);
-    final int steps = isLite ? 18 : (dist / 0.28).clamp(36, 64).toInt();
+    final int steps = (dist / 0.28).clamp(36, 64).toInt();
 
     final Color deepColor = colors.extrudeSide;
     final Color rimColor = Color.lerp(colors.extrudeSide, colors.extrudeTop, 0.28)!;

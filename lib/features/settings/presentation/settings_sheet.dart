@@ -231,7 +231,7 @@ class SettingsSheet extends ConsumerWidget {
                             icon: Icons.speed_rounded,
                             label: 'Lite Effects Mode',
                             description:
-                                'Optimized rendering for lower latency',
+                                'Flat numerals with no 3D extrusion or tilt for maximum speed',
                             colors: colors,
                             trailing: Switch(
                               value: settings.liteMode,
@@ -855,7 +855,7 @@ class _SignatureFooter extends StatefulWidget {
   final ThemeColors colors;
   const _SignatureFooter({required this.colors});
 
-  static const _appVersion = '1.3.0 (8)';
+  static const _appVersion = '1.3.1 (9)';
 
   @override
   State<_SignatureFooter> createState() => _SignatureFooterState();
