@@ -26,6 +26,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     await tester.tap(find.text('2'));
     await tester.pump(const Duration(milliseconds: 50));
+    // An operator left hanging at the end is not part of what gets saved.
+    // (.last: the keypad key, not the "+" already in the expression line.)
+    await tester.tap(find.text('+').last);
+    await tester.pump(const Duration(milliseconds: 50));
 
     // Live preview shows 3 without tapping =
     expect(container.read(historyProvider), isEmpty);

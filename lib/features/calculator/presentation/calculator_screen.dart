@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:popcalc/core/engine/evaluator.dart';
+import 'package:popcalc/core/engine/expression.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/history_store.dart';
@@ -63,7 +64,13 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
     if (calcState.justEvaluated) return;
 
     final preview = calcState.previewText;
-    final expr = calcState.expressionText;
+    // The preview ignores an operator left hanging at the end ("1 + 2 +"),
+    // so the saved expression leaves it out too.
+    final tokens = calcState.expression.getAllTokens();
+    while (tokens.isNotEmpty && tokens.last.isOperator) {
+      tokens.removeLast();
+    }
+    final expr = Expression.fromTokens(tokens).toDisplayString();
     if (preview != null && preview.isNotEmpty && expr.isNotEmpty) {
       ref.read(historyProvider.notifier).savePendingPreview(expr, preview);
     }

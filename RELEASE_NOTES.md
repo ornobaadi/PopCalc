@@ -1,3 +1,27 @@
+# PopCalc v1.3.1 (build 10) — Landscape scientific & fixes
+
+## ✨ What's new
+- **Scientific mode turns sideways:** rotate the phone to see every scientific key at once, beside the keypad
+- **Lite Effects Mode is now truly flat:** no 3D extrusion or tilt, for maximum speed
+- With **Live Preview** on, a calculation you leave unfinished is saved to history when you leave the app
+
+## 🐞 Bug fixes
+- `=` now works when the calculation ends with an operator: `99 + 66 +` then `=` gives 165, with no need to delete the last symbol first
+- Settings shows just the version number, without the build number
+
+---
+
+### Play Store "What's new" (under 500 chars)
+```
+New in 1.3.1:
+• Scientific mode works sideways: rotate to see every key at once
+• Lite Effects Mode is now fully flat for maximum speed
+• Live Preview saves unfinished calculations to history
+• Fixed = doing nothing when a calculation ends with + − × ÷
+```
+
+---
+
 # PopCalc v1.3.0 (build 8) — Skin Store & Materials
 
 ## ✨ What's new

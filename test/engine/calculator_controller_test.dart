@@ -205,6 +205,32 @@ void main() {
     expect(controller.state.celebrationId, id);
   });
 
+  test('= with an operator left at the end answers what was typed', () {
+    type('99+66+99+88+=');
+    expect(controller.state.resultText, '352');
+    expect(controller.state.expressionText, '99 + 66 + 99 + 88');
+    expect(controller.state.justEvaluated, isTrue);
+    expect(controller.state.error, isNull);
+
+    // The answer carries on like any other.
+    type('+1=');
+    expect(controller.state.resultText, '353');
+  });
+
+  test('= after one number and an operator gives that number', () {
+    type('5*=');
+    expect(controller.state.resultText, '5');
+    expect(controller.state.expressionText, '5');
+    expect(controller.state.justEvaluated, isTrue);
+  });
+
+  test('= on nothing but an operator does nothing', () {
+    controller.onOperator(TokenType.minus, '-');
+    type('=');
+    expect(controller.state.justEvaluated, isFalse);
+    expect(controller.state.error, isNull);
+  });
+
   test('Edited number tokens respect the digit cap', () {
     type('1+2');
     controller.selectToken(0);

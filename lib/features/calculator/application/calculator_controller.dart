@@ -422,14 +422,22 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     // Pressing = again on an answer would duplicate history + celebration.
     if (state.justEvaluated) return;
 
-    final tokens = state.expression.getAllTokens();
+    // Operators left hanging at the end ("99 + 66 +", or a lone "-" that
+    // was starting a negative number) are dropped, so = answers what has
+    // been typed so far instead of waiting for one more number.
+    final tokens = state.expression.currentNumber == '-'
+        ? List<Token>.from(state.expression.tokens)
+        : state.expression.getAllTokens();
+    while (tokens.isNotEmpty && tokens.last.isOperator) {
+      tokens.removeLast();
+    }
     if (tokens.isEmpty) return;
 
     final ast = Parser.parse(tokens, tolerant: false);
     if (ast == null) {
-      // A trailing operator ("5 +") or opener ("sin(") is just incomplete —
-      // ignore quietly. Anything else is malformed (e.g. after token edits).
-      if (!tokens.last.isOperator && !tokens.last.isOpener) {
+      // A dangling opener ("sin(") is just incomplete — ignore quietly.
+      // Anything else is malformed (e.g. after token edits).
+      if (!tokens.last.isOpener) {
         _showError(CalcError.invalidExpression);
       }
       return;
@@ -438,11 +446,13 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     try {
       final evaluated = Evaluator.evaluate(ast, angleUnit: _angleUnit);
       final formattedResult = NumberFormatter.format(evaluated);
-      final exprStr = state.expression.toDisplayString();
+      final expression = Expression.fromTokens(tokens);
+      final exprStr = expression.toDisplayString();
 
       onHistoryAdded?.call(exprStr, formattedResult);
 
       state = state.copyWith(
+        expression: expression,
         expressionText: exprStr,
         resultText: formattedResult,
         clearEditingTokenIndex: true,

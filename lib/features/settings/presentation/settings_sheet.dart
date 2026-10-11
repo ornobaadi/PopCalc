@@ -849,13 +849,14 @@ class _StoreBanner extends StatelessWidget {
 }
 
 /// Maker's mark: handwritten signature, version and a short note.
-/// Keep [_appVersion] in step with `version:` in pubspec.yaml.
+/// Keep [_appVersion] in step with `version:` in pubspec.yaml (the name
+/// only: the build number means nothing to a user).
 /// Tapping the signature five times quickly opens the portfolio (hidden).
 class _SignatureFooter extends StatefulWidget {
   final ThemeColors colors;
   const _SignatureFooter({required this.colors});
 
-  static const _appVersion = '1.3.1 (9)';
+  static const _appVersion = '1.3.1';
 
   @override
   State<_SignatureFooter> createState() => _SignatureFooterState();
