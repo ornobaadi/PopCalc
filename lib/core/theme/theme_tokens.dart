@@ -4,7 +4,9 @@ enum AppThemeMode {
   // Order matters: the index is persisted in SharedPreferences.
   ink,
   sunny,
-  peony, // Replaced Bubblegum; keeps its index so saved choices map here.
+  // Third free skin. Took over from Peony (and Bubblegum before it) and
+  // keeps the index, so anyone who had those saved lands here.
+  blueprint,
   obsidian,
   synthwave,
   matcha,
@@ -18,6 +20,8 @@ enum AppThemeMode {
   candy,
   neon,
   mechanical,
+  // Secret: found, not bought (see kSecretSkins in skin_catalog).
+  newsprint,
 }
 
 /// Surface treatment of the 3D numerals (and, for keycaps, the keys).
@@ -31,6 +35,8 @@ enum SkinFinish {
   gloss, // hard candy highlight across the top
   glow, // neon tube with a halo
   keycap, // plain numerals, keys drawn as keycaps
+  wireframe, // hollow line-drawn blocks over a drafting grid
+  halftone, // printed dots across the face
 }
 
 class ThemeColors {
@@ -65,7 +71,7 @@ class ThemeColors {
   static ThemeColors of(AppThemeMode mode) => switch (mode) {
     AppThemeMode.ink => inkTheme,
     AppThemeMode.sunny => sunnyTheme,
-    AppThemeMode.peony => peonyTheme,
+    AppThemeMode.blueprint => blueprintTheme,
     AppThemeMode.obsidian => obsidianTheme,
     AppThemeMode.synthwave => synthwaveTheme,
     AppThemeMode.matcha => matchaTheme,
@@ -78,7 +84,40 @@ class ThemeColors {
     AppThemeMode.candy => candyTheme,
     AppThemeMode.neon => neonTheme,
     AppThemeMode.mechanical => mechanicalTheme,
+    AppThemeMode.newsprint => newsprintTheme,
   };
+
+  /// Blueprint (cyanotype paper, the numerals as hollow line drawings)
+  static const blueprintTheme = ThemeColors(
+    bg: Color(0xFF0B3C8C),
+    bgShade: Color(0xFF124CA6),
+    ink: Color(0xFFEAF2FF),
+    inkSoft: Color(0xFF8FB0E0),
+    accent: Color(0xFFFFD23F), // Marker yellow operators and equals
+    extrudeTop: Color(0xFF0B3C8C), // Hollow: the paper shows through
+    extrudeSide: Color(0xFF0A2F6E),
+    extrudeShadow: Color(0x66001A40),
+    extrudeChamfer: Color(0xFFFFFFFF), // The drawn line
+    burst: Color(0xFFFFFFFF),
+    isDark: true,
+    finish: SkinFinish.wireframe,
+  );
+
+  /// Newsprint, the secret skin (ink on paper, halftone dots, a red stamp for operators)
+  static const newsprintTheme = ThemeColors(
+    bg: Color(0xFFEFE9DC),
+    bgShade: Color(0xFFF6F1E7),
+    ink: Color(0xFF141414),
+    inkSoft: Color(0xFF6B665C),
+    accent: Color(0xFFC1121F),
+    extrudeTop: Color(0xFF141414),
+    extrudeSide: Color(0xFF8C877C),
+    extrudeShadow: Color(0x33000000),
+    extrudeChamfer: Color(0xFFF6F1E7),
+    burst: Color(0xFFC1121F),
+    isDark: false,
+    finish: SkinFinish.halftone,
+  );
 
   // ─── Materials ─────────────────────────────────────────────────────────────
 
@@ -232,21 +271,6 @@ class ThemeColors {
     extrudeChamfer: Color(0x50FFFFFF), // Subtle crisp bevel highlight rim
     burst: Color(0xFFFFA000),
     isDark: true,
-  );
-
-  /// Peony (blush petals, rose-gold pearl extrusion, deep rose accents)
-  static const peonyTheme = ThemeColors(
-    bg: Color(0xFFF7E6E4), // Blush petal
-    bgShade: Color(0xFFFAEEEC), // Soft powder highlight
-    ink: Color(0xFF4A2233), // Deep mulberry numerals
-    inkSoft: Color(0xFF8A5A68), // Dusty mauve utility keys
-    accent: Color(0xFFA8385E), // Rich peony rose operators and equals
-    extrudeTop: Color(0xFF4A2233), // Mulberry front face
-    extrudeSide: Color(0xFFE0A6AE), // Rose-quartz block
-    extrudeShadow: Color(0x33A8385E), // Rose-tinted soft shadow
-    extrudeChamfer: Color(0xFFFFFFFF), // Pearl glint
-    burst: Color(0xFFD4A373), // Rose-gold celebration lines
-    isDark: false,
   );
 
   /// Obsidian (black lacquer and brushed gold, luxury-watch feel)

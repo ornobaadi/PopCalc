@@ -151,9 +151,10 @@ class _SkinDetailSheetState extends ConsumerState<SkinDetailSheet> {
       body: [
         Center(
           child: SizedBox(
-            width: 176.0,
-            child: SkinMockup(
+            width: 190.0,
+            child: SkinSwatch(
               skin: skin,
+              aspectRatio: 0.86,
               borderColor: c.accent,
               borderWidth: 2.0,
               radius: 28.0,

@@ -33,8 +33,24 @@ class SettingsSheet extends ConsumerWidget {
     final currentMode = ref.watch(themeProvider);
     final colors = AppTheme.colorsOf(currentMode);
     final owned = ref.watch(entitlementProvider);
-    // Free and premium skins always show; a material only once it's owned.
-    final skins = [...kSkins, ...kMaterials.where((m) => ownsSkin(owned, m))];
+    final secretFound = ref.watch(
+      settingsProvider.select((s) => s.secretUnlocked),
+    );
+    bool has(SkinInfo skin) => ownsSkin(owned, skin);
+    // Only what can be put on: the free skins, then whatever has been
+    // bought. Anything still locked lives in the store, behind the banner
+    // below, so the picker stays one short tidy grid.
+    final free = kSkins.where((s) => !s.premium).toList();
+    // The secret skin's slot is second, between the first two skins,
+    // where an empty "?" is hard to overlook. A null stands for it
+    // until the skin is found.
+    final skins = <SkinInfo?>[
+      free.first,
+      secretFound ? kSecretSkins.first : null,
+      ...free.skip(1),
+      ...kSkins.where((s) => s.premium && has(s)),
+      ...kMaterials.where(has),
+    ];
     final ownsAll = kBundleItems.every((s) => ownsSkin(owned, s));
     final saving = ref.watch(purchasesProvider.select((s) => s.bundleSaving));
 
@@ -67,7 +83,11 @@ class SettingsSheet extends ConsumerWidget {
 
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 24.0),
+              // Clears the system navigation bar: the sheet is drawn
+              // edge-to-edge, underneath it.
+              padding: EdgeInsets.only(
+                bottom: 24.0 + MediaQuery.viewPaddingOf(context).bottom,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -104,6 +124,9 @@ class SettingsSheet extends ConsumerWidget {
                       itemCount: skins.length,
                       itemBuilder: (context, index) {
                         final skin = skins[index];
+                        if (skin == null) {
+                          return _MysteryTile(colors: colors);
+                        }
                         final locked = !ownsSkin(owned, skin);
                         return _SkinTile(
                           skin: skin,
@@ -656,7 +679,11 @@ class _SkinTile extends StatelessWidget {
                         fontFamily: 'BebasNeue',
                         fontSize: 32.0,
                         height: 1.0,
-                        color: own.extrudeTop,
+                        // Blueprint's numeral is hollow (its face is the
+                        // paper), so the tile shows its line colour.
+                        color: own.finish == SkinFinish.wireframe
+                            ? own.ink
+                            : own.extrudeTop,
                         shadows: [
                           Shadow(
                             color: own.extrudeSide,
@@ -730,6 +757,61 @@ class _SkinTile extends StatelessWidget {
   }
 }
 
+/// The slot the secret skin will take. It gives nothing away but a hint.
+class _MysteryTile extends StatelessWidget {
+  final ThemeColors colors;
+  const _MysteryTile({required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Some answers open doors.',
+      triggerMode: TooltipTriggerMode.tap,
+      showDuration: const Duration(seconds: 3),
+      onTriggered: AppHaptics.lightImpact,
+      child: Column(
+        children: [
+          Container(
+            width: _SkinTile._hexWidth,
+            height: _SkinTile._hexHeight,
+            alignment: Alignment.center,
+            decoration: ShapeDecoration(
+              shape: StarBorder.polygon(
+                sides: 6,
+                pointRounding: 0.4,
+                side: BorderSide(
+                  color: colors.ink.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+              ),
+            ),
+            child: Text(
+              '?',
+              style: TextStyle(
+                fontFamily: 'BebasNeue',
+                fontSize: 32.0,
+                height: 1.0,
+                color: colors.inkSoft.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6.0),
+          Text(
+            '???',
+            style: TextStyle(
+              fontFamily: 'BebasNeue',
+              fontSize: 13.0,
+              letterSpacing: 0.6,
+              height: 1.2,
+              color: colors.inkSoft,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The way into the skin store: a few of its skins fanned out, how much
 /// there is, and what the everything bundle saves.
 class _StoreBanner extends StatelessWidget {
@@ -778,7 +860,7 @@ class _StoreBanner extends StatelessWidget {
                         angle: angle,
                         child: SizedBox(
                           width: 46.0,
-                          child: SkinMockup(
+                          child: SkinSwatch(
                             skin: skinOf(mode),
                             borderColor: Colors.white,
                             borderWidth: 2.0,
@@ -856,7 +938,7 @@ class _SignatureFooter extends StatefulWidget {
   final ThemeColors colors;
   const _SignatureFooter({required this.colors});
 
-  static const _appVersion = '1.3.1';
+  static const _appVersion = '1.4.0';
 
   @override
   State<_SignatureFooter> createState() => _SignatureFooterState();

@@ -10,6 +10,10 @@ const bool kPremiumLocked = true;
 /// Product id of the bundle that unlocks every premium skin and material.
 const String kAllThemesProductId = 'themes_all';
 
+/// The answer that opens the secret skin, as the display writes it. It has
+/// to be worked out: typing the number itself and pressing = does nothing.
+const String kSecretAnswer = '1,337';
+
 /// The sound and haptics that come with a material. Most materials have one;
 /// Mechanical has one per switch type.
 class MaterialFeel {
@@ -41,6 +45,9 @@ class SkinInfo {
   /// applied together and never mixed with other skins or sound packs.
   final List<MaterialFeel> feels;
 
+  /// Not sold and not shown until it has been found (see [kSecretSkins]).
+  final bool secret;
+
   const SkinInfo({
     required this.mode,
     required this.label,
@@ -49,6 +56,7 @@ class SkinInfo {
     required this.modelCode,
     this.productId,
     this.feels = const [],
+    this.secret = false,
   });
 
   bool get premium => productId != null;
@@ -79,11 +87,11 @@ const kSkins = <SkinInfo>[
     modelCode: 'CH-02',
   ),
   SkinInfo(
-    mode: AppThemeMode.peony,
-    label: 'PEONY',
-    tagline: 'Soft petals, bold sums.',
-    description: 'Blush paper, mulberry numerals and a rose-quartz block.',
-    modelCode: 'PN-03',
+    mode: AppThemeMode.blueprint,
+    label: 'BLUEPRINT',
+    tagline: 'Drawn, not built.',
+    description: 'Cyanotype paper and hollow line-drawn numerals.',
+    modelCode: 'BP-03',
   ),
   SkinInfo(
     mode: AppThemeMode.obsidian,
@@ -279,6 +287,19 @@ const kMaterials = <SkinInfo>[
   ),
 ];
 
+/// Skins that are found, not bought: hidden from the picker until a
+/// calculation comes out at [kSecretAnswer]. Not in the store or the bundle.
+const kSecretSkins = <SkinInfo>[
+  SkinInfo(
+    mode: AppThemeMode.newsprint,
+    label: 'NEWSPRINT',
+    tagline: 'Hot off the press.',
+    description: 'Ink on paper in halftone dots, with a red stamp.',
+    modelCode: 'X-NWS',
+    secret: true,
+  ),
+];
+
 /// Everything the bundle unlocks, premium skins and materials alternating so
 /// the store carousel mixes the two.
 final List<SkinInfo> kBundleItems = () {
@@ -300,4 +321,4 @@ final Set<String> kProductIds = {
 };
 
 SkinInfo skinOf(AppThemeMode mode) =>
-    [...kSkins, ...kMaterials].firstWhere((s) => s.mode == mode);
+    [...kSkins, ...kMaterials, ...kSecretSkins].firstWhere((s) => s.mode == mode);

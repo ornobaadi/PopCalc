@@ -11,7 +11,7 @@ class CalcException implements Exception {
   CalcException(this.error);
 
   @override
-  String toString() => 'CalcException: ${error.userMessage}';
+  String toString() => 'CalcException: ${error.plainMessage}';
 }
 
 /// How trig functions read and return angles.
@@ -52,7 +52,8 @@ class Evaluator {
 
   static Decimal _divide(Decimal a, Decimal b) {
     if (b == Decimal.zero) {
-      throw CalcException(CalcError.divideByZero);
+      throw CalcException(
+          a == Decimal.zero ? CalcError.zeroByZero : CalcError.divideByZero);
     }
     final Rational rational = a.toRational() / b.toRational();
     return rational.toDecimal(scaleOnInfinitePrecision: 32);
@@ -170,14 +171,14 @@ class _Evaluation {
     }
 
     if (base < Decimal.zero) {
-      throw CalcException(CalcError.domainError);
+      throw CalcException(CalcError.negativeRoot);
     }
     return _fromDouble(math.pow(base.toDouble(), exponent.toDouble()).toDouble());
   }
 
   Decimal _factorial(Decimal n) {
     if (!n.isInteger || n < Decimal.zero) {
-      throw CalcException(CalcError.domainError);
+      throw CalcException(CalcError.badFactorial);
     }
     if (n > Decimal.fromInt(Evaluator._maxFactorial)) {
       throw CalcException(CalcError.overflow);
@@ -196,21 +197,25 @@ class _Evaluation {
       case 'tan':
         return _trig(name, x);
       case 'sin⁻¹':
-        if (x.abs() > Decimal.one) throw CalcException(CalcError.domainError);
+        if (x.abs() > Decimal.one) {
+          throw CalcException(CalcError.badInverseTrig);
+        }
         return _fromAngle(math.asin(x.toDouble()));
       case 'cos⁻¹':
-        if (x.abs() > Decimal.one) throw CalcException(CalcError.domainError);
+        if (x.abs() > Decimal.one) {
+          throw CalcException(CalcError.badInverseTrig);
+        }
         return _fromAngle(math.acos(x.toDouble()));
       case 'tan⁻¹':
         return _fromAngle(math.atan(x.toDouble()));
       case 'ln':
-        if (x <= Decimal.zero) throw CalcException(CalcError.domainError);
+        if (x <= Decimal.zero) throw CalcException(CalcError.badLog);
         return _fromDouble(math.log(x.toDouble()));
       case 'log':
-        if (x <= Decimal.zero) throw CalcException(CalcError.domainError);
+        if (x <= Decimal.zero) throw CalcException(CalcError.badLog);
         return _fromDouble(math.log(x.toDouble()) / math.ln10);
       case '√':
-        if (x < Decimal.zero) throw CalcException(CalcError.domainError);
+        if (x < Decimal.zero) throw CalcException(CalcError.negativeRoot);
         return _fromDouble(math.sqrt(x.toDouble()));
       case '∛':
         final r = math.pow(x.abs().toDouble(), 1 / 3).toDouble();
@@ -240,7 +245,7 @@ class _Evaluation {
           case 'cos':
             return Decimal.fromInt(c);
           default:
-            if (c == 0) throw CalcException(CalcError.domainError);
+            if (c == 0) throw CalcException(CalcError.tanUndefined);
             return Decimal.fromInt(s * c);
         }
       }
@@ -259,7 +264,7 @@ class _Evaluation {
         break;
       default:
         if (math.cos(radians).abs() < 1e-15) {
-          throw CalcException(CalcError.domainError);
+          throw CalcException(CalcError.tanUndefined);
         }
         value = math.tan(radians);
     }
@@ -273,7 +278,7 @@ class _Evaluation {
   /// Rounds a double result to 15 significant digits so float noise
   /// (asin(0.5) = 30.000000000000004°) never reaches the display.
   static Decimal _fromDouble(double value) {
-    if (value.isNaN) throw CalcException(CalcError.domainError);
+    if (value.isNaN) throw CalcException(CalcError.invalidExpression);
     if (value.isInfinite) throw CalcException(CalcError.overflow);
     if (value == 0) return Decimal.zero;
     return Decimal.parse(value.toStringAsPrecision(15));

@@ -105,11 +105,11 @@ void main() {
     test('cos(60) = 0.5', () => expect(calc(['cos(', '60', ')']), '0.5'));
     test('tan(45) = 1', () => expect(calc(['tan(', '45', ')']), '1'));
     test('tan(90) is undefined',
-        () => expect(calc(['tan(', '90', ')']), 'domainError'));
+        () => expect(calc(['tan(', '90', ')']), 'tanUndefined'));
     test('sin⁻¹(0.5) = 30',
         () => expect(calc(['sin⁻¹(', '0.5', ')']), '30'));
     test('cos⁻¹(2) is undefined',
-        () => expect(calc(['cos⁻¹(', '2', ')']), 'domainError'));
+        () => expect(calc(['cos⁻¹(', '2', ')']), 'badInverseTrig'));
     test('tan⁻¹(1) = 45', () => expect(calc(['tan⁻¹(', '1', ')']), '45'));
   });
 
@@ -123,34 +123,47 @@ void main() {
             calc(['sin(', 'π', '÷', '2', ')'], unit: AngleUnit.radians), '1'));
     test('tan(π ÷ 2) is undefined',
         () => expect(calc(['tan(', 'π', '÷', '2', ')'], unit: AngleUnit.radians),
-            'domainError'));
+            'tanUndefined'));
   });
 
   group('Roots and logs', () {
     test('√(2)', () => expect(calc(['√(', '2', ')']), '1.4142135623731'));
     test('√(144) = 12', () => expect(calc(['√(', '144', ')']), '12'));
     test('√(-1) is undefined',
-        () => expect(calc(['√(', '-1', ')']), 'domainError'));
+        () => expect(calc(['√(', '-1', ')']), 'negativeRoot'));
     test('∛(-27) = -3', () => expect(calc(['∛(', '-27', ')']), '-3'));
     test('log(1000) = 3', () => expect(calc(['log(', '1000', ')']), '3'));
     test('ln(e) = 1', () => expect(calc(['ln(', 'e', ')']), '1'));
     test('ln(0) is undefined',
-        () => expect(calc(['ln(', '0', ')']), 'domainError'));
+        () => expect(calc(['ln(', '0', ')']), 'badLog'));
     test('2^0.5 = √2', () => expect(calc(['2', '^', '0.5']), '1.4142135623731'));
     test('(-8)^0.5 is undefined',
-        () => expect(calc(['-8', '^', '0.5']), 'domainError'));
+        () => expect(calc(['-8', '^', '0.5']), 'negativeRoot'));
   });
 
   group('Errors', () {
-    test('2.5! is undefined', () => expect(calc(['2.5', '!']), 'domainError'));
+    test('2.5! is undefined', () => expect(calc(['2.5', '!']), 'badFactorial'));
     test('-3! is -(3!) = -6', () => expect(calc(['-', '3', '!']), '-6'));
     test('1000! overflows', () => expect(calc(['1000', '!']), 'overflow'));
     test('9^99999 overflows',
         () => expect(calc(['9', '^', '99999']), 'overflow'));
     test('0^-1 divides by zero',
         () => expect(calc(['0', '^', '-1']), 'divideByZero'));
-    test('domain error message', () {
-      expect(CalcError.domainError.userMessage, 'Not defined');
+    test('0 ÷ 0 is its own error',
+        () => expect(calc(['0', '÷', '0']), 'zeroByZero'));
+    test('log(-3) and (-3)! are told apart', () {
+      expect(calc(['log(', '-3', ')']), 'badLog');
+      expect(calc(['(', '-3', ')', '!']), 'badFactorial');
+    });
+    test('every error has lines short enough for the display', () {
+      for (final error in CalcError.values) {
+        expect(error.plainMessage, isNotEmpty);
+        expect(error.messages.length, greaterThanOrEqualTo(3), reason: '$error');
+        for (final line in error.messages) {
+          expect(line.length, lessThanOrEqualTo(19), reason: line);
+          expect(line, line.toUpperCase(), reason: 'Bebas Neue has capitals only');
+        }
+      }
     });
   });
 

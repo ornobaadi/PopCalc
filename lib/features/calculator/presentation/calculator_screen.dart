@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:popcalc/core/engine/evaluator.dart';
@@ -7,10 +9,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/history_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
+import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/features/calculator/application/calculator_controller.dart';
 import 'package:popcalc/features/converter/presentation/converter_screen.dart';
 import 'package:popcalc/features/history/presentation/history_sheet.dart';
+
 import 'widgets/celebration_burst.dart';
 import 'widgets/expression_line.dart';
 import 'widgets/grain_overlay.dart';
@@ -35,6 +39,10 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
   /// Whether the device may currently rotate (null until first decided).
   bool? _landscapeAllowed;
 
+  /// The secret skin was found a moment ago: say so.
+  bool _secretAnnounced = false;
+  Timer? _secretTimer;
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +52,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _secretTimer?.cancel();
     super.dispose();
   }
 
@@ -110,6 +119,14 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
     final calcState = ref.watch(calculatorProvider);
     final settings = ref.watch(settingsProvider);
     final scientific = settings.advancedTools && settings.scientificActive;
+
+    ref.listen(secretFoundProvider, (_, _) {
+      _secretTimer?.cancel();
+      _secretTimer = Timer(const Duration(seconds: 4), () {
+        if (mounted) setState(() => _secretAnnounced = false);
+      });
+      setState(() => _secretAnnounced = true);
+    });
 
     // Auto-clear highlight when state changes externally
     if (_resultHighlighted &&
@@ -187,29 +204,57 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
                 color: colors.burst,
               ),
             ),
-            AnimatedExtrudedNumber(
-              text: calcState.resultText,
-              isEvaluated: calcState.justEvaluated,
-              hasError: calcState.error != null,
-              colors: colors,
-              isLite: settings.liteMode,
-              isZero: calcState.isZeroState,
-              celebrationId: calcState.celebrationId,
-              onTap: () {
-                if (calcState.editingTokenIndex != null) {
-                  ref.read(calculatorProvider.notifier).deselectToken();
-                } else {
-                  AppHaptics.selectionClick();
-                  setState(() {
-                    _resultHighlighted = !_resultHighlighted;
-                  });
-                }
-              },
-              onLongPress: () {
-                setState(() => _resultHighlighted = false);
-                _copyResult(context, calcState.resultText);
-              },
+            // An error's line is a joke; a screen reader gets the reason.
+            Semantics(
+              label: calcState.error?.plainMessage ?? calcState.resultText,
+              excludeSemantics: true,
+              child: AnimatedExtrudedNumber(
+                text: calcState.resultText,
+                isEvaluated: calcState.justEvaluated,
+                hasError: calcState.error != null,
+                colors: colors,
+                isLite: settings.liteMode,
+                isZero: calcState.isZeroState,
+                celebrationId: calcState.celebrationId,
+                onTap: () {
+                  if (calcState.editingTokenIndex != null) {
+                    ref.read(calculatorProvider.notifier).deselectToken();
+                  } else {
+                    AppHaptics.selectionClick();
+                    setState(() {
+                      _resultHighlighted = !_resultHighlighted;
+                    });
+                  }
+                },
+                onLongPress: () {
+                  setState(() => _resultHighlighted = false);
+                  _copyResult(context, calcState.resultText);
+                },
+              ),
             ),
+            // Under an error's line, the plain reason, small and quiet.
+            // Together with the smaller lettering it marks the line as
+            // a message, not an answer.
+            if (calcState.error != null)
+              Align(
+                alignment: Alignment.center,
+                child: Transform.translate(
+                  offset: const Offset(0.0, 54.0),
+                  child: IgnorePointer(
+                    child: Text(
+                      calcState.error!.plainMessage,
+                      key: const ValueKey('error-reason'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 13.0,
+                        letterSpacing: 0.3,
+                        color: colors.inkSoft,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             // Angle unit badge, display-corner style
             if (scientific && !landscape)
               Positioned(
@@ -316,8 +361,8 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
                     end: !scientific
                         ? 44
                         : settings.scientificExpanded
-                            ? 24
-                            : 34,
+                        ? 24
+                        : 34,
                   ),
                   duration: const Duration(milliseconds: 260),
                   curve: Curves.easeOutCubic,
@@ -390,10 +435,56 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
             ),
           ),
 
+          // Blueprint: a drafting grid under everything
+          if (colors.finish == SkinFinish.wireframe)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: GridPaper(
+                  color: colors.ink.withValues(alpha: 0.14),
+                  interval: 96.0,
+                  divisions: 1,
+                  subdivisions: 4,
+                ),
+              ),
+            ),
+
           // Tactile film grain overlay
           const GrainOverlay(),
 
           content,
+
+          // The secret skin, announced as it lands
+          Align(
+            alignment: Alignment.topCenter,
+            child: SafeArea(
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  opacity: _secretAnnounced ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 260),
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 10.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14.0,
+                      vertical: 6.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.accent,
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    child: Text(
+                      'SECRET SKIN FOUND · ${kSecretSkins.first.label}',
+                      style: TextStyle(
+                        fontFamily: 'BebasNeue',
+                        fontSize: 15.0,
+                        letterSpacing: 1.6,
+                        color: colors.bg,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -432,8 +523,10 @@ class _AngleBadge extends StatelessWidget {
                 FadeTransition(opacity: anim, child: child),
             child: Container(
               key: ValueKey(isDeg),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 9.0, vertical: 4.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 9.0,
+                vertical: 4.0,
+              ),
               decoration: BoxDecoration(
                 border: Border.all(
                   color: colors.accent.withValues(alpha: 0.5),

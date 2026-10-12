@@ -7,7 +7,7 @@ Complete working documentation for PopCalc. It exists so a session never has to 
 1. **After every change, however small, update this file in the same session**: the file map, the relevant section, the "Where to change X" table if a location moved, and a dated line in [Change log](#change-log). If you add a file, a setting key, a provider, a sound, a skin, a test, a gotcha — it goes here.
 2. **Pull `main` before starting work** (`git fetch origin && git pull --ff-only origin main`). `macos/Flutter/GeneratedPluginRegistrant.swift` is a perpetual unrelated local modification; ignore it, never commit it.
 3. **Never run `flutter build …`** (apk/appbundle). Give the user the command in a `bash` block and let them run it. `flutter analyze` and `flutter test` are fine to run.
-4. Skin names: Charcoal (ink), Marigold (sunny), Peony, Obsidian, Synthwave, Matcha, Frost, Velvet. Never use the names "Andy" or "Graphite".
+4. Skin names: Charcoal (ink), Marigold (sunny), Blueprint, Obsidian, Synthwave, Matcha, Frost, Velvet; secret: Newsprint. Peony and Prism are gone. Never use the names "Andy" or "Graphite".
 5. `flutter_soloud` stays pinned to 4.x (5.x needs a host C++ toolchain just to run `flutter test`). Don't upgrade it.
 6. Don't trust `architecture.md` (a plan, partly different from what was built). Trust `lib/`.
 7. No phone/emulator has ever been connected in a session: verify UI with widget tests / test-rendered screenshots (recipe below). Sounds, haptics, landscape and real Play purchases have never been tried on hardware; say so when reporting.
@@ -16,10 +16,10 @@ Complete working documentation for PopCalc. It exists so a session never has to 
 
 PopCalc — offline, Android-first Flutter calculator with extruded 3D numerals, tactile motion, sounds and haptics. No ads, no account, no data collected. Package `com.ornobaadi.popcalc` (debug/profile get `.dev` suffix and label "PopCalc Dev"). Dart SDK `^3.13.4`, so Dart 3 syntax is used freely (null-aware elements `?x`, wildcard params `(_, _)`, records, switch expressions).
 
-- **Version**: `pubspec.yaml` `version: 1.3.1+10` (build 9 was the first 1.3.1 upload; 10 adds the `=` fix and goes to open testing). Must be repeated by hand in `_SignatureFooter._appVersion` (`'1.3.1'` — **version name only, never the build number**; `lib/features/settings/presentation/settings_sheet.dart`), `README.md` and a new entry at the top of `RELEASE_NOTES.md`.
+- **Version**: `pubspec.yaml` `version: 1.4.0+11`. Must be repeated by hand in `_SignatureFooter._appVersion` (`'1.4.0'` — **version name only, never the build number**; `lib/features/settings/presentation/settings_sheet.dart`), `README.md` and a new entry at the top of `RELEASE_NOTES.md`.
 - **Portrait-only, except scientific mode**, which may rotate to landscape (see [Orientation](#orientation)). The converter, splash, store and history are portrait.
-- **Skins**: 3 free (Marigold, Charcoal, Peony) + 5 premium skins + 7 "materials" (premium; look + sound + haptics as one set) = 15 `AppThemeMode`s. Premium ones are one-time Google Play products, plus an "everything" bundle.
-- **Test status** (2026-10-12): `flutter test` → 216 tests, all pass (the old failing smoke test `test/widget_test.dart` is fixed).
+- **Skins**: 3 free (Marigold, Charcoal, Blueprint) + 5 premium skins + 7 "materials" (premium; look + sound + haptics as one set) + 1 secret skin (Newsprint, found not bought) = 16 `AppThemeMode`s. Premium ones are one-time Google Play products, plus an "everything" bundle.
+- **Test status** (2026-10-12): `flutter test` → 226 tests, all pass (the old failing smoke test `test/widget_test.dart` is fixed).
 - Docs at repo root: `PRD.md`, `design.md`, `architecture.md` (plan, unreliable), `phases.md`, `README.md`, `RELEASE_NOTES.md` (user-facing notes + Play "What's new" ≤500 chars per release), `docs/privacy-policy.html`.
 
 ## Commands
@@ -34,7 +34,6 @@ flutter test --plain-name "some test name"         # single test by name
 flutter build apk --release                        # or appbundle — USER RUNS THESE, not Claude
 dart run flutter_native_splash:create              # after editing flutter_native_splash.yaml
 python tool/generate_sounds.py                     # regenerate assets/sounds/**/*.wav
-flutter test tool/generate_skin_mockups.dart --update-goldens   # regenerate assets/skins/*.png
 ```
 
 Release signing reads `android/key.properties` (+ `android/app/popcalc.keystore`); both are local secrets, never commit or print them. `android/*.log` (`hs_err_pid*`, `replay_pid*`) are JVM crash junk.
@@ -64,8 +63,8 @@ lib/
     themes/presentation/      theme_store_screen, theme_detail_sheet, theme_bundle_sheet,
                               theme_card, theme_preview_overlay, store_widgets, purchase_feedback
 test/        engine/, core/, units/, + widget tests (see Tests)
-tool/        generate_sounds.py, generate_skin_mockups.dart
-assets/      fonts/, sounds/<folder>/, skins/<mode>.png, textures/noise.png, splash/,
+tool/        generate_sounds.py
+assets/      fonts/, sounds/<folder>/, textures/noise.png, splash/,
              brand_assets/, ornob-aadi-signature/, readme/, licenses/
 android/app/src/main/kotlin/com/ornobaadi/popcalc/MainActivity.kt   native haptics channel
 ```
@@ -82,7 +81,7 @@ Layering rule: `core/engine` and `core/units` import **no Flutter**. Feature-fir
 
 ## Math engine (`lib/core/engine/`, pure Dart)
 
-Pipeline: `Expression` (immutable) → `Parser` → AST → `Evaluator` → `Decimal` → `NumberFormatter`. Errors are `CalcError` (`divideByZero` "Can't divide by zero", `overflow` "Overflow", `invalidExpression` "Error", `domainError` "Not defined"); evaluator throws `CalcException(error)`.
+Pipeline: `Expression` (immutable) → `Parser` → AST → `Evaluator` → `Decimal` → `NumberFormatter`. Errors are `CalcError` (`calc_error.dart`): `divideByZero` (`5÷0`, `0^-1`), `zeroByZero` (`0÷0`), `overflow` (past 1000 digits, `n!` with n > 450, double ∞), `negativeRoot` (`√(-4)`, negative base to a fractional power), `badLog` (`ln`/`log` of ≤ 0), `badInverseTrig` (`sin⁻¹`/`cos⁻¹` outside −1..1), `tanUndefined` (`tan 90°`, `tan π/2`), `badFactorial` (`2.5!`, `(-3)!`), `invalidExpression` (malformed, NaN). Each has `plainMessage` (sober reason, used as the screen-reader label) and `messages`: a pool of 3-5 fun lines shown in the hero numerals. **Lines must be CAPITALS (Bebas has no lowercase) and ≤ 19 characters** (a test enforces both). **How an error is shown** (so it never passes for a result): the line is set much smaller than a number (`ExtrudedNumber.maxFontSize` 60 instead of 200) with a shallow block (depth × 0.4), both applied in `numeral_animator.dart` when `hasError`; and `calculator_screen.dart` puts `plainMessage` under it in small Inter (`ValueKey('error-reason')`, 54 px below centre). No warning colour is used. The evaluator throws `CalcException(error)`. Not errors, silent by design: the 15-digit and 60-token limits, `=` on a dangling `sin(`.
 
 **`token.dart`**: `TokenType {number, plus, minus, multiply, divide, percent, power, leftParen, rightParen, function, constant, factorial}`. `Token(type, text)` with `==`/hashCode. Helpers: `isOperator` (+ − × ÷ ^), `isNumber`, `isPercent`, `isOpener` (leftParen or function), `endsOperand` (number, percent, rightParen, constant, factorial), `functionName` (text minus trailing `(`; function token text includes the `(`, e.g. `sin(`). Operator symbols: `+`, `-` (ASCII hyphen on the keypad's token), `×`, `÷`, `^`.
 
@@ -108,7 +107,7 @@ Pipeline: `Expression` (immutable) → `Parser` → AST → `Evaluator` → `Dec
 
 Behaviours worth knowing:
 - After `=` (`justEvaluated`): a **digit/decimal/opener/constant** starts a fresh expression; an **operator, %, +/−, !, x²** continue from the displayed answer (`_baseExpression()` = `Expression.fromResult(resultText)`). `onEquals` is ignored when already evaluated (no duplicate history/celebration). Backspace after `=` clears.
-- `onEquals`: first **drops trailing operators** (and a lone `-` currentNumber), so `99 + 66 +` `=` gives 165 and the expression line/history show `99 + 66` without the hanging operator (state `expression` is replaced by the trimmed one); nothing left → no-op. Then strict parse; a dangling opener (`sin(`) is ignored quietly, any other malformed expression shows `invalidExpression`. Success adds to history, sets `justEvaluated`, `celebrationId + 1`. `_showError` clears editing/preview.
+- `onEquals`: first **drops trailing operators** (and a lone `-` currentNumber), so `99 + 66 +` `=` gives 165 and the expression line/history show `99 + 66` without the hanging operator (state `expression` is replaced by the trimmed one); nothing left → no-op. Then strict parse; a dangling opener (`sin(`) is ignored quietly, any other malformed expression shows `invalidExpression`. Success adds to history, sets `justEvaluated`, `celebrationId + 1`. `_showError` picks one of `error.messages` at random (injectable `Random` in the constructor), never the same line twice running, and clears editing/preview.
 - Live preview (`_computePreview`): needs ≥ 2 tokens, tolerant parse; stored in `previewText` always, but only *shown* when `settings.showLivePreview`.
 - **Token editing** (tap a token in the expression line): `selectToken` sets `editingTokenIndex`, `isReplacingEditedToken = true`, hero shows the token. First digit replaces the token; later digits extend (cap 15 digits). Operator on a highlighted operator/percent replaces it; on a highlighted number swaps the *following* operator or inserts one after. `%` on a number inserts a percent token after it (selection moves to it); on an operator it is ignored. Backspace → `removeTokenCleanly`. `_applyAdvanced` first calls `deselectToken()`.
 - `loadExpression` (history tap) re-tokenises the saved display string by hand: numbers `[0-9.,]` (+ `e` only when a digit follows, so `1.5e20` stays one token and `2e` is number+constant), operators `+ − - × * ÷ /`, `%`, `^`, parens, `!`, `π`/`e`, and function names from `_functionNames`. **Add any new function name to `_functionNames`** or history restore breaks.
@@ -131,16 +130,17 @@ Behaviours worth knowing:
 | scientificActive (f(x) toggle) | `settings_scientific_active` | true |
 | scientificExpanded (tray 2nd row) | `settings_scientific_expanded` | true |
 | angleUnit | `settings_angle_unit` | degrees |
+| secretUnlocked (secret skin found) | `settings_secret_unlocked` | false |
 
-Other keys: theme `settings_theme_mode` (**int index of `AppThemeMode`** — only ever append enum values), converter `converter_category` / `converter_from` / `converter_to`, purchases `purchases_owned` (Play build) and `settings_owned_products` (fake store). Setters mirror state into `AppHaptics.enabled/strength` and `AppSounds.configure`. Sliders: `setHapticStrength`/`setSoundVolume` apply live while dragging; call `saveHapticStrength`/`saveSoundVolume` on drag end. `setAdvancedTools(true)` also turns `scientificActive` on.
+Other keys: theme `settings_theme_mode` (**int index of `AppThemeMode`** — only ever append enum values), converter `converter_category` / `converter_from` / `converter_to`, purchases `purchases_owned` (Play build) and `settings_owned_products` (fake store). Setters mirror state into `AppHaptics.enabled/strength` and `AppSounds.configure`. Sliders: `setHapticStrength`/`setSoundVolume` apply live while dragging; call `saveHapticStrength`/`saveSoundVolume` on drag end. `setAdvancedTools(true)` also turns `scientificActive` on. `unlockSecret()` sets `secretUnlocked`; `secretFoundProvider` (a `StateProvider<int>` in the same file) counts up at the moment of finding, which is what the calculator screen listens to for its announcement (the saved flag also turns true at every launch, so it cannot be used for that).
 
 `historyProvider` / `HistoryNotifier` (`history_store.dart`): newest-first `List<HistoryEntry{id, expression, result, timestamp}>`, **cap 50**, append-only JSONL `calc_history.jsonl` in the app documents dir (compacted via `_saveAll` when the file has > 100 lines; `removeEntry` rewrites). `savePendingPreview` stores the in-progress expression + preview (skips if equal to newest; the screen strips trailing operators first, so `1 + 2 +` is saved as `1 + 2`) — called by `CalculatorScreen.didChangeAppLifecycleState` on paused/detached/hidden when live preview is on and the answer isn't already evaluated.
 
 ## Theme, skins, materials
 
-- `core/theme/theme_tokens.dart`: `enum AppThemeMode {ink, sunny, peony, obsidian, synthwave, matcha, frost, velvet, clay, chrome, glass, wood, candy, neon, mechanical}` (**index persisted — append only**; `peony` kept Bubblegum's index). `ThemeColors` (`bg, bgShade, ink, inkSoft, accent, extrudeTop, extrudeSide, extrudeShadow, extrudeChamfer, burst, isDark, finish`) with one `const` per skin and `ThemeColors.of(mode)`. `SkinFinish {standard, matte, mirror, glass, grain, gloss, glow, keycap}` — only materials use non-standard.
-- `core/theme/app_theme.dart`: `themeProvider` (`ThemeNotifier`, default `sunny`; loads/saves index; `ThemeNotifier.preview(mode)` is fixed, never persists — used by hold-to-preview and the mockup generator), `AppTheme.getThemeData` (font BebasNeue, ColorScheme from tokens), `AppTheme.colorsOf`.
-- `core/theme/skin_catalog.dart`: `kPremiumLocked` (**master switch**: `false` ⇒ everything free), `kAllThemesProductId = 'themes_all'`, `SkinInfo` (mode, label, tagline, description, modelCode, productId?, feels), `MaterialFeel` (id, label, description, soundFolder, haptics), lists `kSkins` (8, order shown in settings grid), `kMaterials` (7), `kBundleItems` (premium skins and materials interleaved), `kProductIds`, `skinOf(mode)`.
+- `core/theme/theme_tokens.dart`: `enum AppThemeMode {ink, sunny, blueprint, obsidian, synthwave, matcha, frost, velvet, clay, chrome, glass, wood, candy, neon, mechanical, newsprint}` (**index persisted — append only**; index 2 was Bubblegum, then Peony, now `blueprint`, so anyone with those saved lands on Blueprint). `ThemeColors` (`bg, bgShade, ink, inkSoft, accent, extrudeTop, extrudeSide, extrudeShadow, extrudeChamfer, burst, isDark, finish`) with one `const` per skin and `ThemeColors.of(mode)`. `SkinFinish {standard, matte, mirror, glass, grain, gloss, glow, keycap, wireframe, halftone}`. Materials use the first group; `wireframe` is Blueprint (face = background so the block is hollow, the white chamfer is the drawn line, and a `GridPaper` drafting grid is laid in `calculator_screen.dart` and in `SkinPhone`); `halftone` is Newsprint (an `ImageShader` of `_halftoneTile`, one dot drawn once with `toImageSync`, in `extruded_number.dart`).
+- `core/theme/app_theme.dart`: `themeProvider` (`ThemeNotifier`, default `sunny`; loads/saves index; `ThemeNotifier.preview(mode)` is fixed, never persists — used by hold-to-preview and by tests that need a fixed skin), `AppTheme.getThemeData` (font BebasNeue, ColorScheme from tokens), `AppTheme.colorsOf`.
+- `core/theme/skin_catalog.dart`: `kPremiumLocked` (**master switch**: `false` ⇒ everything free), `kAllThemesProductId = 'themes_all'`, `SkinInfo` (mode, label, tagline, description, modelCode, productId?, feels), `MaterialFeel` (id, label, description, soundFolder, haptics), lists `kSkins` (8, order shown in settings grid), `kMaterials` (7), `kBundleItems` (premium skins and materials interleaved), `kProductIds`, `skinOf(mode)`, plus `kSecretSkins` (`SkinInfo.secret`) and `kSecretAnswer`.
   - Product ids: `theme_obsidian|synthwave|matcha|frost|velvet`, `material_clay|chrome|glass|wood|candy|neon|mechanical`, `themes_all`.
 - `core/theme/material_feel.dart`: `materialFeelProvider` (active skin's feel, using `settings.mechSwitch` for Mechanical, null for ordinary skins) and `applyMaterialFeel(feel)` → `AppSounds.setMaterial(folder)` + `AppHaptics.feel`.
 
@@ -150,7 +150,11 @@ Other keys: theme `settings_theme_mode` (**int index of `AppThemeMode`** — onl
 - *Haptics*: `HapticFeel` enum + `_feels` map in `app_haptics.dart` swaps digit/operator/utility/backspace patterns (same native primitives, no Kotlin change).
 - Settings sound section: pack chips replaced by a note, or by switch chips for Mechanical.
 
-**Add a skin** = `AppThemeMode` value (append!) + `ThemeColors` const + `ThemeColors.of` case + `SkinInfo` in `kSkins` (with `productId` if premium) + a `_Layout` in `tool/generate_skin_mockups.dart` + regenerate mockup + create/activate the product in Play Console.
+**Secret skin (Newsprint)**: `AppThemeMode.newsprint`, ink on paper with halftone dots and a red stamp accent. It is the one entry in `kSecretSkins`, has no `productId` (so `ownsSkin` is always true for it), and is not in `kSkins`, `kBundleItems` or the store. It is unlocked in `calculatorProvider`'s `onHistoryAdded` wiring when a result equals `kSecretAnswer` (`'1,337'`, written as the display formats it) **and the expression is a real calculation** (typing 1337 then `=` does nothing): that calls `unlockSecret()`, puts `kSecretSkins.first` on and bumps `secretFoundProvider`. `CalculatorScreen` then shows a "SECRET SKIN FOUND · NEWSPRINT" pill for 4 s. The secret skin's slot is **second in the settings grid, between Marigold and Charcoal**: a "?" tile until found (`_MysteryTile`, a tap-triggered `Tooltip`: "Some answers open doors."), the skin itself afterwards. Tests: `test/secret_skin_test.dart`.
+
+**Shelved looks** (tried as secret-skin candidates on 2026-10-12, liked by the owner, removed from the app; could return as paid skins). Blackout: bg `#050505`/`#0E0E0E`, ink `#5A5A5A`, inkSoft `#333333`, accent `#8A8A8A`, top `#0A0A0A`, side `#1C1C1C`, shadow `#CC000000`, chamfer `#59FFFFFF`, standard finish. Pixel: bg `#9BBC0F`/`#A8C81A`, ink and accent `#0F380F`, inkSoft and side `#306230`, no shadow or chamfer, wall drawn in 4 hard steps instead of 36-64. Chalkboard: bg `#1F3B2D`/`#28493A`, ink and top `#F2EFE6`, inkSoft `#9DB3A6`, accent `#F4D35E`, side `#5E7A6B`, slanted repeating dark strokes over the face. Prism (rainbow foil) was rejected outright: no rainbow skins.
+
+**Add a skin** = `AppThemeMode` value (append!) + `ThemeColors` const + `ThemeColors.of` case + `SkinInfo` in `kSkins` (with `productId` if premium) + create/activate the product in Play Console. No artwork: the store draws every skin live (`SkinSwatch`).
 **Add a material** = also a `finish`, a `kMaterials` entry with `MaterialFeel`s, a pack in `MATERIAL_PACKS` + folder under `flutter.assets` in `pubspec.yaml`, a `HapticFeel` + `_feels` entry; update tests that count them (`test/materials_test.dart`).
 
 ## Purchases (`core/storage/entitlement_store.dart`, `play_purchase_service.dart`)
@@ -163,14 +167,14 @@ Other keys: theme `settings_theme_mode` (**int index of `AppThemeMode`** — onl
 
 ## Skin store UI (`features/themes/presentation/`)
 
-- `theme_store_screen.dart` — `ThemeStoreScreen.open` (fade+slide route; opened from the settings banner). Rechecks prices on init. Layout: back + "SKIN STORE", `BundleCarousel`, **MATERIALS** row (card width = 1.75 across), **PREMIUM SKINS** row (2.3 across), "RESTORE PURCHASES" button with result note. `BundleCarousel`: endless wheel driven by an **unbounded `AnimationController`** (not a PageView); auto-turns every `BundleCarousel.dwell` (2200 ms, 520 ms ease), one skin per swipe however hard (clamped ±1), recolours only its own box to the front skin, shows only the "n% OFF" chip (no price); tap → `BundleDetailSheet`.
-- `theme_card.dart` — `SkinMockup` (square `assets/skins/<mode>.png` in a rounded border), `SkinCard` (mockup + label + model code + `_StandingPill`), `SkinStanding {active, owned, forSale, notForSale}`.
-- `theme_detail_sheet.dart` — `SkinDetailSheet.show(ctx, skin, {fromBundle})`: drawn in that skin's colours; mockup, tagline, description; materials get "tap to hear and feel it" demo buttons (`AppSounds.previewMaterial` + `AppHaptics.demo`, each tap = next digit); footer: **hold to preview** (`ThemePreview` on pointer down/up), then ACTIVE / APPLY / UNLOCK+price, purchase note, and "Or everything for $X [n% OFF]" unless opened from the bundle sheet.
-- `theme_bundle_sheet.dart` — `BundleDetailSheet`: every mockup in a 4-col grid (each opens its skin sheet with `fromBundle: true`), `_ValueCard` (contents summed singly, struck through, vs bundle, "You save …"), GET EVERYTHING / OWNED.
+- `theme_store_screen.dart` — `ThemeStoreScreen.open` (fade+slide route; opened from the settings banner). Rechecks prices on init. Back + "SKIN STORE"; `_BundleCard` (key `bundle-card`, 176 px hero: saving chip, "EVERYTHING", counts, "SEE THE BUNDLE", and three `SkinPhone`s fanned on the right from `_phones`; a `Row` of words (flex 11, one `FittedBox` so they shrink together on narrow phones instead of overflowing) and phones (flex 10, `BoxFit.cover`); **no price**; opens `BundleDetailSheet` in the current skin's colours); then two-column grids of `SkinCard`s: **MATERIALS** and **SKINS** hold only what is still for sale, **YOURS** holds what is owned (an empty section is not drawn); "RESTORE PURCHASES" with its result note.
+- `theme_card.dart` — **`SkinPhone`** (the store's mockup, drawn live, no images: a 228 × 470 phone showing the top-bar icons, `32 × 4 =`, a real `ExtrudedNumber` "128" and the five keypad rows in the skin's colours; keycaps for Mechanical, the drafting grid for Blueprint; `IgnorePointer`, scale it with a `FittedBox`). **`SkinSwatch`** (the shop window: a `SkinPhone` leaning −0.07 rad on a backdrop of `lerp(bg, extrudeSide, 0.5)`, running off the bottom edge; `aspectRatio` decides how much keypad shows; laid out at 300 px wide inside a `FittedBox`, so it works from a 46 px chip to a full card). `SkinCard` (swatch at `swatchAspect` 0.82 + label + model code + `_StandingPill`, `captionHeight` 58), `SkinStanding {active, owned, forSale, notForSale}`.
+- `theme_detail_sheet.dart` — `SkinDetailSheet.show(ctx, skin, {fromBundle})`: drawn in that skin's colours; swatch, tagline, description; materials get "tap to hear and feel it" demo buttons (`AppSounds.previewMaterial` + `AppHaptics.demo`, each tap = next digit); footer: **hold to preview** (`ThemePreview` on pointer down/up), then ACTIVE / APPLY / UNLOCK+price, purchase note, and "Or everything for $X [n% OFF]" unless opened from the bundle sheet.
+- `theme_bundle_sheet.dart` — `BundleDetailSheet`: every swatch in a 4-col grid (each opens its skin sheet with `fromBundle: true`), `_ValueCard` (contents summed singly, struck through, vs bundle, "You save …"), GET EVERYTHING / OWNED.
 - `theme_preview_overlay.dart` — `ThemePreview`: inserts an `OverlayEntry` on the root overlay with the real `CalculatorScreen` inside a nested `ProviderScope` overriding `themeProvider` with `ThemeNotifier.preview(skin.mode)`; saved skin untouched; fades out then removes itself.
 - `store_widgets.dart` — `SavingChip` ("64% OFF"), `Pressable` (0.97 scale), `StoreButton` (54 px pill, text shrinks to fit prices), `StoreSheet` (rounded frame; body scrolls, footer buttons stay in view; max 90 % height).
 - `purchase_feedback.dart` — `priceTag`, `purchaseNote`, `purchaseHaptic`, `recheckPrices(ref, ids)` (microtask refresh when any price is missing), `moneyLike` (writes a computed total in Play's own currency format), `BundleValue.of`, `PurchaseNote`.
-- Settings sheet shows free + premium skins always, materials only once owned; locked tile tap opens its `SkinDetailSheet`.
+- Settings grid shows **only what can be put on** (locked skins and materials are in the store only, so the grid stays short): Marigold → the secret slot ("?" or the found skin) → Charcoal, Blueprint → owned premium skins → owned materials. Locked materials never show there. A locked tile opens its `SkinDetailSheet`. The `_StoreBanner` fans three `SkinSwatch` chips.
 
 ## Calculator screen & widgets (`features/calculator/presentation/`)
 
@@ -188,9 +192,9 @@ Other keys: theme `settings_theme_mode` (**int index of `AppThemeMode`** — onl
 
 **`expression_line.dart`**: 56 px tall, 40 pt Bebas, horizontal scroll `reverse: true` (newest in view). Each token is a `_TokenChip` (fixed padding + 2 px border so selection never shifts layout; only colours animate, 130 ms). Operators and `%` accent-coloured. Trailing `=` chip after evaluate; or `= preview` when live preview is on.
 
-**`extruded_number.dart`** (`ExtrudedNumber` + `_ExtrudedNumberPainter`): font = min(height × 0.88, 200) ≥ 64, shrunk to fit width − 40 (≥ 40). Layers: neon halo → blurred contact shadow → **36–64 stamped copies** of the text from `extrudeSide` to a rim colour along the extrusion vector (direction = base lower-right `(0.55, 0.82) × 18 × depth` + tilt × 0.55) → front face → finish shader → chamfer stroke. **Lite mode paints one flat face** (+ finish). `_painterCache` (max 16) keyed by text/size/colours/lite. `isZero` ⇒ opacity 0.28, depth 0.35.
+**`extruded_number.dart`** (`ExtrudedNumber`, stateful, + `_ExtrudedNumberPainter`): font = min(height × 0.88, 200) ≥ 64, shrunk to fit width − 40 (≥ 40) by `_fitFontSize` (cached); a refit within 0.7×–1.4× **eases over 140 ms** through a `TweenAnimationBuilder` (bigger jumps and lite mode snap). Layers, split into `_paintUnder` (neon halo, blurred contact shadow) and `_paintBody` (**36–64 stamped copies** from `extrudeSide` to a rim colour along the extrusion vector = base lower-right `(0.55, 0.82) × 18 × depth` + tilt × 0.55, then front face, finish shader, chamfer stroke). **Typing**: `stableLength` + `enterProgress` split the text into a settled run and an arriving run; the arriving digits are painted through a horizontal `canvas.scale` about their own centre (0.35 → 1, easeOutCubic) with their extrusion growing from 30 %, all "under" layers before all "body" layers so no shadow crosses a neighbour's face. **Lite mode paints one flat face** (+ finish) and never animates. `_painterCache` (max 16) keyed by text/font size/colours. `isZero` ⇒ opacity 0.28, depth 0.35. Small fixed-size uses (`SkinPhone`) wrap it in a `FittedBox`, because of the 64 px minimum.
 
-**`numeral_animator.dart`** (`AnimatedExtrudedNumber`): 7 controllers — depth spring (240 ms easeOutBack), scale, error shake (320 ms, ±12 px), idle breathing (4 s, 0.97–1.0), drag spring-back (600 ms elasticOut), typing stamp (280 ms rise/drop), celebration (720 ms pop + wobble). `didUpdateWidget` order: error → shake + `AppHaptics.error` + `AppSounds.error`; `celebrationId` increase → pop + `AppHaptics.success` + `AppSounds.success`; text change → type animation. Touch drag (< 7 px = tap → `onTap`) + **accelerometer** (`sensors_plus`, EMA 0.86/0.14, `setState` each event) drive 3D tilt (perspective `0.001`, ±0.28 rad) and the extrusion light. Lite mode skips the perspective transform. The converter reuses this widget.
+**`numeral_animator.dart`** (`AnimatedExtrudedNumber`): 7 controllers — depth spring (240 ms easeOutBack), scale, error shake (320 ms, ±12 px), idle breathing (4 s, 0.97–1.0), drag spring-back (600 ms elasticOut), typing (160 ms, drives `enterProgress`), celebration (720 ms pop + wobble). `didUpdateWidget` order: error → shake + `AppHaptics.error` + `AppSounds.error`; `celebrationId` increase → pop + `AppHaptics.success` + `AppSounds.success`; text change → typing: **the block never moves**; if the text grew, `_stableLength` = the old length when the new text starts with the old one, otherwise length − 1 (formatting reshuffled it, e.g. `999` → `1,000`), and the new digit turns in; backspace only dips the depth (from 0.8). (The old rise-from-below, squash and drop were removed in 1.4.0: users found them hard on the eyes.) Touch drag (< 7 px = tap → `onTap`) + **accelerometer** (`sensors_plus`, EMA 0.86/0.14, `setState` each event) drive 3D tilt (perspective `0.001`, ±0.28 rad) and the extrusion light. Lite mode skips the perspective transform. The converter reuses this widget.
 
 **`celebration_burst.dart`**: 22 random speed-line rays, 750 ms, fires when `trigger` increases. **`grain_overlay.dart`**: `assets/textures/noise.png` repeated at 4.5 % opacity. **`backspace_icon.dart`**: custom-painted hexagon-with-x.
 
@@ -215,10 +219,10 @@ Static `AppHaptics` (`enabled`, `strength`, `feel`). Each call builds `List<_Hit
 ## Other screens
 
 - **`history_sheet.dart`**: modal bottom sheet 65 % height; list of entries (expression small, `= result` big); tap → `loadExpression` + pop; swipe left to delete; "CLEAR ALL"; empty text "No calculations yet".
-- **`settings_sheet.dart`** (72 % height, scrolls): title "SKINS" → 4-column hex tile grid (`_SkinTile`, lock on unowned) → `_StoreBanner` (fanned mockups, "SKIN STORE", saving chip or "Everything unlocked" / "N skins and M materials") → rows: Scientific & Converter, Live Preview on Top, Haptic Feedback + strength slider, Lite Effects Mode → SOUND section (Sound Effects switch + volume slider, pack chips or Mechanical switch chips, descriptive note) → `_SignatureFooter` (signature PNG chosen by `isDark`, version line, "OFFLINE · NO ADS · NO TRACKING"; **tapping the signature 5× within 1.5 s each opens ornobaadi.vercel.app** — hidden).
+- **`settings_sheet.dart`** (72 % height, scrolls): title "SKINS" → 4-column hex tile grid (`_SkinTile`, lock on unowned; usable skins first, see Skin store UI; `_MysteryTile` in the second slot until the secret skin is found) → `_StoreBanner` (fanned mockups, "SKIN STORE", saving chip or "Everything unlocked" / "N skins and M materials") → rows: Scientific & Converter, Live Preview on Top, Haptic Feedback + strength slider, Lite Effects Mode → SOUND section (Sound Effects switch + volume slider, pack chips or Mechanical switch chips, descriptive note) → `_SignatureFooter` (signature PNG chosen by `isDark`, version line, "OFFLINE · NO ADS · NO TRACKING"; **tapping the signature 5× within 1.5 s each opens ornobaadi.vercel.app** — hidden).
 - Switch styling: `activeThumbColor: colors.accent`, track accent @35 %.
 
-## Tests (`test/`, 216 tests, all green on 2026-10-12)
+## Tests (`test/`, 226 tests, all green on 2026-10-12)
 
 | file | covers |
 |---|---|
@@ -231,19 +235,20 @@ Static `AppHaptics` (`enabled`, `strength`, `feel`). Each call builds `List<_Hit
 | `core/play_purchase_service_test.dart` | scripted `BillingGateway`: buy/pending/cancel/error/refund/other-phone, bundle saving, `moneyLike` formatting |
 | `core/sound_files_test.dart` | every `Sfx` has a file in every pack, shared sounds, snake_case |
 | `materials_test.dart` | sound sets per feel, finishes/prices/haptics, bundle contents, applying feel, settings chips |
-| `theme_store_widget_test.dart` | buy→apply, hold to preview, bundle sheet, carousel behaviour, Play states, fallback to Marigold |
+| `theme_store_widget_test.dart` | buy→apply, hold to preview, bundle card and sheet, owned items under YOURS, Play states, fallback to Marigold |
+| `secret_skin_test.dart` | unlock only by a real calculation reaching `kSecretAnswer`, announced once, persisted; settings grid order, "?" tile and hint |
 | `advanced_mode_widget_test.dart` | top-bar buttons, f(x) toggle, tray fold, converter open/swipe, **landscape grid** |
 | `live_preview_history_test.dart` | pending preview saved to history on pause |
 | `widget_test.dart` | calculator smoke test |
 
-Tests run under the **Ahem** font (every glyph a square), so text is far wider than on a phone: an overflow in a widget test is a hint, not proof. Mock the sensors channels (`dev.fluttercommunity.plus/sensors/*`) when pumping screens (see `tool/generate_skin_mockups.dart`).
+Tests run under the **Ahem** font (every glyph a square), so text is far wider than on a phone: an overflow in a widget test is a hint, not proof. Mock the sensors channels (`dev.fluttercommunity.plus/sensors/*`) when pumping screens: `for (final c in ['method','accelerometer','gyroscope','user_accel']) messenger.setMockMethodCallHandler(MethodChannel('dev.fluttercommunity.plus/sensors/$c'), (_) async => null);`. For a fixed skin override `themeProvider` with `ThemeNotifier.preview(mode)`; for a fixed store override `purchasesProvider` with a small `PurchaseService` subclass (see `FixedStore` in `theme_store_widget_test.dart`).
 
 **Screenshot recipe (no device)**: write a temporary `test/zz_shot_test.dart` that loads the real fonts with `FontLoader` (BebasNeue, Antonio, Inter from `assets/fonts/`, MaterialIcons from `C:/flutter/bin/cache/artifacts/material_fonts/materialicons-regular.otf`), precaches asset images inside `tester.runAsync`, sets `debugDisableShadows = false` (restore `true` before the test ends), and `expectLater(find…, matchesGoldenFile('zz_shots/<name>.png'))` with `flutter test --update-goldens`. Golden paths must be relative (absolute `C:/` silently writes nothing). Copy PNGs to the scratchpad, show with SendUserFile, then delete the test and `test/zz_shots`. Git Bash heredocs with mixed quotes fail here ("unexpected EOF"): write patch scripts with the Write tool instead.
 
 ## Tools
 
 - `tool/generate_sounds.py` — see Audio. Voices: bloop, marimba, noise_burst, resonant_click, bell, sweep, whoosh, partials, chirp; `pack_pop/mellow/typewriter`, `material_pack(...)` builders, `scientific_sounds(tone)` per pack, `mech_key` for switches; `normalize` = tanh drive, `fade_edges` 3 ms.
-- `tool/generate_skin_mockups.dart` — a *test* (`flutter test … --update-goldens`) that renders the real calculator (digits 1-2-8) per skin in `_layouts` (only store-sold skins, 12) inside a tilted phone frame with the skin name in its accent colour → 600 px `assets/skins/<mode>.png`. Regenerate after changing a skin's colours; never edit PNGs by hand.
+- (The skin mockup generator and `assets/skins/` were removed in 1.4.0; the store draws skins live.)
 
 ## Where to change X (quick lookup)
 
@@ -259,7 +264,10 @@ Tests run under the **Ahem** font (every glyph a square), so text is far wider t
 | Change top-bar buttons | `widgets/top_bar.dart` |
 | Change result/keypad proportions or landscape layout | `calculator_screen.dart` |
 | Change 3D numeral look/animation | `extruded_number.dart`, `numeral_animator.dart` |
-| Change a skin's colours | `core/theme/theme_tokens.dart`, then regenerate mockups |
+| Change a skin's colours | `core/theme/theme_tokens.dart` (the store follows by itself) |
+| Change or add an error line | `messages` in `core/engine/calc_error.dart` |
+| Change the secret answer or skin | `kSecretAnswer` / `kSecretSkins` in `core/theme/skin_catalog.dart` |
+| Change typing motion | `numeral_animator.dart` (`didUpdateWidget`) and the arriving-run code in `extruded_number.dart` |
 | Change what a skin/material is called or costs info | `core/theme/skin_catalog.dart` (price itself is in Play Console) |
 | Make everything free / locked | `kPremiumLocked` in `skin_catalog.dart` |
 | Change store layout | `features/themes/presentation/` (see its section) |
@@ -272,6 +280,8 @@ Tests run under the **Ahem** font (every glyph a square), so text is far wider t
 
 ## Gotchas & conventions
 
+- **Edge-to-edge** (Android 15+ forces it for target SDK 35+; Flutter 3.47 targets 36 and draws edge-to-edge on older Android too; `main.dart` makes both system bars transparent). No native code is needed (`MainActivity` is a plain `FlutterActivity`); insets are handled in Dart: full screens and `StoreSheet`/`_UnitSheet` use `SafeArea`, and the settings and history sheets add `MediaQuery.viewPaddingOf(context).bottom` to their scroll padding. **Any new screen or bottom sheet must do one of the two**, or its last row sits under the navigation bar. Play Console shows a generic "Edge-to-edge may not display for all users" notice for every app targeting 35+; it is advice, not a blocker.
+
 - State classes use `copyWith` with explicit `clearX` booleans for nullable fields; follow that pattern.
 - `AppSounds` / `AppHaptics` are static singletons, deliberately fire-and-forget; wrap UI taps with them rather than awaiting.
 - Comments in this codebase explain *why*; keep that voice, don't narrate what.
@@ -283,10 +293,30 @@ Tests run under the **Ahem** font (every glyph a square), so text is far wider t
 - The accelerometer subscription lives in every `AnimatedExtrudedNumber` (calculator hero and converter input).
 - `architecture.md` mentions a theme picker, golden tests and `app/` folder that were not built as written.
 
+## Planned, not built
+
+**Alternate app icons (Phase B of the 1.4.0 plan)**: waiting for the owner's logo files (one 1024 px PNG per icon, ideally separate foreground and background, in `assets/brand_assets/icons/<name>/`). Design: one `<activity-alias>` per icon in `AndroidManifest.xml` (each with its own icon and the MAIN/LAUNCHER filter; `MainActivity` loses its launcher filter), a `popcalc/app_icon` channel in `MainActivity.kt` that enables the chosen alias with `PackageManager.setComponentEnabledSetting(..., DONT_KILL_APP)`, `settings_app_icon`, an "APP ICON" row in settings, and the Flutter `SplashScreen` showing the chosen mark. The native splash cannot differ per alias, so its fixed logo would be dropped. Limits: launchers update slowly, some drop the home-screen shortcut or close the app, and it needs a real phone to verify.
+
 ## Change log
 
 Newest first. Add a line for every change (date, what, files).
 
+- **2026-10-12** — Owner's picks: **Peony removed, Blueprint is the third free skin** (takes Peony's enum index), **Newsprint is the secret skin**; Prism and the other candidates deleted with their finishes (`theme_tokens.dart`, `skin_catalog.dart`, `extruded_number.dart`, tests, README). Store mockups are back as live phones: `SkinPhone` + rebuilt `SkinSwatch`, bundle hero with three phones (`theme_card.dart`, `theme_store_screen.dart`, `theme_detail_sheet.dart`); Blueprint's settings tile uses its line colour (`settings_sheet.dart`).
+- **2026-10-12** — Five secret-skin candidates added for the owner to try in the app (`theme_tokens.dart`, `skin_catalog.dart`, finishes in `extruded_number.dart`, grid in `calculator_screen.dart`, listed in `settings_sheet.dart` behind `kShowSecretCandidates`). Temporary.
+- **2026-10-12** — Settings skin grid no longer lists locked premium skins (owner: five locked tiles broke the layout); they are reached through the store banner (`settings_sheet.dart`, `secret_skin_test.dart`).
+- **2026-10-12** — Error lines made smaller and shallower with the plain reason beneath (`maxFontSize` on `ExtrudedNumber`, `numeral_animator.dart`, `calculator_screen.dart`). Secret slot moved to second place in the settings grid (`settings_sheet.dart`, `secret_skin_test.dart`). Owner rejected Prism; replacement pending their pick.
+- **2026-10-12 — 1.4.0+11 (Phase A of the plan)**:
+  - *Errors*: `CalcError` split into nine cases with rotating fun lines (`calc_error.dart`, `evaluator.dart`, `_showError` in `calculator_controller.dart`); hero numerals get the plain reason as their semantics label.
+  - *Typing*: rise-from-below removed; per-digit turn-in, eased refit (`extruded_number.dart` rewritten, `numeral_animator.dart`).
+  - *Secret skin* (first as Prism with a rainbow `holo` finish, replaced the same day by Newsprint, see above): `kSecretSkins`/`kSecretAnswer`, `secretUnlocked`, `secretFoundProvider`, pill on `calculator_screen.dart`, `_MysteryTile`; `test/secret_skin_test.dart`.
+  - *Owned first*: settings grid order; YOURS section in the store.
+  - *Store* (first as flat numeral swatches, then as live `SkinPhone` mockups, see above): `SkinSwatch` cards replace PNG mockups and the carousel (`theme_store_screen.dart` rewritten, `theme_card.dart`); `assets/skins/` and `tool/generate_skin_mockups.dart` deleted, `pubspec.yaml` asset entry removed.
+  - README, `RELEASE_NOTES.md`, `_appVersion` → 1.4.0. `calculator_screen.dart` was reformatted by `dart format` in passing. Nothing here has run on a phone.
+
+- **2026-10-12** — Promo v3 `assets/Mockup Videos/popcalc_promo_9x16_v3.mp4` (17 s): skins scene cut to 3 s (owner: not every skin needs showing), a slow push-in on every shot, light grade and vignette, and the Google Play badge (`_edit/badge.png`, downloaded from a URL the owner gave) in place of the text call to action. `_edit/build2.py` and `_edit/music.py` now produce v3.
+- **2026-10-12** — Promo v2 `assets/Mockup Videos/popcalc_promo_9x16_v2.mp4` (18 s, 1080x1920, cuts on a 120 BPM grid). Its scripts are kept beside it in `_edit/` (ignored): `music.py` synthesizes the backing track in pure Python (no numpy/PIL on this machine), `build2.py` cuts the shots with ffmpeg (`zoompan` punch-ins, `drawtext` lower thirds over a `geq` scrim); run both from a scratch folder. The skins clip was replaced by the owner with a 10.7 s `... - Trim.mp4` (ends at Chrome). `.claude/skills/` and `.agents/` are in `.gitignore`; the installed skills (`product-launch-video`, `video-edit`) were not used for this cut.
+- **2026-10-12** — Marketing: `assets/Mockup Videos/` (raw 4K mockup clips, ~146 MB, plus edits such as `popcalc_promo_9x16.mp4`) is now in `.gitignore`; it is not bundled in the app (not under `flutter.assets`). The 2026-10-10 clip in it is a different app (ZeroPuff), never use it. Promo cuts are made with ffmpeg (installed via WinGet); in `drawtext` use a relative `fontfile` (absolute Windows paths crash it).
+- **2026-10-12** — Edge-to-edge check after the Play Console notice: main screens already used `SafeArea`; history list and settings scroll now add the bottom system inset (`history_sheet.dart`, `settings_sheet.dart`). Gotcha added.
 - **2026-10-12** — Build number bumped to `1.3.1+10` (version name unchanged) for the open-testing release; `RELEASE_NOTES.md` 1.3.1 entry now says build 10.
 - **2026-10-12** — Settings footer shows `VERSION 1.3.1` without the build number (`_appVersion` in `settings_sheet.dart`). Pending live-preview history entries no longer keep a trailing operator (`_savePendingPreviewIfNeeded` in `calculator_screen.dart`; test extended in `live_preview_history_test.dart`). README version → 1.3.1; added the 1.3.1 entry to `RELEASE_NOTES.md`.
 - **2026-10-11** — Fix: `=` now works when the expression ends with an operator (`99+66+99+88+` → 352); trailing operators / lone `-` are trimmed in `CalculatorController.onEquals` (`calculator_controller.dart`). 3 new tests in `test/engine/calculator_controller_test.dart` (216 total).

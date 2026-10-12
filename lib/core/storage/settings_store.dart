@@ -28,6 +28,9 @@ class AppSettings {
   final bool scientificExpanded;
   final AngleUnit angleUnit;
 
+  /// The secret skin has been found (see `kSecretSkins`).
+  final bool secretUnlocked;
+
   const AppSettings({
     this.showLivePreview = false,
     this.hapticsEnabled = true,
@@ -41,6 +44,7 @@ class AppSettings {
     this.scientificActive = true,
     this.scientificExpanded = true,
     this.angleUnit = AngleUnit.degrees,
+    this.secretUnlocked = false,
   });
 
   AppSettings copyWith({
@@ -56,6 +60,7 @@ class AppSettings {
     bool? scientificActive,
     bool? scientificExpanded,
     AngleUnit? angleUnit,
+    bool? secretUnlocked,
   }) {
     return AppSettings(
       showLivePreview: showLivePreview ?? this.showLivePreview,
@@ -70,9 +75,14 @@ class AppSettings {
       scientificActive: scientificActive ?? this.scientificActive,
       scientificExpanded: scientificExpanded ?? this.scientificExpanded,
       angleUnit: angleUnit ?? this.angleUnit,
+      secretUnlocked: secretUnlocked ?? this.secretUnlocked,
     );
   }
 }
+
+/// Counts up each time the secret skin is found, so the calculator screen
+/// can announce it (the saved flag alone also turns true at every launch).
+final secretFoundProvider = StateProvider<int>((ref) => 0);
 
 final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((
   ref,
@@ -99,6 +109,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const _kScientificActive = 'settings_scientific_active';
   static const _kScientificExpanded = 'settings_scientific_expanded';
   static const _kAngleUnit = 'settings_angle_unit';
+  static const _kSecretUnlocked = 'settings_secret_unlocked';
 
   /// Starts the sound engine with saved settings before the first frame,
   /// so the splash screen's launch sound respects the user's choices.
@@ -131,6 +142,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         scientificActive: prefs.getBool(_kScientificActive) ?? true,
         scientificExpanded: prefs.getBool(_kScientificExpanded) ?? true,
         angleUnit: AngleUnit.fromName(prefs.getString(_kAngleUnit)),
+        // Found while the saved settings were still loading: keep it.
+        secretUnlocked:
+            state.secretUnlocked || (prefs.getBool(_kSecretUnlocked) ?? false),
       );
       AppHaptics.enabled = state.hapticsEnabled;
       AppHaptics.strength = state.hapticStrength;
@@ -233,6 +247,11 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> setScientificExpanded(bool value) async {
     state = state.copyWith(scientificExpanded: value);
     await _persist((p) => p.setBool(_kScientificExpanded, value));
+  }
+
+  Future<void> unlockSecret() async {
+    state = state.copyWith(secretUnlocked: true);
+    await _persist((p) => p.setBool(_kSecretUnlocked, true));
   }
 
   Future<void> setAngleUnit(AngleUnit unit) async {

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:popcalc/core/engine/calc_error.dart';
 import 'package:popcalc/core/engine/token.dart';
 import 'package:popcalc/features/calculator/application/calculator_controller.dart';
 
@@ -65,8 +66,30 @@ void main() {
     controller.onDigit('0');
     controller.onEquals();
 
-    expect(controller.state.resultText, "Can't divide by zero");
+    expect(
+      CalcError.divideByZero.messages,
+      contains(controller.state.resultText),
+    );
     expect(controller.state.error, isNotNull);
+  });
+
+  test('The same mistake twice never shows the same line twice running', () {
+    String fail() {
+      controller.onClear();
+      controller.onDigit('5');
+      controller.onOperator(TokenType.divide, '÷');
+      controller.onDigit('0');
+      controller.onEquals();
+      return controller.state.resultText;
+    }
+
+    var last = fail();
+    for (var i = 0; i < 30; i++) {
+      final next = fail();
+      expect(next, isNot(last));
+      expect(CalcError.divideByZero.messages, contains(next));
+      last = next;
+    }
   });
 
   test('Percent displays on the big hero display', () {

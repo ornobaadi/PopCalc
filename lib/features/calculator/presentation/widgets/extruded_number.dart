@@ -1,4 +1,5 @@
-import 'dart:math';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 
@@ -6,7 +7,7 @@ import 'package:popcalc/core/theme/theme_tokens.dart';
 /// The extrusion direction follows device tilt + touch drag for a natural
 /// "physical object" feel. Sub-pixel stamping with a gradient-shaded side wall
 /// gives the illusion of a real engraved block with zero visible staircase.
-class ExtrudedNumber extends StatelessWidget {
+class ExtrudedNumber extends StatefulWidget {
   final String text;
   final double depth; // 0.0 (flat) to 1.0 (full depth)
   final ThemeColors colors;
@@ -14,6 +15,16 @@ class ExtrudedNumber extends StatelessWidget {
   final bool isLite;
   final TextAlign textAlign;
   final bool isZero;
+
+  /// How many leading characters are already in place. The rest are being
+  /// typed in and turn into place as [enterProgress] goes from 0 to 1, while
+  /// the settled digits stay perfectly still. Null: nothing is entering.
+  final int? stableLength;
+  final double enterProgress;
+
+  /// Upper limit on the numeral's size. Words (an error's line) are set
+  /// well below the size of a number, so they never pass for a result.
+  final double maxFontSize;
 
   const ExtrudedNumber({
     super.key,
@@ -24,24 +35,56 @@ class ExtrudedNumber extends StatelessWidget {
     this.isLite = false,
     this.textAlign = TextAlign.center,
     this.isZero = false,
+    this.stableLength,
+    this.enterProgress = 1.0,
+    this.maxFontSize = 200.0,
   });
+
+  @override
+  State<ExtrudedNumber> createState() => _ExtrudedNumberState();
+}
+
+class _ExtrudedNumberState extends State<ExtrudedNumber> {
+  /// The size the numeral was last fitted to, to tell a small refit (one
+  /// more digit: ease into it) from a new number altogether (snap).
+  double? _lastFit;
 
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final size = Size(constraints.maxWidth, constraints.maxHeight);
+          final fit = _fitFontSize(widget.text, size, widget.maxFontSize);
+          final last = _lastFit;
+          _lastFit = fit;
+          // A long number shrinks to fit. One digit's worth of shrinking is
+          // eased so the block never snaps to a new size under the eye.
+          final ease =
+              !widget.isLite &&
+              last != null &&
+              fit / last > 0.7 &&
+              fit / last < 1.4;
+
           return Opacity(
-            opacity: isZero ? 0.28 : 1.0,
-            child: CustomPaint(
-              size: Size(constraints.maxWidth, constraints.maxHeight),
-              painter: _ExtrudedNumberPainter(
-                text: text,
-                depth: isZero ? 0.35 : depth,
-                colors: colors,
-                tilt: tilt,
-                isLite: isLite,
-                textAlign: textAlign,
+            opacity: widget.isZero ? 0.28 : 1.0,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(end: fit),
+              duration: Duration(milliseconds: ease ? 140 : 0),
+              curve: Curves.easeOutCubic,
+              builder: (context, fontSize, _) => CustomPaint(
+                size: size,
+                painter: _ExtrudedNumberPainter(
+                  text: widget.text,
+                  fontSize: fontSize,
+                  depth: widget.isZero ? 0.35 : widget.depth,
+                  colors: widget.colors,
+                  tilt: widget.tilt,
+                  isLite: widget.isLite,
+                  textAlign: widget.textAlign,
+                  stableLength: widget.stableLength,
+                  enterProgress: widget.enterProgress,
+                ),
               ),
             ),
           );
@@ -51,108 +94,121 @@ class ExtrudedNumber extends StatelessWidget {
   }
 }
 
+const _baseStyle = TextStyle(
+  fontFamily: 'BebasNeue',
+  fontFamilyFallback: ['Antonio', 'sans-serif'],
+  fontWeight: FontWeight.w400,
+  letterSpacing: 1.0,
+  height: 1.0,
+);
+
+TextPainter _layout(String text, TextStyle style) => TextPainter(
+  text: TextSpan(text: text, style: style),
+  textDirection: TextDirection.ltr,
+)..layout();
+
+/// One cell of the halftone screen: a grey dot on nothing, tiled over the
+/// numeral face. Drawn once.
+final ui.Image _halftoneTile = () {
+  const cell = 16.0;
+  final recorder = ui.PictureRecorder();
+  Canvas(recorder).drawCircle(
+    const Offset(cell / 2, cell / 2),
+    cell * 0.3,
+    Paint()
+      ..color = const Color(0xFF8C877C)
+      ..isAntiAlias = true,
+  );
+  return recorder.endRecording().toImageSync(cell.toInt(), cell.toInt());
+}();
+
+// ─── Fit cache ────────────────────────────────────────────────────────────────
+final _fitCache = <String, double>{};
+
+/// The largest font size at which [text] fits [size].
+double _fitFontSize(String text, Size size, double maxFontSize) {
+  final key =
+      '${text}_${size.width.toInt()}_${size.height.toInt()}_${maxFontSize.toInt()}';
+  final cached = _fitCache[key];
+  if (cached != null) return cached;
+
+  var fontSize = (size.height * 0.88).clamp(64.0, 200.0);
+  if (fontSize > maxFontSize) fontSize = maxFontSize;
+  final width = _layout(text, _baseStyle.copyWith(fontSize: fontSize)).width;
+  final maxAllowedWidth = size.width - 40.0;
+  if (width > maxAllowedWidth && width > 0) {
+    fontSize = (fontSize * maxAllowedWidth / width).clamp(40.0, 200.0);
+  }
+
+  if (_fitCache.length > 32) _fitCache.remove(_fitCache.keys.first);
+  return _fitCache[key] = fontSize;
+}
+
 // ─── Layout Cache ─────────────────────────────────────────────────────────────
 final _painterCache = <String, _LayoutCache>{};
 
 class _LayoutCache {
   final TextPainter frontPainter;
   final TextPainter shadowPainter;
-  final double fontSize;
 
-  _LayoutCache({
-    required this.frontPainter,
-    required this.shadowPainter,
-    required this.fontSize,
-  });
+  _LayoutCache({required this.frontPainter, required this.shadowPainter});
 }
 
 // ─── Painter ──────────────────────────────────────────────────────────────────
 class _ExtrudedNumberPainter extends CustomPainter {
   final String text;
+  final double fontSize;
   final double depth;
   final ThemeColors colors;
   final Offset tilt;
   final bool isLite;
   final TextAlign textAlign;
+  final int? stableLength;
+  final double enterProgress;
 
   _ExtrudedNumberPainter({
     required this.text,
+    required this.fontSize,
     required this.depth,
     required this.colors,
     required this.tilt,
     required this.isLite,
     required this.textAlign,
+    required this.stableLength,
+    required this.enterProgress,
   });
 
-  String _cacheKey(Size size) =>
-      '${text}_${size.width.toInt()}_${size.height.toInt()}_${colors.extrudeTop.toARGB32()}_${colors.extrudeSide.toARGB32()}_$isLite';
+  TextStyle get _style => _baseStyle.copyWith(fontSize: fontSize);
 
-  _LayoutCache _buildCache(Size size) {
-    double targetFontSize = size.height * 0.88;
-    if (targetFontSize > 200.0) targetFontSize = 200.0;
-    if (targetFontSize < 64.0) targetFontSize = 64.0;
+  String get _cacheKey =>
+      '${text}_${fontSize.toStringAsFixed(1)}_${colors.extrudeTop.toARGB32()}_${colors.extrudeShadow.toARGB32()}';
 
-    const baseStyle = TextStyle(
-      fontFamily: 'BebasNeue',
-      fontFamilyFallback: ['Antonio', 'sans-serif'],
-      fontWeight: FontWeight.w400,
-      letterSpacing: 1.0,
-      height: 1.0,
-    );
+  TextPainter _front(String run) =>
+      _layout(run, _style.copyWith(color: colors.extrudeTop));
 
-    var measurePainter = TextPainter(
-      text: TextSpan(text: text, style: baseStyle.copyWith(fontSize: targetFontSize)),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    final maxAllowedWidth = size.width - 40.0;
-    if (measurePainter.width > maxAllowedWidth) {
-      final scaleFactor = maxAllowedWidth / measurePainter.width;
-      targetFontSize = (targetFontSize * scaleFactor).clamp(40.0, 200.0);
-    }
-
-    final fittedStyle = baseStyle.copyWith(fontSize: targetFontSize);
-
-    // Front face numeral
-    final frontPainter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: fittedStyle.copyWith(color: colors.extrudeTop),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    // Soft ambient contact shadow
-    final shadowPainter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: fittedStyle.copyWith(
-          foreground: Paint()
-            ..color = colors.extrudeShadow
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18.0),
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    return _LayoutCache(
-      frontPainter: frontPainter,
-      shadowPainter: shadowPainter,
-      fontSize: targetFontSize,
-    );
-  }
+  // Soft ambient contact shadow
+  TextPainter _shadow(String run) => _layout(
+    run,
+    _style.copyWith(
+      foreground: Paint()
+        ..color = colors.extrudeShadow
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18.0),
+    ),
+  );
 
   @override
   void paint(Canvas canvas, Size size) {
     if (text.isEmpty) return;
 
-    final key = _cacheKey(size);
-    _painterCache[key] ??= _buildCache(size);
+    final key = _cacheKey;
+    final cache = _painterCache[key] ??= _LayoutCache(
+      frontPainter: _front(text),
+      shadowPainter: _shadow(text),
+    );
     if (_painterCache.length > 16) {
       _painterCache.remove(_painterCache.keys.first);
     }
 
-    final cache = _painterCache[key]!;
     final textWidth = cache.frontPainter.width;
     final textHeight = cache.frontPainter.height;
 
@@ -169,13 +225,7 @@ class _ExtrudedNumberPainter extends CustomPainter {
 
       final finish = _finishShader(frontOffset & Size(textWidth, textHeight));
       if (finish != null) {
-        _paintGlyphs(
-          canvas,
-          size,
-          frontOffset,
-          cache.fontSize,
-          Paint()..shader = finish,
-        );
+        _paintGlyphs(canvas, text, frontOffset, Paint()..shader = finish);
       }
       return;
     }
@@ -194,6 +244,7 @@ class _ExtrudedNumberPainter extends CustomPainter {
     const double tiltInfluence = 0.55;
     final double dirX = baseDirX + (tilt.dx * tiltInfluence);
     final double dirY = baseDirY + (tilt.dy * tiltInfluence);
+    final dir = Offset(dirX, dirY);
 
     // Center the text so the block appears centered in the widget
     final double startX = (textAlign == TextAlign.center)
@@ -202,133 +253,149 @@ class _ExtrudedNumberPainter extends CustomPainter {
     final double startY = (size.height - textHeight) / 2 - (dirY * 0.5);
 
     final frontOffset = Offset(startX, startY);
+    final face = frontOffset & Size(textWidth, textHeight);
 
+    // Digits being typed in turn into place on their own; the ones already
+    // there do not move at all.
+    final stable = stableLength;
+    final entering =
+        stable != null &&
+        stable >= 0 &&
+        stable < text.length &&
+        enterProgress < 1.0;
+
+    if (!entering) {
+      _paintUnder(canvas, text, frontOffset, dir, cache.shadowPainter);
+      _paintBody(canvas, text, frontOffset, dir, face, cache.frontPainter);
+      return;
+    }
+
+    final settled = text.substring(0, stable);
+    final arriving = text.substring(stable);
+    final arrivingOffset =
+        frontOffset + Offset(settled.isEmpty ? 0.0 : _front(settled).width, 0);
+    final arrivingFront = _front(arriving);
+
+    final t = Curves.easeOutCubic.transform(enterProgress.clamp(0.0, 1.0));
+    // Seen edge-on first, then turning to face the front as it thickens.
+    final turn = 0.35 + 0.65 * t;
+    final arrivingDir = dir * (0.3 + 0.7 * t);
+    final pivotX = arrivingOffset.dx + arrivingFront.width / 2;
+
+    void turned(void Function() draw) {
+      canvas.save();
+      canvas.translate(pivotX, 0);
+      canvas.scale(turn, 1.0);
+      canvas.translate(-pivotX, 0);
+      draw();
+      canvas.restore();
+    }
+
+    // Everything that sits underneath first, so no digit's shadow falls
+    // across its neighbour's face.
+    if (settled.isNotEmpty) _paintUnder(canvas, settled, frontOffset, dir, null);
+    turned(() => _paintUnder(canvas, arriving, arrivingOffset, arrivingDir, null));
+    if (settled.isNotEmpty) {
+      _paintBody(canvas, settled, frontOffset, dir, face, null);
+    }
+    turned(
+      () => _paintBody(
+        canvas,
+        arriving,
+        arrivingOffset,
+        arrivingDir,
+        face,
+        arrivingFront,
+      ),
+    );
+  }
+
+  /// What lies under a run of digits: the neon halo and the contact shadow.
+  void _paintUnder(
+    Canvas canvas,
+    String run,
+    Offset offset,
+    Offset dir,
+    TextPainter? shadow,
+  ) {
     // ─── 0. Neon halo behind everything ───────────────────────────────────────
     if (colors.finish == SkinFinish.glow) {
       _paintGlyphs(
         canvas,
-        size,
-        frontOffset,
-        cache.fontSize,
+        run,
+        offset,
         Paint()
           ..color = colors.extrudeTop.withValues(alpha: 0.6)
-          ..maskFilter = MaskFilter.blur(
-            BlurStyle.normal,
-            cache.fontSize * 0.14,
-          ),
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, fontSize * 0.14),
       );
     }
 
     // ─── 1. Soft ambient contact drop shadow ──────────────────────────────────
     if (depth > 0.05) {
-      cache.shadowPainter.paint(
-        canvas,
-        Offset(startX + dirX * 1.5, startY + dirY * 1.5),
-      );
-    }
-
-    // ─── 2. Gradient-shaded 3D block wall ─────────────────────────────────────
-    // Sub-pixel stamping with gradient colour lerp creates smooth bevel.
-    // t=0 (far layers): deep shadow colour  
-    // t=1 (near face):  slightly lighter rim, mimicking a real thick block edge
-    final double dist = sqrt(dirX * dirX + dirY * dirY);
-    final int steps = (dist / 0.28).clamp(36, 64).toInt();
-
-    final Color deepColor = colors.extrudeSide;
-    final Color rimColor = Color.lerp(colors.extrudeSide, colors.extrudeTop, 0.28)!;
-
-    for (int i = 0; i < steps; i++) {
-      final t = i / (steps - 1.0);
-      final layerOffset = Offset(
-        frontOffset.dx + dirX * (1.0 - t),
-        frontOffset.dy + dirY * (1.0 - t),
-      );
-
-      final lerpT = Curves.easeInCubic.transform(t);
-      final layerColor = Color.lerp(deepColor, rimColor, lerpT)!;
-
-      final tp = TextPainter(
-        text: TextSpan(
-          text: text,
-          style: TextStyle(
-            fontFamily: 'BebasNeue',
-            fontFamilyFallback: const ['Antonio', 'sans-serif'],
-            fontWeight: FontWeight.w400,
-            letterSpacing: 1.0,
-            height: 1.0,
-            fontSize: cache.fontSize,
-            color: layerColor,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: size.width);
-      tp.paint(canvas, layerOffset);
-    }
-
-    // ─── 3. Crisp front face numeral ──────────────────────────────────────────
-    cache.frontPainter.paint(canvas, frontOffset);
-
-    // ─── 3b. Material finish over the face ────────────────────────────────────
-    final finish = _finishShader(frontOffset & Size(textWidth, textHeight));
-    if (finish != null) {
-      _paintGlyphs(
-        canvas,
-        size,
-        frontOffset,
-        cache.fontSize,
-        Paint()..shader = finish,
-      );
-    }
-
-    // ─── 4. Subtle bevel highlight at face rim ────────────────────────────────
-    if (!isLite && colors.extrudeChamfer != Colors.transparent) {
-      final chamferPainter = TextPainter(
-        text: TextSpan(
-          text: text,
-          style: TextStyle(
-            fontFamily: 'BebasNeue',
-            fontFamilyFallback: const ['Antonio', 'sans-serif'],
-            fontWeight: FontWeight.w400,
-            letterSpacing: 1.0,
-            height: 1.0,
-            fontSize: cache.fontSize,
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 1
-              ..color = colors.extrudeChamfer,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: size.width);
-      chamferPainter.paint(canvas, frontOffset);
+      (shadow ?? _shadow(run)).paint(canvas, offset + dir * 1.5);
     }
   }
 
-  /// Paints the numeral's glyphs once more with [paint], exactly over the
-  /// front face (for finishes and glows).
-  void _paintGlyphs(
+  /// The block itself: side wall, front face, material finish and bevel.
+  /// [face] is the whole numeral's face, so a finish runs unbroken across
+  /// digits painted in separate runs.
+  void _paintBody(
     Canvas canvas,
-    Size size,
+    String run,
     Offset offset,
-    double fontSize,
-    Paint paint,
+    Offset dir,
+    Rect face,
+    TextPainter? front,
   ) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          fontFamily: 'BebasNeue',
-          fontFamilyFallback: const ['Antonio', 'sans-serif'],
-          fontWeight: FontWeight.w400,
-          letterSpacing: 1.0,
-          height: 1.0,
-          fontSize: fontSize,
-          foreground: paint,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: size.width);
-    painter.paint(canvas, offset);
+    // ─── 2. Gradient-shaded 3D block wall ─────────────────────────────────────
+    // Sub-pixel stamping with gradient colour lerp creates smooth bevel.
+    // t=0 (far layers): deep shadow colour
+    // t=1 (near face):  slightly lighter rim, mimicking a real thick block edge
+    final int steps = (dir.distance / 0.28).clamp(36, 64).toInt();
+
+    final Color deepColor = colors.extrudeSide;
+    final Color rimColor = Color.lerp(
+      colors.extrudeSide,
+      colors.extrudeTop,
+      0.28,
+    )!;
+
+    for (int i = 0; i < steps; i++) {
+      final t = i / (steps - 1.0);
+      final lerpT = Curves.easeInCubic.transform(t);
+      _layout(
+        run,
+        _style.copyWith(color: Color.lerp(deepColor, rimColor, lerpT)!),
+      ).paint(canvas, offset + dir * (1.0 - t));
+    }
+
+    // ─── 3. Crisp front face numeral ──────────────────────────────────────────
+    (front ?? _front(run)).paint(canvas, offset);
+
+    // ─── 3b. Material finish over the face ────────────────────────────────────
+    final finish = _finishShader(face);
+    if (finish != null) {
+      _paintGlyphs(canvas, run, offset, Paint()..shader = finish);
+    }
+
+    // ─── 4. Subtle bevel highlight at face rim ────────────────────────────────
+    if (colors.extrudeChamfer != Colors.transparent) {
+      _paintGlyphs(
+        canvas,
+        run,
+        offset,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = colors.extrudeChamfer,
+      );
+    }
+  }
+
+  /// Paints [run]'s glyphs once more with [paint], exactly over the front
+  /// face (for finishes, glows and the bevel).
+  void _paintGlyphs(Canvas canvas, String run, Offset offset, Paint paint) {
+    _layout(run, _style.copyWith(foreground: paint)).paint(canvas, offset);
   }
 
   /// What a material's surface does to the flat face colour, as a gradient
@@ -404,8 +471,18 @@ class _ExtrudedNumberPainter extends CustomPainter {
           colors: [clear, Color(0x8CFFFFFF), clear],
           stops: [0.12, 0.5, 0.88],
         ).createShader(face);
+      case SkinFinish.halftone:
+        // Printed dots, sized to the numeral so they read at any scale.
+        final scale = (fontSize / 34.0) / _halftoneTile.width;
+        return ui.ImageShader(
+          _halftoneTile,
+          TileMode.repeated,
+          TileMode.repeated,
+          (Matrix4.identity()..scaleByDouble(scale, scale, 1.0, 1.0)).storage,
+        );
       case SkinFinish.standard:
       case SkinFinish.keycap:
+      case SkinFinish.wireframe:
         return null;
     }
   }
@@ -413,12 +490,13 @@ class _ExtrudedNumberPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ExtrudedNumberPainter oldDelegate) {
     return oldDelegate.text != text ||
+        oldDelegate.fontSize != fontSize ||
         oldDelegate.depth != depth ||
         oldDelegate.colors != colors ||
         oldDelegate.tilt != tilt ||
         oldDelegate.isLite != isLite ||
-        oldDelegate.textAlign != textAlign;
+        oldDelegate.textAlign != textAlign ||
+        oldDelegate.stableLength != stableLength ||
+        oldDelegate.enterProgress != enterProgress;
   }
 }
-
-

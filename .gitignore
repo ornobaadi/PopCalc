@@ -62,3 +62,10 @@ assets/screen-*.mp4
 
 # Kotlin compiler session files written during Android builds
 android/.kotlin/
+
+# Raw marketing clips and the edits made from them (large, not part of the app)
+assets/Mockup Videos/
+
+# Agent skills installed locally for Claude (not part of the app)
+.claude/skills/
+.agents/

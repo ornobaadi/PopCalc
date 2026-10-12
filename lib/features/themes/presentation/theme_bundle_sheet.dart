@@ -147,7 +147,7 @@ class _BundleDetailSheetState extends ConsumerState<BundleDetailSheet> {
                   AppHaptics.selectionClick();
                   SkinDetailSheet.show(context, skin, fromBundle: true);
                 },
-                child: SkinMockup(
+                child: SkinSwatch(
                   skin: skin,
                   borderColor: c.ink.withValues(alpha: 0.14),
                   borderWidth: 1.0,

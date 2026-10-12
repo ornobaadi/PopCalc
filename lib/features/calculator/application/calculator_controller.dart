@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/engine/calc_error.dart';
 import 'package:popcalc/core/engine/evaluator.dart';
@@ -7,6 +9,8 @@ import 'package:popcalc/core/engine/parser.dart';
 import 'package:popcalc/core/engine/token.dart';
 import 'package:popcalc/core/storage/history_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
+import 'package:popcalc/core/theme/app_theme.dart';
+import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'calculator_state.dart';
 
 final calculatorProvider =
@@ -14,6 +18,16 @@ final calculatorProvider =
   final controller = CalculatorController(
     onHistoryAdded: (expr, res) {
       ref.read(historyProvider.notifier).addEntry(expr, res);
+
+      // The secret skin: a calculation that comes out at the magic answer.
+      // Typing the answer itself and pressing = is not a calculation.
+      if (res == kSecretAnswer &&
+          expr.replaceAll(',', '') != res.replaceAll(',', '') &&
+          !ref.read(settingsProvider).secretUnlocked) {
+        ref.read(settingsProvider.notifier).unlockSecret();
+        ref.read(themeProvider.notifier).setTheme(kSecretSkins.first.mode);
+        ref.read(secretFoundProvider.notifier).state++;
+      }
     },
     angleUnit: () => ref.read(settingsProvider).angleUnit,
   );
@@ -26,8 +40,13 @@ class CalculatorController extends StateNotifier<CalculatorState> {
   final void Function(String expression, String result)? onHistoryAdded;
   final AngleUnit Function()? angleUnit;
 
-  CalculatorController({this.onHistoryAdded, this.angleUnit})
-      : super(const CalculatorState());
+  CalculatorController({this.onHistoryAdded, this.angleUnit, Random? random})
+      : _random = random ?? Random(),
+        super(const CalculatorState());
+
+  /// Picks which of an error's lines to show.
+  final Random _random;
+  String? _lastErrorLine;
 
   AngleUnit get _angleUnit => angleUnit?.call() ?? AngleUnit.degrees;
 
@@ -470,9 +489,15 @@ class CalculatorController extends StateNotifier<CalculatorState> {
   }
 
   void _showError(CalcError error) {
+    // A different line each time, so the same mistake twice in a row
+    // does not read like a stuck display.
+    final lines = error.messages.where((m) => m != _lastErrorLine).toList();
+    final line = lines[_random.nextInt(lines.length)];
+    _lastErrorLine = line;
+
     state = state.copyWith(
       error: error,
-      resultText: error.userMessage,
+      resultText: line,
       clearEditingTokenIndex: true,
       isReplacingEditedToken: false,
       clearPreview: true,

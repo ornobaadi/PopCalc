@@ -117,8 +117,14 @@ class HistorySheet extends ConsumerWidget {
                   )
                 : ListView.builder(
                     itemCount: history.length,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 8.0),
+                    // The sheet runs under the system navigation bar
+                    // (edge-to-edge), so the last entry needs to clear it.
+                    padding: EdgeInsets.fromLTRB(
+                      16.0,
+                      8.0,
+                      16.0,
+                      8.0 + MediaQuery.viewPaddingOf(context).bottom,
+                    ),
                     itemBuilder: (context, index) {
                       final item = history[index];
                       return Dismissible(

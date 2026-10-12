@@ -1,3 +1,28 @@
+# PopCalc v1.4.0 (build 11) — Calmer typing, cleaner store, a secret
+
+## ✨ What's new
+- **Calmer typing:** the number no longer jumps up from below. Each new digit turns into place while the rest stay still, and long numbers ease to a smaller size instead of snapping
+- **A new Skin Store:** every skin and material is shown on its own little phone, drawn live in its real colours, numerals and keys
+- **Your skins come first:** anything you have bought moves up beside the free skins in Settings, and steps aside under "Yours" in the store
+- **Errors with a sense of humour:** dividing by zero, roots of negatives and friends now answer with a different line each time
+- **Blueprint replaces Peony** as the third free skin: cyanotype paper and hollow, line-drawn numerals. If you were using Peony you are now on Blueprint
+- **Something is hidden.** Some answers open doors
+
+---
+
+### Play Store "What's new" (under 500 chars)
+```
+New in 1.4.0:
+• Calmer typing: each digit turns into place, nothing jumps
+• A new Skin Store: every skin on its own little phone
+• New free skin: Blueprint (replaces Peony)
+• Skins you own now sit first in Settings
+• Errors with a sense of humour
+• Something is hidden. Some answers open doors
+```
+
+---
+
 # PopCalc v1.3.1 (build 10) — Landscape scientific & fixes
 
 ## ✨ What's new

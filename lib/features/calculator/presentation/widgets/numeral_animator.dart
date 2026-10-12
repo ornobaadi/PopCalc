@@ -50,8 +50,9 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
   late final AnimationController _typeController;
   late final AnimationController _celebrateController;
 
-  /// +1 when a character was added (type-up), -1 when removed (drop).
-  int _typeDirection = 1;
+  /// Leading characters that were already on screen before the last key;
+  /// the rest turn into place. Null when nothing is being typed in.
+  int? _stableLength;
 
   late Animation<double> _depthAnimation;
   late Animation<double> _scaleAnimation;
@@ -122,10 +123,10 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
       ),
     );
 
-    // 6. Typing "stamp": new text rises up from below and extrudes into place
+    // 6. Typing: the new digit turns into place; the rest stay still
     _typeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 280),
+      duration: const Duration(milliseconds: 160),
     )..value = 1.0;
 
     // 7. Answer celebration pop
@@ -175,9 +176,20 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
       AppSounds.success();
       _depthController.forward(from: 0.0);
     } else if (widget.text != oldWidget.text) {
-      _typeDirection = widget.text.length >= oldWidget.text.length ? 1 : -1;
-      _typeController.forward(from: 0.0);
-      _depthController.forward(from: _typeDirection > 0 ? 0.15 : 0.6);
+      final typed = widget.text.length >= oldWidget.text.length;
+      if (typed && !widget.isLite) {
+        // Usually the old text plus one digit. When formatting reshuffles
+        // it ("999" to "1,000") only the last digit counts as new.
+        _stableLength = widget.text.startsWith(oldWidget.text) &&
+                widget.text.length > oldWidget.text.length
+            ? oldWidget.text.length
+            : widget.text.length - 1;
+        _typeController.forward(from: 0.0);
+      } else {
+        _stableLength = null;
+      }
+      // A small give in the block's depth is all the rest of it does.
+      _depthController.forward(from: typed ? 0.75 : 0.8);
     }
   }
 
@@ -278,7 +290,11 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
 
           // Idle breathing subtle modulation (0.97 to 1.0)
           final idleMod = 0.97 + (_idleController.value * 0.03);
-          final currentDepth = (_depthAnimation.value * idleMod).clamp(0.0, 1.15);
+          // An error's line is words, not a result: a shallower, much
+          // smaller block, so it cannot be mistaken for a number.
+          final currentDepth =
+              (_depthAnimation.value * idleMod).clamp(0.0, 1.15) *
+              (widget.hasError ? 0.4 : 1.0);
 
           // Current active touch offset
           final activeTouchOffset = _dragSpringController.isAnimating
@@ -297,19 +313,6 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
           final dynamicTilt = widget.tilt +
               Offset(combinedX * 12.0, combinedY * 12.0);
 
-          // Typing: type-up (rise + squash-stretch) or backspace (drop)
-          final typeT = _typeController.value;
-          final typeEase = Curves.easeOutBack.transform(typeT);
-          final typeOffsetY = _typeDirection > 0
-              ? (1.0 - typeEase) * 26.0
-              : -(1.0 - Curves.easeOutCubic.transform(typeT)) * 12.0;
-          final typeScaleY = _typeDirection > 0
-              ? 0.86 + 0.14 * typeEase
-              : 1.0 + 0.05 * (1.0 - typeT);
-          final typeScaleX = _typeDirection > 0
-              ? 1.06 - 0.06 * typeEase
-              : 1.0;
-
           // Celebration: punch in from small, overshoot, settle with a wobble
           final c = _celebrateController.value;
           final celebrateScale = c >= 1.0
@@ -327,15 +330,18 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
             isLite: widget.isLite,
             isZero: widget.isZero,
             textAlign: TextAlign.center,
+            stableLength: _stableLength,
+            enterProgress: _typeController.value,
+            maxFontSize: widget.hasError ? 60.0 : 200.0,
           );
 
           return Transform.translate(
-            offset: Offset(shakeOffsetX, typeOffsetY),
+            offset: Offset(shakeOffsetX, 0.0),
             child: Transform(
               alignment: Alignment.bottomCenter,
               transform: Matrix4.diagonal3Values(
-                typeScaleX * celebrateScale * _scaleAnimation.value,
-                typeScaleY * celebrateScale * _scaleAnimation.value,
+                celebrateScale * _scaleAnimation.value,
+                celebrateScale * _scaleAnimation.value,
                 1.0,
               )..rotateZ(celebrateTilt),
               child: widget.isLite

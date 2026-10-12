@@ -106,17 +106,17 @@ void main() {
     expect(container.read(themeProvider), AppThemeMode.sunny);
   });
 
-  testWidgets('Bundle sheet opens from the carousel and unlocks every skin', (
+  testWidgets('Bundle sheet opens from its card and unlocks every skin', (
     tester,
   ) async {
     await pumpStore(tester);
     expect(find.text(r'$0.99'), findsNWidgets(5));
-    // The banner itself carries no price or buy button, only the saving:
+    // The card itself carries no price or buy button, only the saving:
     // $19.88 singly against $6.99.
     expect(find.text(r'$6.99'), findsNothing);
     expect(find.text('64% OFF'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('bundle-wheel')));
+    await tester.tap(find.byKey(const ValueKey('bundle-card')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('EVERYTHING BUNDLE'), findsOneWidget);
@@ -140,73 +140,30 @@ void main() {
     expect(find.text('OWNED'), findsNWidgets(13));
   });
 
-  group('Bundle carousel', () {
-    AppThemeMode front(WidgetTester tester) => tester
-        .state<BundleCarouselState>(find.byType(BundleCarousel))
-        .front
-        .mode;
-    final wheel = find.byKey(const ValueKey('bundle-wheel'));
+  testWidgets('what is owned steps aside under YOURS', (tester) async {
+    await pumpStore(
+      tester,
+      store: FixedStore(
+        PurchaseState(
+          loaded: true,
+          prices: allPriced,
+          owned: const {'theme_velvet', 'material_clay'},
+        ),
+      ),
+    );
+    expect(find.text('YOURS'), findsOneWidget);
+    expect(find.text('OWNED'), findsNWidgets(2));
+    expect(find.text('BDT 120.00'), findsNWidgets(10));
+    // Below everything still for sale.
+    final yours = tester.getTopLeft(find.text('YOURS')).dy;
+    expect(tester.getTopLeft(find.text('VELVET')).dy, greaterThan(yours));
+    expect(tester.getTopLeft(find.text('CLAY')).dy, greaterThan(yours));
+    expect(tester.getTopLeft(find.text('OBSIDIAN')).dy, lessThan(yours));
+  });
 
-    testWidgets('one skin per swipe, however hard', (tester) async {
-      await pumpStore(tester);
-      expect(front(tester), AppThemeMode.frost);
-
-      await tester.fling(wheel, const Offset(-300, 0), 3000);
-      await tester.pumpAndSettle();
-      expect(front(tester), AppThemeMode.wood);
-
-      await tester.fling(wheel, const Offset(300, 0), 3000);
-      await tester.pumpAndSettle();
-      expect(front(tester), AppThemeMode.frost);
-    });
-
-    testWidgets('turns by itself and wraps round forever', (tester) async {
-      await pumpStore(tester);
-      final seen = <AppThemeMode>[front(tester)];
-      // Sample mid-dwell, exactly one dwell apart, so each sample sees
-      // one more turn.
-      await tester.pump(const Duration(milliseconds: 1000));
-      for (var i = 0; i < 6; i++) {
-        await tester.pump(const Duration(milliseconds: 1200)); // tick fires
-        await tester.pump(const Duration(milliseconds: 16));
-        await tester.pump(const Duration(milliseconds: 600)); // turn done
-        await tester.pump(
-          BundleCarousel.dwell - const Duration(milliseconds: 1816),
-        );
-        seen.add(front(tester));
-      }
-      // Skins and materials alternate; after Mechanical it wraps round.
-      expect(seen, [
-        AppThemeMode.frost,
-        AppThemeMode.wood,
-        AppThemeMode.velvet,
-        AppThemeMode.candy,
-        AppThemeMode.neon,
-        AppThemeMode.mechanical,
-        AppThemeMode.obsidian, // wrapped
-      ]);
-    });
-
-    testWidgets('only the box recolours, not the screen', (tester) async {
-      await pumpStore(tester);
-      Color screen() =>
-          tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor!;
-      Color box() =>
-          (tester
-                      .widget<Container>(
-                        find.byKey(const ValueKey('bundle-box')),
-                      )
-                      .decoration
-                  as BoxDecoration)
-              .color!;
-
-      final before = box();
-      expect(screen(), ThemeColors.sunnyTheme.bg);
-      await tester.pump(BundleCarousel.dwell);
-      await tester.pumpAndSettle();
-      expect(box(), isNot(before));
-      expect(screen(), ThemeColors.sunnyTheme.bg);
-    });
+  testWidgets('nothing owned: no YOURS section', (tester) async {
+    await pumpStore(tester);
+    expect(find.text('YOURS'), findsNothing);
   });
 
   group('What Play says', () {
@@ -309,7 +266,7 @@ void main() {
     ) async {
       final store = FixedStore(const PurchaseState(loaded: true));
       await pumpStore(tester, store: store);
-      await tester.tap(find.byKey(const ValueKey('bundle-wheel')));
+      await tester.tap(find.byKey(const ValueKey('bundle-card')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -330,7 +287,7 @@ void main() {
         ),
       );
       await pumpStore(tester, store: store);
-      await tester.tap(find.byKey(const ValueKey('bundle-wheel')));
+      await tester.tap(find.byKey(const ValueKey('bundle-card')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('EVERYTHING BUNDLE'), findsOneWidget);
@@ -352,7 +309,7 @@ void main() {
       expect(find.text('UNLOCK'), findsNothing); // the skin's sheet is gone
 
       // From inside the bundle, a skin's sheet does not point back at it.
-      await tester.tap(find.byType(SkinMockup).last);
+      await tester.tap(find.byType(SkinSwatch).last);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.text('UNLOCK'), findsOneWidget);
@@ -431,7 +388,7 @@ void main() {
     await pumpStore(tester);
     expect(find.text('MARIGOLD'), findsNothing);
     expect(find.text('CHARCOAL'), findsNothing);
-    expect(find.text('PEONY'), findsNothing);
+    expect(find.text('BLUEPRINT'), findsNothing);
     expect(find.text('FREE'), findsNothing);
   });
 }

@@ -91,7 +91,7 @@ void main() {
     c.onOpener(const Token(TokenType.function, 'ln('));
     c.onDigit('0');
     c.onEquals();
-    expect(c.state.resultText, 'Not defined');
+    expect(c.state.error!.messages, contains(c.state.resultText));
   });
 
   test('history string round-trips through loadExpression', () {

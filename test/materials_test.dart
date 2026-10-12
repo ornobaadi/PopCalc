@@ -41,10 +41,16 @@ void main() {
     }
   });
 
-  test('the existing skins are untouched: no finish, no feel', () {
+  test('skins are not materials: no feel, and no material finish', () {
     for (final skin in kSkins) {
       expect(skin.isMaterial, isFalse);
-      expect(skin.colors.finish, SkinFinish.standard);
+      // Blueprint's line drawing is the one finish a plain skin has.
+      expect(
+        skin.colors.finish,
+        skin.mode == AppThemeMode.blueprint
+            ? SkinFinish.wireframe
+            : SkinFinish.standard,
+      );
     }
   });
 
