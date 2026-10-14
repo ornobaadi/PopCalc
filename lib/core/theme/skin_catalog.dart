@@ -10,9 +10,36 @@ const bool kPremiumLocked = true;
 /// Product id of the bundle that unlocks every premium skin and material.
 const String kAllThemesProductId = 'themes_all';
 
-/// The answer that opens the secret skin, as the display writes it. It has
-/// to be worked out: typing the number itself and pressing = does nothing.
-const String kSecretAnswer = '1,337';
+/// The newsroom hunt that leads to the secret skin: notes from "the editor",
+/// one at a time on the ??? tile in Settings, each pointing at a feature.
+/// Solved in order (`SettingsNotifier.advanceHunt`):
+///   0 divide by zero, 1 Typewriter sound pack, 2 Live Preview on,
+///   3 open the converter and come back (needs Scientific & Converter on),
+///   4 tap "today's edition" waiting at the top of History.
+/// The last tap closes History and the skin arrives with an ink spill.
+const kHuntNotes = <String>[
+  'Every teacher told you never to do it. Do it.',
+  "A newsroom doesn't go pop. Find the sound of one.",
+  'Good reporters see the story before it ends.',
+  'The science desk measures everything. Unlock the hidden tools, '
+      'borrow the ruler and bring it back.',
+  "Today's edition just went to the archive. Go find it.",
+];
+
+/// Shown under a note whose setting may already be on.
+const kHuntAgainHint = 'Already done? Do it again for the editor.';
+
+/// What dividing by zero says while it is the first note (CAPITALS, ≤ 19).
+const kHuntErrorLine = "NOW THAT'S A STORY";
+const kHuntErrorNote = 'Psst. The editor slipped a note under the ??? skin.';
+
+/// The planted entry at the top of History for the last note.
+const kHuntEditionTitle = "TODAY'S EDITION";
+const kHuntEditionLine = 'Hot off the press. Tap to read.';
+
+/// What the big number says once the ink dries.
+const kHuntHeadline = 'EXTRA! EXTRA!';
+const kHuntHeadlineNote = 'Newsprint is yours. Welcome to the paper.';
 
 /// The sound and haptics that come with a material. Most materials have one;
 /// Mechanical has one per switch type.
@@ -287,8 +314,8 @@ const kMaterials = <SkinInfo>[
   ),
 ];
 
-/// Skins that are found, not bought: hidden from the picker until a
-/// calculation comes out at [kSecretAnswer]. Not in the store or the bundle.
+/// Skins that are found, not bought: hidden from the picker until the
+/// newsroom hunt ([kHuntNotes]) is solved. Not in the store or the bundle.
 const kSecretSkins = <SkinInfo>[
   SkinInfo(
     mode: AppThemeMode.newsprint,

@@ -18,6 +18,7 @@ import 'package:popcalc/features/history/presentation/history_sheet.dart';
 import 'widgets/celebration_burst.dart';
 import 'widgets/expression_line.dart';
 import 'widgets/grain_overlay.dart';
+import 'widgets/ink_spill.dart';
 import 'widgets/keypad.dart';
 import 'widgets/numeral_animator.dart';
 import 'widgets/scientific_tray.dart';
@@ -39,9 +40,14 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
   /// Whether the device may currently rotate (null until first decided).
   bool? _landscapeAllowed;
 
-  /// The secret skin was found a moment ago: say so.
-  bool _secretAnnounced = false;
-  Timer? _secretTimer;
+  /// The pill at the top: a hunt note solved, or the secret skin found.
+  String? _pill;
+  bool _pillShown = false;
+  Timer? _pillTimer;
+
+  /// The hunt's finale is running (see [InkSpill]).
+  bool _spilling = false;
+  final _heroKey = GlobalKey();
 
   @override
   void initState() {
@@ -52,7 +58,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _secretTimer?.cancel();
+    _pillTimer?.cancel();
     super.dispose();
   }
 
@@ -99,6 +105,38 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
     ]);
   }
 
+  void _announce(String text) {
+    _pillTimer?.cancel();
+    _pillTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _pillShown = false);
+    });
+    setState(() {
+      _pill = text;
+      _pillShown = true;
+    });
+  }
+
+  /// Where the ink starts: the middle of the big number.
+  Offset _heroCentre() {
+    final hero = _heroKey.currentContext?.findRenderObject() as RenderBox?;
+    final me = context.findRenderObject() as RenderBox?;
+    if (hero == null || me == null || !hero.hasSize) {
+      return MediaQuery.sizeOf(context).center(Offset.zero);
+    }
+    return me.globalToLocal(hero.localToGlobal(hero.size.center(Offset.zero)));
+  }
+
+  /// Under the ink: the skin is found and put on.
+  void _finishHunt() {
+    ref.read(settingsProvider.notifier).unlockSecret();
+    ref.read(themeProvider.notifier).setTheme(kSecretSkins.first.mode);
+    ref.read(secretFoundProvider.notifier).state++;
+    ref
+        .read(calculatorProvider.notifier)
+        .showHeadline(kHuntHeadline, kHuntHeadlineNote);
+    AppHaptics.success();
+  }
+
   void _copyResult(BuildContext context, String text) {
     if (text.isEmpty) return;
     Clipboard.setData(ClipboardData(text: text.replaceAll(',', '')));
@@ -121,12 +159,22 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
     final scientific = settings.advancedTools && settings.scientificActive;
 
     ref.listen(secretFoundProvider, (_, _) {
-      _secretTimer?.cancel();
-      _secretTimer = Timer(const Duration(seconds: 4), () {
-        if (mounted) setState(() => _secretAnnounced = false);
-      });
-      setState(() => _secretAnnounced = true);
+      _announce('SECRET SKIN FOUND · ${kSecretSkins.first.label}');
     });
+    ref.listen(huntSolvedProvider, (_, _) {
+      final step = ref.read(settingsProvider).huntStep;
+      _announce('STORY $step OF $kHuntLength FILED');
+    });
+    // Every note solved: the finale plays once this screen is on top again
+    // (History closes itself on the last note; or at the next launch).
+    if (settings.huntStep >= kHuntLength &&
+        !settings.secretUnlocked &&
+        !_spilling &&
+        (ModalRoute.of(context)?.isCurrent ?? true)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_spilling) setState(() => _spilling = true);
+      });
+    }
 
     // Auto-clear highlight when state changes externally
     if (_resultHighlighted &&
@@ -154,6 +202,8 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
           // the build decide again once it closes.
           _allowLandscape(false);
           ConverterScreen.open(context).whenComplete(() {
+            // The hunt's fourth note: borrow the ruler, bring it back.
+            ref.read(settingsProvider.notifier).advanceHunt(3);
             if (mounted) setState(() {});
           });
         },
@@ -206,7 +256,10 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
             ),
             // An error's line is a joke; a screen reader gets the reason.
             Semantics(
-              label: calcState.error?.plainMessage ?? calcState.resultText,
+              key: _heroKey,
+              label: calcState.errorNote ??
+                  calcState.error?.plainMessage ??
+                  calcState.resultText,
               excludeSemantics: true,
               child: AnimatedExtrudedNumber(
                 text: calcState.resultText,
@@ -235,14 +288,14 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
             // Under an error's line, the plain reason, small and quiet.
             // Together with the smaller lettering it marks the line as
             // a message, not an answer.
-            if (calcState.error != null)
+            if (calcState.error != null || calcState.errorNote != null)
               Align(
                 alignment: Alignment.center,
                 child: Transform.translate(
                   offset: const Offset(0.0, 54.0),
                   child: IgnorePointer(
                     child: Text(
-                      calcState.error!.plainMessage,
+                      calcState.errorNote ?? calcState.error!.plainMessage,
                       key: const ValueKey('error-reason'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -453,13 +506,25 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
 
           content,
 
-          // The secret skin, announced as it lands
+          if (_spilling)
+            Positioned.fill(
+              child: InkSpill(
+                origin: _heroCentre(),
+                isLite: settings.liteMode,
+                onCovered: _finishHunt,
+                onDone: () {
+                  if (mounted) setState(() => _spilling = false);
+                },
+              ),
+            ),
+
+          // Hunt progress and the secret skin, announced as they land
           Align(
             alignment: Alignment.topCenter,
             child: SafeArea(
               child: IgnorePointer(
                 child: AnimatedOpacity(
-                  opacity: _secretAnnounced ? 1.0 : 0.0,
+                  opacity: _pillShown ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 260),
                   child: Container(
                     margin: const EdgeInsets.only(top: 10.0),
@@ -472,7 +537,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
                       borderRadius: BorderRadius.circular(20.0),
                     ),
                     child: Text(
-                      'SECRET SKIN FOUND · ${kSecretSkins.first.label}',
+                      _pill ?? '',
                       style: TextStyle(
                         fontFamily: 'BebasNeue',
                         fontSize: 15.0,

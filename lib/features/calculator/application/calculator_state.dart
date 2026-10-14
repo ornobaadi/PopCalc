@@ -7,6 +7,10 @@ class CalculatorState {
   final String resultText;
   final String? previewText;
   final CalcError? error;
+
+  /// Small line under the hero: replaces an error's plain reason, or
+  /// stands alone under a headline (the hunt). Lasts until the next change.
+  final String? errorNote;
   final bool justEvaluated;
   final int? editingTokenIndex;
   final bool isReplacingEditedToken;
@@ -20,6 +24,7 @@ class CalculatorState {
     this.resultText = '0',
     this.previewText,
     this.error,
+    this.errorNote,
     this.justEvaluated = false,
     this.editingTokenIndex,
     this.isReplacingEditedToken = false,
@@ -42,6 +47,7 @@ class CalculatorState {
     bool clearPreview = false,
     CalcError? error,
     bool clearError = false,
+    String? errorNote,
     bool? justEvaluated,
     int? editingTokenIndex,
     bool clearEditingTokenIndex = false,
@@ -54,6 +60,8 @@ class CalculatorState {
       resultText: resultText ?? this.resultText,
       previewText: clearPreview ? null : (previewText ?? this.previewText),
       error: clearError ? null : (error ?? this.error),
+      // Never carried over: it belongs to the moment it was set.
+      errorNote: errorNote,
       justEvaluated: justEvaluated ?? this.justEvaluated,
       editingTokenIndex: clearEditingTokenIndex
           ? null

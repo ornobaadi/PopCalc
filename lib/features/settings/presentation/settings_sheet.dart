@@ -12,6 +12,7 @@ import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:popcalc/features/themes/presentation/store_widgets.dart';
+import 'hunt_note_sheet.dart';
 import 'package:popcalc/features/themes/presentation/theme_card.dart';
 import 'package:popcalc/features/themes/presentation/theme_detail_sheet.dart';
 import 'package:popcalc/features/themes/presentation/theme_store_screen.dart';
@@ -757,18 +758,19 @@ class _SkinTile extends StatelessWidget {
   }
 }
 
-/// The slot the secret skin will take. It gives nothing away but a hint.
-class _MysteryTile extends StatelessWidget {
+/// The slot the secret skin will take. Tapping it opens the editor's note:
+/// the first clue of the newsroom hunt, then whichever one is next.
+class _MysteryTile extends ConsumerWidget {
   final ThemeColors colors;
   const _MysteryTile({required this.colors});
 
   @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Some answers open doors.',
-      triggerMode: TooltipTriggerMode.tap,
-      showDuration: const Duration(seconds: 3),
-      onTriggered: AppHaptics.lightImpact,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final solved = ref.watch(settingsProvider.select((s) => s.huntStep));
+    return GestureDetector(
+      key: const ValueKey('mystery-tile'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => HuntNoteSheet.show(context, colors),
       child: Column(
         children: [
           Container(
@@ -785,14 +787,21 @@ class _MysteryTile extends StatelessWidget {
                 ),
               ),
             ),
-            child: Text(
-              '?',
-              style: TextStyle(
-                fontFamily: 'BebasNeue',
-                fontSize: 32.0,
-                height: 1.0,
-                color: colors.inkSoft.withValues(alpha: 0.7),
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '?',
+                  style: TextStyle(
+                    fontFamily: 'BebasNeue',
+                    fontSize: 32.0,
+                    height: 1.0,
+                    color: colors.inkSoft.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 3.0),
+                HuntPips(colors: colors, solved: solved),
+              ],
             ),
           ),
           const SizedBox(height: 6.0),
@@ -938,7 +947,7 @@ class _SignatureFooter extends StatefulWidget {
   final ThemeColors colors;
   const _SignatureFooter({required this.colors});
 
-  static const _appVersion = '1.4.0';
+  static const _appVersion = '1.4.1';
 
   @override
   State<_SignatureFooter> createState() => _SignatureFooterState();

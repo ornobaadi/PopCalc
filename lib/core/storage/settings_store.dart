@@ -31,6 +31,13 @@ class AppSettings {
   /// The secret skin has been found (see `kSecretSkins`).
   final bool secretUnlocked;
 
+  /// How many of the newsroom hunt's notes are solved (0..[kHuntLength]).
+  /// The secret skin is put on once the last one is.
+  final int huntStep;
+
+  /// The hunt is over: every note solved, or the skin found the old way.
+  bool get huntDone => secretUnlocked || huntStep >= kHuntLength;
+
   const AppSettings({
     this.showLivePreview = false,
     this.hapticsEnabled = true,
@@ -45,6 +52,7 @@ class AppSettings {
     this.scientificExpanded = true,
     this.angleUnit = AngleUnit.degrees,
     this.secretUnlocked = false,
+    this.huntStep = 0,
   });
 
   AppSettings copyWith({
@@ -61,6 +69,7 @@ class AppSettings {
     bool? scientificExpanded,
     AngleUnit? angleUnit,
     bool? secretUnlocked,
+    int? huntStep,
   }) {
     return AppSettings(
       showLivePreview: showLivePreview ?? this.showLivePreview,
@@ -76,6 +85,7 @@ class AppSettings {
       scientificExpanded: scientificExpanded ?? this.scientificExpanded,
       angleUnit: angleUnit ?? this.angleUnit,
       secretUnlocked: secretUnlocked ?? this.secretUnlocked,
+      huntStep: huntStep ?? this.huntStep,
     );
   }
 }
@@ -84,10 +94,19 @@ class AppSettings {
 /// can announce it (the saved flag alone also turns true at every launch).
 final secretFoundProvider = StateProvider<int>((ref) => 0);
 
+/// Number of notes in the newsroom hunt (texts in `kHuntNotes`).
+const int kHuntLength = 5;
+
+/// Counts up each time a hunt note is solved, for the "STORY n OF 4" pill
+/// (like [secretFoundProvider], the saved step alone changes at launch).
+final huntSolvedProvider = StateProvider<int>((ref) => 0);
+
 final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((
   ref,
 ) {
-  return SettingsNotifier();
+  final notifier = SettingsNotifier();
+  notifier.onHuntSolved = () => ref.read(huntSolvedProvider.notifier).state++;
+  return notifier;
 });
 
 class SettingsNotifier extends StateNotifier<AppSettings> {
@@ -110,6 +129,10 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const _kScientificExpanded = 'settings_scientific_expanded';
   static const _kAngleUnit = 'settings_angle_unit';
   static const _kSecretUnlocked = 'settings_secret_unlocked';
+  static const _kHuntStep = 'settings_hunt_step';
+
+  /// Told when a hunt note is solved (wired in `settingsProvider`).
+  void Function()? onHuntSolved;
 
   /// Starts the sound engine with saved settings before the first frame,
   /// so the splash screen's launch sound respects the user's choices.
@@ -145,6 +168,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         // Found while the saved settings were still loading: keep it.
         secretUnlocked:
             state.secretUnlocked || (prefs.getBool(_kSecretUnlocked) ?? false),
+        huntStep: [state.huntStep, prefs.getInt(_kHuntStep) ?? 0]
+            .reduce((a, b) => a > b ? a : b),
       );
       AppHaptics.enabled = state.hapticsEnabled;
       AppHaptics.strength = state.hapticStrength;
@@ -192,6 +217,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   Future<void> setSoundPack(SoundPack pack) async {
     state = state.copyWith(soundPack: pack);
+    if (pack == SoundPack.typewriter) advanceHunt(1);
     _applyAudio();
     await _persist((p) => p.setString(_kSoundPack, pack.name));
   }
@@ -203,6 +229,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   Future<void> setShowLivePreview(bool value) async {
     state = state.copyWith(showLivePreview: value);
+    if (value) advanceHunt(2);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kShowLivePreview, value);
@@ -252,6 +279,16 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> unlockSecret() async {
     state = state.copyWith(secretUnlocked: true);
     await _persist((p) => p.setBool(_kSecretUnlocked, true));
+  }
+
+  /// Solves hunt note [from] (0-based). Only the note currently showing
+  /// counts, so doing step 3's thing early does nothing.
+  void advanceHunt(int from) {
+    if (state.huntDone || state.huntStep != from) return;
+    state = state.copyWith(huntStep: from + 1);
+    AppHaptics.success();
+    onHuntSolved?.call();
+    _persist((p) => p.setInt(_kHuntStep, from + 1));
   }
 
   Future<void> setAngleUnit(AngleUnit unit) async {

@@ -16,10 +16,10 @@ Complete working documentation for PopCalc. It exists so a session never has to 
 
 PopCalc — offline, Android-first Flutter calculator with extruded 3D numerals, tactile motion, sounds and haptics. No ads, no account, no data collected. Package `com.ornobaadi.popcalc` (debug/profile get `.dev` suffix and label "PopCalc Dev"). Dart SDK `^3.13.4`, so Dart 3 syntax is used freely (null-aware elements `?x`, wildcard params `(_, _)`, records, switch expressions).
 
-- **Version**: `pubspec.yaml` `version: 1.4.0+11`. Must be repeated by hand in `_SignatureFooter._appVersion` (`'1.4.0'` — **version name only, never the build number**; `lib/features/settings/presentation/settings_sheet.dart`), `README.md` and a new entry at the top of `RELEASE_NOTES.md`.
+- **Version**: `pubspec.yaml` `version: 1.4.1+13`. Must be repeated by hand in `_SignatureFooter._appVersion` (`'1.4.1'` — **version name only, never the build number**; `lib/features/settings/presentation/settings_sheet.dart`), `README.md` and a new entry at the top of `RELEASE_NOTES.md`.
 - **Portrait-only, except scientific mode**, which may rotate to landscape (see [Orientation](#orientation)). The converter, splash, store and history are portrait.
 - **Skins**: 3 free (Marigold, Charcoal, Blueprint) + 5 premium skins + 7 "materials" (premium; look + sound + haptics as one set) + 1 secret skin (Newsprint, found not bought) = 16 `AppThemeMode`s. Premium ones are one-time Google Play products, plus an "everything" bundle.
-- **Test status** (2026-10-12): `flutter test` → 226 tests, all pass (the old failing smoke test `test/widget_test.dart` is fixed).
+- **Test status** (2026-10-15): `flutter test` → 231 tests, all pass.
 - Docs at repo root: `PRD.md`, `design.md`, `architecture.md` (plan, unreliable), `phases.md`, `README.md`, `RELEASE_NOTES.md` (user-facing notes + Play "What's new" ≤500 chars per release), `docs/privacy-policy.html`.
 
 ## Commands
@@ -54,11 +54,11 @@ lib/
     calculator/application/   calculator_controller, calculator_state
     calculator/presentation/  calculator_screen + widgets/ (keypad, key_button, top_bar,
                               scientific_tray, expression_line, extruded_number,
-                              numeral_animator, celebration_burst, grain_overlay, backspace_icon)
+                              numeral_animator, celebration_burst, ink_spill, grain_overlay, backspace_icon)
     converter/application/    converter_controller
     converter/presentation/   converter_screen
     history/presentation/     history_sheet
-    settings/presentation/    settings_sheet
+    settings/presentation/    settings_sheet, hunt_note_sheet
     splash/presentation/      splash_screen
     themes/presentation/      theme_store_screen, theme_detail_sheet, theme_bundle_sheet,
                               theme_card, theme_preview_overlay, store_widgets, purchase_feedback
@@ -131,8 +131,9 @@ Behaviours worth knowing:
 | scientificExpanded (tray 2nd row) | `settings_scientific_expanded` | true |
 | angleUnit | `settings_angle_unit` | degrees |
 | secretUnlocked (secret skin found) | `settings_secret_unlocked` | false |
+| huntStep (newsroom hunt notes solved, 0–5) | `settings_hunt_step` | 0 |
 
-Other keys: theme `settings_theme_mode` (**int index of `AppThemeMode`** — only ever append enum values), converter `converter_category` / `converter_from` / `converter_to`, purchases `purchases_owned` (Play build) and `settings_owned_products` (fake store). Setters mirror state into `AppHaptics.enabled/strength` and `AppSounds.configure`. Sliders: `setHapticStrength`/`setSoundVolume` apply live while dragging; call `saveHapticStrength`/`saveSoundVolume` on drag end. `setAdvancedTools(true)` also turns `scientificActive` on. `unlockSecret()` sets `secretUnlocked`; `secretFoundProvider` (a `StateProvider<int>` in the same file) counts up at the moment of finding, which is what the calculator screen listens to for its announcement (the saved flag also turns true at every launch, so it cannot be used for that).
+Other keys: theme `settings_theme_mode` (**int index of `AppThemeMode`** — only ever append enum values), converter `converter_category` / `converter_from` / `converter_to`, purchases `purchases_owned` (Play build) and `settings_owned_products` (fake store). Setters mirror state into `AppHaptics.enabled/strength` and `AppSounds.configure`. Sliders: `setHapticStrength`/`setSoundVolume` apply live while dragging; call `saveHapticStrength`/`saveSoundVolume` on drag end. `setAdvancedTools(true)` also turns `scientificActive` on. `advanceHunt(from)` solves a hunt note (see Secret skin); `unlockSecret()` sets `secretUnlocked`; `secretFoundProvider` (a `StateProvider<int>` in the same file) counts up at the moment of finding, which is what the calculator screen listens to for its announcement (the saved flag also turns true at every launch, so it cannot be used for that).
 
 `historyProvider` / `HistoryNotifier` (`history_store.dart`): newest-first `List<HistoryEntry{id, expression, result, timestamp}>`, **cap 50**, append-only JSONL `calc_history.jsonl` in the app documents dir (compacted via `_saveAll` when the file has > 100 lines; `removeEntry` rewrites). `savePendingPreview` stores the in-progress expression + preview (skips if equal to newest; the screen strips trailing operators first, so `1 + 2 +` is saved as `1 + 2`) — called by `CalculatorScreen.didChangeAppLifecycleState` on paused/detached/hidden when live preview is on and the answer isn't already evaluated.
 
@@ -140,7 +141,7 @@ Other keys: theme `settings_theme_mode` (**int index of `AppThemeMode`** — onl
 
 - `core/theme/theme_tokens.dart`: `enum AppThemeMode {ink, sunny, blueprint, obsidian, synthwave, matcha, frost, velvet, clay, chrome, glass, wood, candy, neon, mechanical, newsprint}` (**index persisted — append only**; index 2 was Bubblegum, then Peony, now `blueprint`, so anyone with those saved lands on Blueprint). `ThemeColors` (`bg, bgShade, ink, inkSoft, accent, extrudeTop, extrudeSide, extrudeShadow, extrudeChamfer, burst, isDark, finish`) with one `const` per skin and `ThemeColors.of(mode)`. `SkinFinish {standard, matte, mirror, glass, grain, gloss, glow, keycap, wireframe, halftone}`. Materials use the first group; `wireframe` is Blueprint (face = background so the block is hollow, the white chamfer is the drawn line, and a `GridPaper` drafting grid is laid in `calculator_screen.dart` and in `SkinPhone`); `halftone` is Newsprint (an `ImageShader` of `_halftoneTile`, one dot drawn once with `toImageSync`, in `extruded_number.dart`).
 - `core/theme/app_theme.dart`: `themeProvider` (`ThemeNotifier`, default `sunny`; loads/saves index; `ThemeNotifier.preview(mode)` is fixed, never persists — used by hold-to-preview and by tests that need a fixed skin), `AppTheme.getThemeData` (font BebasNeue, ColorScheme from tokens), `AppTheme.colorsOf`.
-- `core/theme/skin_catalog.dart`: `kPremiumLocked` (**master switch**: `false` ⇒ everything free), `kAllThemesProductId = 'themes_all'`, `SkinInfo` (mode, label, tagline, description, modelCode, productId?, feels), `MaterialFeel` (id, label, description, soundFolder, haptics), lists `kSkins` (8, order shown in settings grid), `kMaterials` (7), `kBundleItems` (premium skins and materials interleaved), `kProductIds`, `skinOf(mode)`, plus `kSecretSkins` (`SkinInfo.secret`) and `kSecretAnswer`.
+- `core/theme/skin_catalog.dart`: `kPremiumLocked` (**master switch**: `false` ⇒ everything free), `kAllThemesProductId = 'themes_all'`, `SkinInfo` (mode, label, tagline, description, modelCode, productId?, feels), `MaterialFeel` (id, label, description, soundFolder, haptics), lists `kSkins` (8, order shown in settings grid), `kMaterials` (7), `kBundleItems` (premium skins and materials interleaved), `kProductIds`, `skinOf(mode)`, plus `kSecretSkins` (`SkinInfo.secret`), `kHuntNotes`, `kHuntAgainHint`, `kHuntErrorLine`, `kHuntErrorNote`, `kHuntEditionTitle`/`Line`, `kHuntHeadline`/`Note`.
   - Product ids: `theme_obsidian|synthwave|matcha|frost|velvet`, `material_clay|chrome|glass|wood|candy|neon|mechanical`, `themes_all`.
 - `core/theme/material_feel.dart`: `materialFeelProvider` (active skin's feel, using `settings.mechSwitch` for Mechanical, null for ordinary skins) and `applyMaterialFeel(feel)` → `AppSounds.setMaterial(folder)` + `AppHaptics.feel`.
 
@@ -150,7 +151,7 @@ Other keys: theme `settings_theme_mode` (**int index of `AppThemeMode`** — onl
 - *Haptics*: `HapticFeel` enum + `_feels` map in `app_haptics.dart` swaps digit/operator/utility/backspace patterns (same native primitives, no Kotlin change).
 - Settings sound section: pack chips replaced by a note, or by switch chips for Mechanical.
 
-**Secret skin (Newsprint)**: `AppThemeMode.newsprint`, ink on paper with halftone dots and a red stamp accent. It is the one entry in `kSecretSkins`, has no `productId` (so `ownsSkin` is always true for it), and is not in `kSkins`, `kBundleItems` or the store. It is unlocked in `calculatorProvider`'s `onHistoryAdded` wiring when a result equals `kSecretAnswer` (`'1,337'`, written as the display formats it) **and the expression is a real calculation** (typing 1337 then `=` does nothing): that calls `unlockSecret()`, puts `kSecretSkins.first` on and bumps `secretFoundProvider`. `CalculatorScreen` then shows a "SECRET SKIN FOUND · NEWSPRINT" pill for 4 s. The secret skin's slot is **second in the settings grid, between Marigold and Charcoal**: a "?" tile until found (`_MysteryTile`, a tap-triggered `Tooltip`: "Some answers open doors."), the skin itself afterwards. Tests: `test/secret_skin_test.dart`.
+**Secret skin (Newsprint) and the newsroom hunt**: `AppThemeMode.newsprint`, ink on paper with halftone dots and a red stamp accent. It is the one entry in `kSecretSkins`, has no `productId` (so `ownsSkin` is always true for it), and is not in `kSkins`, `kBundleItems` or the store. It is earned through a 5-step **newsroom hunt** (since 1.4.1; the old "any calculation = 1,337" unlock is gone). Each step is a note from "the editor" (`kHuntNotes` in `skin_catalog.dart`, all wording there) pointing at a feature: **0** divide by zero (the error shows `kHuntErrorLine` "NOW THAT'S A STORY" with `kHuntErrorNote` under it instead of a joke: `CalculatorController.onDivideByZero` callback → `CalculatorState.errorNote`; `errorNote` is **never carried over by `copyWith`**, it lasts only until the next state change; the screen shows the small line whenever `error != null || errorNote != null`), **1** pick the Typewriter sound pack (hook in `setSoundPack`), **2** turn Live Preview on (hook in `setShowLivePreview`), **3** open the converter and come back (the top-bar ruler, only there with Scientific & Converter on; counted in `onConverterTap`'s `whenComplete` in `calculator_screen.dart`, so the pill shows on the calculator), **4** tap "TODAY'S EDITION", a planted row at the top of History (`_EditionEntry` in `history_sheet.dart`, key `hunt-edition`, shown only at step 4 and even with empty history; it pops the sheet then `advanceHunt(4)`). Progress: `huntStep` (0–5, `settings_hunt_step`, `kHuntLength = 5`), `SettingsNotifier.advanceHunt(from)` only advances when `huntStep == from` (order enforced; already-on settings must be flipped again, the note says so via `kHuntAgainHint`), fires `AppHaptics.success` and bumps `huntSolvedProvider` → pill "STORY n OF 5 FILED". `huntDone` = `secretUnlocked || huntStep >= kHuntLength`; old 1,337 finders are done. **Finale**: when `huntStep == 5`, not yet unlocked, and `CalculatorScreen` is the current route (History has just closed itself, or next launch), it lays `InkSpill` (`widgets/ink_spill.dart`, 2.2 s: blobs flood from the hero centre, black at 0.5 where `onCovered` → `_finishHunt` = `unlockSecret()` + `setTheme(newsprint)` + `secretFoundProvider++` → "SECRET SKIN FOUND · NEWSPRINT" pill, and `CalculatorController.showHeadline(kHuntHeadline, kHuntHeadlineNote)` resets the calculator to "EXTRA! EXTRA!" with "Newsprint is yours. Welcome to the paper." under it (so the ÷0 line and its note are gone), then a halftone dot grid shrinks from the origin out; lite mode = plain fade). Settings grid: the secret slot is **second, between Marigold and Charcoal**: `_MysteryTile` ("?" + `HuntPips`, key `mystery-tile`) opens `HuntNoteSheet` (`features/settings/presentation/hunt_note_sheet.dart`, a `StoreSheet`: "FROM THE EDITOR", current note in monospace on top, solved ones struck through with a red FILED stamp); after unlock the skin itself sits there. Tests: `test/secret_skin_test.dart`.
 
 **Shelved looks** (tried as secret-skin candidates on 2026-10-12, liked by the owner, removed from the app; could return as paid skins). Blackout: bg `#050505`/`#0E0E0E`, ink `#5A5A5A`, inkSoft `#333333`, accent `#8A8A8A`, top `#0A0A0A`, side `#1C1C1C`, shadow `#CC000000`, chamfer `#59FFFFFF`, standard finish. Pixel: bg `#9BBC0F`/`#A8C81A`, ink and accent `#0F380F`, inkSoft and side `#306230`, no shadow or chamfer, wall drawn in 4 hard steps instead of 36-64. Chalkboard: bg `#1F3B2D`/`#28493A`, ink and top `#F2EFE6`, inkSoft `#9DB3A6`, accent `#F4D35E`, side `#5E7A6B`, slanted repeating dark strokes over the face. Prism (rainbow foil) was rejected outright: no rainbow skins.
 
@@ -222,7 +223,7 @@ Static `AppHaptics` (`enabled`, `strength`, `feel`). Each call builds `List<_Hit
 - **`settings_sheet.dart`** (72 % height, scrolls): title "SKINS" → 4-column hex tile grid (`_SkinTile`, lock on unowned; usable skins first, see Skin store UI; `_MysteryTile` in the second slot until the secret skin is found) → `_StoreBanner` (fanned mockups, "SKIN STORE", saving chip or "Everything unlocked" / "N skins and M materials") → rows: Scientific & Converter, Live Preview on Top, Haptic Feedback + strength slider, Lite Effects Mode → SOUND section (Sound Effects switch + volume slider, pack chips or Mechanical switch chips, descriptive note) → `_SignatureFooter` (signature PNG chosen by `isDark`, version line, "OFFLINE · NO ADS · NO TRACKING"; **tapping the signature 5× within 1.5 s each opens ornobaadi.vercel.app** — hidden).
 - Switch styling: `activeThumbColor: colors.accent`, track accent @35 %.
 
-## Tests (`test/`, 226 tests, all green on 2026-10-12)
+## Tests (`test/`, 231 tests, all green on 2026-10-15)
 
 | file | covers |
 |---|---|
@@ -236,7 +237,7 @@ Static `AppHaptics` (`enabled`, `strength`, `feel`). Each call builds `List<_Hit
 | `core/sound_files_test.dart` | every `Sfx` has a file in every pack, shared sounds, snake_case |
 | `materials_test.dart` | sound sets per feel, finishes/prices/haptics, bundle contents, applying feel, settings chips |
 | `theme_store_widget_test.dart` | buy→apply, hold to preview, bundle card and sheet, owned items under YOURS, Play states, fallback to Marigold |
-| `secret_skin_test.dart` | unlock only by a real calculation reaching `kSecretAnswer`, announced once, persisted; settings grid order, "?" tile and hint |
+| `secret_skin_test.dart` | newsroom hunt: each note, order gating, special ÷0 line, persistence, old finders, 1,337 does nothing; ink-spill finale on `CalculatorScreen` ending in the EXTRA! headline; today's edition in History; settings grid order, ??? tile opens the note |
 | `advanced_mode_widget_test.dart` | top-bar buttons, f(x) toggle, tray fold, converter open/swipe, **landscape grid** |
 | `live_preview_history_test.dart` | pending preview saved to history on pause |
 | `widget_test.dart` | calculator smoke test |
@@ -266,7 +267,7 @@ Tests run under the **Ahem** font (every glyph a square), so text is far wider t
 | Change 3D numeral look/animation | `extruded_number.dart`, `numeral_animator.dart` |
 | Change a skin's colours | `core/theme/theme_tokens.dart` (the store follows by itself) |
 | Change or add an error line | `messages` in `core/engine/calc_error.dart` |
-| Change the secret answer or skin | `kSecretAnswer` / `kSecretSkins` in `core/theme/skin_catalog.dart` |
+| Change the hunt's clues or the secret skin | `kHuntNotes` / `kHuntErrorLine` / `kSecretSkins` in `core/theme/skin_catalog.dart`; step hooks see Secret skin section |
 | Change typing motion | `numeral_animator.dart` (`didUpdateWidget`) and the arriving-run code in `extruded_number.dart` |
 | Change what a skin/material is called or costs info | `core/theme/skin_catalog.dart` (price itself is in Play Console) |
 | Make everything free / locked | `kPremiumLocked` in `skin_catalog.dart` |
@@ -301,6 +302,13 @@ Tests run under the **Ahem** font (every glyph a square), so text is far wider t
 
 Newest first. Add a line for every change (date, what, files).
 
+- **2026-10-15 — 1.4.1+13**: release with the newsroom hunt (entries below). `pubspec.yaml`, `_appVersion`, README, new `RELEASE_NOTES.md` entry (the 1.4.0 entry is back to what shipped). 1.4.0+12 is live in production.
+
+- **2026-10-15** — Hunt reworked to 5 steps after owner feedback: the converter step counts on return, a new last step taps "TODAY'S EDITION" in History (closing History starts the ink spill, no converter round-trip). Fix: after unlocking, the old ÷0 line and "editor left you a note" stayed on screen; the finale now resets the calculator to an "EXTRA! EXTRA!" headline (`showHeadline`), and `errorNote` no longer survives `copyWith`. Files: `skin_catalog.dart`, `settings_store.dart`, `calculator_state.dart`, `calculator_controller.dart`, `calculator_screen.dart`, `history_sheet.dart`, `secret_skin_test.dart` (231 tests).
+
+- **2026-10-15** — **Newsroom hunt replaces the 1,337 unlock** for Newsprint: 4 editor's notes (÷0 → Typewriter pack → Live Preview → open the converter), `huntStep`/`advanceHunt`/`huntSolvedProvider` (`settings_store.dart`), `kHuntNotes` & co. (`skin_catalog.dart`, `kSecretAnswer` removed), `onDivideByZero` + `errorNote` (`calculator_controller.dart`, `calculator_state.dart`), new `hunt_note_sheet.dart` and `widgets/ink_spill.dart`, pill + finale in `calculator_screen.dart`, `_MysteryTile` opens the note (`settings_sheet.dart`); `secret_skin_test.dart` rewritten (229 tests). Not yet bumped or committed; not run on a phone.
+
+- **2026-10-13** — Build number bumped to `1.4.0+12` for the release build (aab + apk); `RELEASE_NOTES.md` 1.4.0 entry now says build 12.
 - **2026-10-12** — Owner's picks: **Peony removed, Blueprint is the third free skin** (takes Peony's enum index), **Newsprint is the secret skin**; Prism and the other candidates deleted with their finishes (`theme_tokens.dart`, `skin_catalog.dart`, `extruded_number.dart`, tests, README). Store mockups are back as live phones: `SkinPhone` + rebuilt `SkinSwatch`, bundle hero with three phones (`theme_card.dart`, `theme_store_screen.dart`, `theme_detail_sheet.dart`); Blueprint's settings tile uses its line colour (`settings_sheet.dart`).
 - **2026-10-12** — Five secret-skin candidates added for the owner to try in the app (`theme_tokens.dart`, `skin_catalog.dart`, finishes in `extruded_number.dart`, grid in `calculator_screen.dart`, listed in `settings_sheet.dart` behind `kShowSecretCandidates`). Temporary.
 - **2026-10-12** — Settings skin grid no longer lists locked premium skins (owner: five locked tiles broke the layout); they are reached through the store banner (`settings_sheet.dart`, `secret_skin_test.dart`).

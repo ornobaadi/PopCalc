@@ -1,4 +1,23 @@
-# PopCalc v1.4.0 (build 11) — Calmer typing, cleaner store, a secret
+# PopCalc v1.4.1 (build 13) — The newsroom hunt
+
+## ✨ What's new
+- **The ??? skin is now a treasure hunt.** Tap it in Settings and the editor hands you your first note. Five short stories to file, each one leading you somewhere new in the app
+- Finish the hunt and the secret skin arrives in a spill of ink
+- If you already found it, it stays yours
+
+---
+
+### Play Store "What's new" (under 500 chars)
+```
+New in 1.4.1:
+• The ??? skin is now a treasure hunt. Tap it in Settings to start your first day at the paper
+• Five notes from the editor, each leading somewhere new in the app
+• Finish them all for a secret skin, delivered in a spill of ink
+```
+
+---
+
+# PopCalc v1.4.0 (build 12) — Calmer typing, cleaner store, a secret
 
 ## ✨ What's new
 - **Calmer typing:** the number no longer jumps up from below. Each new digit turns into place while the rest stay still, and long numbers ease to a smaller size instead of snapping

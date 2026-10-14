@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/history_store.dart';
+import 'package:popcalc/core/storage/settings_store.dart';
+import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 
@@ -34,6 +36,10 @@ class HistorySheet extends ConsumerWidget {
     final colors = AppTheme.colorsOf(ref.watch(themeProvider));
     final history = ref.watch(historyProvider);
     final historyNotifier = ref.read(historyProvider.notifier);
+    // The hunt's last note: today's edition waits at the top.
+    final edition = ref.watch(settingsProvider.select(
+      (s) => !s.huntDone && s.huntStep == kHuntLength - 1,
+    ));
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -103,7 +109,7 @@ class HistorySheet extends ConsumerWidget {
 
           // History items list
           Expanded(
-            child: history.isEmpty
+            child: history.isEmpty && !edition
                 ? Center(
                     child: Text(
                       'No calculations yet',
@@ -116,7 +122,7 @@ class HistorySheet extends ConsumerWidget {
                     ),
                   )
                 : ListView.builder(
-                    itemCount: history.length,
+                    itemCount: history.length + (edition ? 1 : 0),
                     // The sheet runs under the system navigation bar
                     // (edge-to-edge), so the last entry needs to clear it.
                     padding: EdgeInsets.fromLTRB(
@@ -126,6 +132,20 @@ class HistorySheet extends ConsumerWidget {
                       8.0 + MediaQuery.viewPaddingOf(context).bottom,
                     ),
                     itemBuilder: (context, index) {
+                      if (edition) {
+                        if (index == 0) {
+                          return _EditionEntry(
+                            colors: colors,
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              ref
+                                  .read(settingsProvider.notifier)
+                                  .advanceHunt(kHuntLength - 1);
+                            },
+                          );
+                        }
+                        index--;
+                      }
                       final item = history[index];
                       return Dismissible(
                         key: Key(item.id),
@@ -192,6 +212,63 @@ class HistorySheet extends ConsumerWidget {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Not a calculation: the newsroom hunt's last clue, a folded paper at the
+/// top of History. Tapping it closes the sheet and the ink spills.
+class _EditionEntry extends StatelessWidget {
+  final ThemeColors colors;
+  final VoidCallback onTap;
+  const _EditionEntry({required this.colors, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Material(
+        color: colors.ink,
+        borderRadius: BorderRadius.circular(16.0),
+        child: InkWell(
+          key: const ValueKey('hunt-edition'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16.0),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16.0, 14.0, 16.0, 14.0),
+            child: Row(
+              children: [
+                Icon(Icons.newspaper_rounded, color: colors.bg, size: 30.0),
+                const SizedBox(width: 14.0),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        kHuntEditionTitle,
+                        style: TextStyle(
+                          fontFamily: 'BebasNeue',
+                          fontSize: 26.0,
+                          letterSpacing: 1.2,
+                          color: colors.bg,
+                        ),
+                      ),
+                      Text(
+                        kHuntEditionLine,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12.0,
+                          color: colors.bg.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

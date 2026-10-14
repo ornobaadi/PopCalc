@@ -9,7 +9,6 @@ import 'package:popcalc/core/engine/parser.dart';
 import 'package:popcalc/core/engine/token.dart';
 import 'package:popcalc/core/storage/history_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
-import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'calculator_state.dart';
 
@@ -18,16 +17,13 @@ final calculatorProvider =
   final controller = CalculatorController(
     onHistoryAdded: (expr, res) {
       ref.read(historyProvider.notifier).addEntry(expr, res);
-
-      // The secret skin: a calculation that comes out at the magic answer.
-      // Typing the answer itself and pressing = is not a calculation.
-      if (res == kSecretAnswer &&
-          expr.replaceAll(',', '') != res.replaceAll(',', '') &&
-          !ref.read(settingsProvider).secretUnlocked) {
-        ref.read(settingsProvider.notifier).unlockSecret();
-        ref.read(themeProvider.notifier).setTheme(kSecretSkins.first.mode);
-        ref.read(secretFoundProvider.notifier).state++;
-      }
+    },
+    // The hunt's first note: "never do it" means dividing by zero.
+    onDivideByZero: () {
+      final settings = ref.read(settingsProvider);
+      if (settings.huntDone || settings.huntStep != 0) return false;
+      ref.read(settingsProvider.notifier).advanceHunt(0);
+      return true;
     },
     angleUnit: () => ref.read(settingsProvider).angleUnit,
   );
@@ -40,7 +36,16 @@ class CalculatorController extends StateNotifier<CalculatorState> {
   final void Function(String expression, String result)? onHistoryAdded;
   final AngleUnit Function()? angleUnit;
 
-  CalculatorController({this.onHistoryAdded, this.angleUnit, Random? random})
+  /// Asked on a division by zero; true means it solved the hunt's first
+  /// note, so the error shows the hunt's line instead of a joke.
+  final bool Function()? onDivideByZero;
+
+  CalculatorController({
+    this.onHistoryAdded,
+    this.angleUnit,
+    this.onDivideByZero,
+    Random? random,
+  })
       : _random = random ?? Random(),
         super(const CalculatorState());
 
@@ -488,7 +493,31 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     }
   }
 
+  /// A line in the hero that is neither answer nor error (the hunt's
+  /// finale). The calculator is otherwise cleared; the next key starts fresh.
+  void showHeadline(String line, String note) {
+    state = CalculatorState(
+      resultText: line,
+      errorNote: note,
+      celebrationId: state.celebrationId + 1,
+    );
+  }
+
   void _showError(CalcError error) {
+    if ((error == CalcError.divideByZero || error == CalcError.zeroByZero) &&
+        (onDivideByZero?.call() ?? false)) {
+      state = state.copyWith(
+        error: error,
+        errorNote: kHuntErrorNote,
+        resultText: kHuntErrorLine,
+        clearEditingTokenIndex: true,
+        isReplacingEditedToken: false,
+        clearPreview: true,
+        justEvaluated: false,
+      );
+      return;
+    }
+
     // A different line each time, so the same mistake twice in a row
     // does not read like a stuck display.
     final lines = error.messages.where((m) => m != _lastErrorLine).toList();
