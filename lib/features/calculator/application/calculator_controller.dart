@@ -25,6 +25,13 @@ final calculatorProvider =
       ref.read(settingsProvider.notifier).advanceHunt(0);
       return true;
     },
+    // The hunt's fourth note: "a guy named Tan tried to do a 90".
+    onTanUndefined: () {
+      final settings = ref.read(settingsProvider);
+      if (settings.huntDone || settings.huntStep != 3) return false;
+      ref.read(settingsProvider.notifier).advanceHunt(3);
+      return true;
+    },
     angleUnit: () => ref.read(settingsProvider).angleUnit,
   );
   ref.listen(settingsProvider.select((s) => s.angleUnit),
@@ -40,10 +47,15 @@ class CalculatorController extends StateNotifier<CalculatorState> {
   /// note, so the error shows the hunt's line instead of a joke.
   final bool Function()? onDivideByZero;
 
+  /// Asked when exactly tan 90 (degrees) is undefined; true means it
+  /// solved the hunt's fourth note, so the hunt's line replaces the joke.
+  final bool Function()? onTanUndefined;
+
   CalculatorController({
     this.onHistoryAdded,
     this.angleUnit,
     this.onDivideByZero,
+    this.onTanUndefined,
     Random? random,
   })
       : _random = random ?? Random(),
@@ -487,7 +499,7 @@ class CalculatorController extends StateNotifier<CalculatorState> {
         celebrationId: state.celebrationId + 1,
       );
     } on CalcException catch (e) {
-      _showError(e.error);
+      _showError(e.error, tokens);
     } catch (_) {
       _showError(CalcError.invalidExpression);
     }
@@ -503,7 +515,34 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     );
   }
 
-  void _showError(CalcError error) {
+  /// Exactly "tan(90" (closing bracket optional) in degrees: the owner's
+  /// tan 90, and nothing else that happens to be undefined.
+  bool _isTan90(List<Token> tokens) {
+    final core = tokens.where((t) => t.type != TokenType.rightParen).toList();
+    return _angleUnit == AngleUnit.degrees &&
+        core.length == 2 &&
+        core[0].type == TokenType.function &&
+        core[0].functionName == 'tan' &&
+        core[1].type == TokenType.number &&
+        core[1].text == '90';
+  }
+
+  void _showError(CalcError error, [List<Token>? tokens]) {
+    if (error == CalcError.tanUndefined &&
+        tokens != null &&
+        _isTan90(tokens) &&
+        (onTanUndefined?.call() ?? false)) {
+      state = state.copyWith(
+        error: error,
+        errorNote: kHuntTanNote,
+        resultText: kHuntTanLine,
+        clearEditingTokenIndex: true,
+        isReplacingEditedToken: false,
+        clearPreview: true,
+        justEvaluated: false,
+      );
+      return;
+    }
     if ((error == CalcError.divideByZero || error == CalcError.zeroByZero) &&
         (onDivideByZero?.call() ?? false)) {
       state = state.copyWith(

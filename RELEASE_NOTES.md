@@ -1,18 +1,26 @@
-# PopCalc v1.4.1 (build 13) — The newsroom hunt
+# PopCalc v1.5.0 (build 13) — Make it yours, and a case to crack
 
 ## ✨ What's new
-- **The ??? skin is now a treasure hunt.** Tap it in Settings and the editor hands you your first note. Five short stories to file, each one leading you somewhere new in the app
-- Finish the hunt and the secret skin arrives in a spill of ink
-- If you already found it, it stays yours
+- **Pick your app icon:** eight icons to choose from in Settings, free for everyone. The new icon shows on your home screen as soon as you leave the app, no restart
+- **A launch that matches:** PopCalc now opens on the icon you chose and settles smoothly into the app, with no flash of the old logo
+- **The ??? skin is now a case to crack.** Tap it in Settings and the editor hands you a confidential case file: five one-line riddles, each hiding somewhere in the app. Crack them all and the secret skin arrives in a spill of ink
+- **Found Newsprint with 1,337 before?** The case is open to you too: the skin locks again so you can crack it properly. It's more fun this way, promise
+- **Quieter in the background:** PopCalc no longer shows up in your phone's volume controls while you're not using it
+- Fits better on small screens and edge-to-edge displays
+- Clearer wording in Settings
 
 ---
 
 ### Play Store "What's new" (under 500 chars)
 ```
-New in 1.4.1:
-• The ??? skin is now a treasure hunt. Tap it in Settings to start your first day at the paper
-• Five notes from the editor, each leading somewhere new in the app
-• Finish them all for a secret skin, delivered in a spill of ink
+New in 1.5.0:
+• Pick your app icon: 8 icons, free, in Settings
+• Opens smoothly on the icon you chose
+• The ??? skin is now a case to crack: 5 riddles from the editor, a secret skin at the end
+• Found the secret skin before? The case is open to you too
+• No longer listed in your volume controls when in the background
+• Better fit on small and edge-to-edge screens
+• Clearer wording in Settings
 ```
 
 ---

@@ -163,7 +163,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
     });
     ref.listen(huntSolvedProvider, (_, _) {
       final step = ref.read(settingsProvider).huntStep;
-      _announce('STORY $step OF $kHuntLength FILED');
+      _announce('${kHuntSolvedLines[step - 1]} · $step/$kHuntLength');
     });
     // Every note solved: the finale plays once this screen is on top again
     // (History closes itself on the last note; or at the next launch).
@@ -202,8 +202,6 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
           // the build decide again once it closes.
           _allowLandscape(false);
           ConverterScreen.open(context).whenComplete(() {
-            // The hunt's fourth note: borrow the ruler, bring it back.
-            ref.read(settingsProvider.notifier).advanceHunt(3);
             if (mounted) setState(() {});
           });
         },
@@ -257,7 +255,8 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
             // An error's line is a joke; a screen reader gets the reason.
             Semantics(
               key: _heroKey,
-              label: calcState.errorNote ??
+              label:
+                  calcState.errorNote ??
                   calcState.error?.plainMessage ??
                   calcState.resultText,
               excludeSemantics: true,

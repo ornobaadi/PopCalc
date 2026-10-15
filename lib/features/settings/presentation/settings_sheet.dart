@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:popcalc/core/app_icon/app_icons.dart';
 import 'package:popcalc/core/storage/entitlement_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
@@ -12,7 +13,9 @@ import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'package:popcalc/features/themes/presentation/store_widgets.dart';
+
 import 'hunt_note_sheet.dart';
+
 import 'package:popcalc/features/themes/presentation/theme_card.dart';
 import 'package:popcalc/features/themes/presentation/theme_detail_sheet.dart';
 import 'package:popcalc/features/themes/presentation/theme_store_screen.dart';
@@ -165,6 +168,8 @@ class SettingsSheet extends ConsumerWidget {
                     ),
                   ),
 
+                  _AppIconSection(colors: colors),
+
                   const SizedBox(height: 20.0),
                   Divider(color: colors.ink.withValues(alpha: 0.08), height: 1),
                   const SizedBox(height: 6.0),
@@ -184,7 +189,7 @@ class SettingsSheet extends ConsumerWidget {
                           _SettingsRow(
                             icon: Icons.functions_rounded,
                             label: 'Scientific & Converter',
-                            description: 'Adds f(x) and unit converter buttons to the top bar',
+                            description: 'Adds Σ (scientific) and ruler (unit converter) buttons to the top bar',
                             colors: colors,
                             trailing: Switch(
                               value: settings.advancedTools,
@@ -203,7 +208,7 @@ class SettingsSheet extends ConsumerWidget {
                           _SettingsRow(
                             icon: Icons.visibility_outlined,
                             label: 'Live Preview on Top',
-                            description: 'Show "= preview" on top while typing (off by default)',
+                            description: 'Shows the answer on top as you type',
                             colors: colors,
                             trailing: Switch(
                               value: settings.showLivePreview,
@@ -254,8 +259,7 @@ class SettingsSheet extends ConsumerWidget {
                           _SettingsRow(
                             icon: Icons.speed_rounded,
                             label: 'Lite Effects Mode',
-                            description:
-                                'Flat numerals with no 3D extrusion or tilt for maximum speed',
+                            description: 'Flat numerals with no 3D extrusion or tilt for maximum speed',
                             colors: colors,
                             trailing: Switch(
                               value: settings.liteMode,
@@ -947,7 +951,7 @@ class _SignatureFooter extends StatefulWidget {
   final ThemeColors colors;
   const _SignatureFooter({required this.colors});
 
-  static const _appVersion = '1.4.1';
+  static const _appVersion = '1.5.0';
 
   @override
   State<_SignatureFooter> createState() => _SignatureFooterState();
@@ -992,14 +996,21 @@ class _SignatureFooterState extends State<_SignatureFooter> {
       margin: const EdgeInsets.symmetric(horizontal: 10.0),
       decoration: BoxDecoration(color: soft, shape: BoxShape.circle),
     );
-    Widget line(List<String> parts) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < parts.length; i++) ...[
-          if (i > 0) dot,
-          Text(parts[i], style: label),
-        ],
-      ],
+    // Shrinks rather than overflows on the narrowest phones.
+    Widget line(List<String> parts) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < parts.length; i++) ...[
+              if (i > 0) dot,
+              Text(parts[i], style: label),
+            ],
+          ],
+        ),
+      ),
     );
     final variant = colors.isDark ? 'light' : 'dark';
     return Padding(
@@ -1030,6 +1041,157 @@ class _SignatureFooterState extends State<_SignatureFooter> {
             line(['OFFLINE', 'NO ADS', 'NO TRACKING']),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Home-screen icon picker. Free for everyone; the official logo is Classic.
+/// Android swaps launcher entries, which some launchers take a moment to show.
+class _AppIconSection extends ConsumerWidget {
+  final ThemeColors colors;
+
+  static const int _cols = 4;
+
+  const _AppIconSection({required this.colors});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(settingsProvider.select((s) => s.appIcon));
+    final notifier = ref.read(settingsProvider.notifier);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24.0, 22.0, 24.0, 10.0),
+          child: Text(
+            'APP ICON',
+            style: TextStyle(
+              fontFamily: 'BebasNeue',
+              fontSize: 26.0,
+              letterSpacing: 2.0,
+              color: colors.ink,
+            ),
+          ),
+        ),
+        // Rows of four (two rows once all eight icons are in), each preview
+        // big enough to judge; capped so tablets don't get giant tiles.
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Column(
+            children: [
+              for (var row = 0; row < kAppIcons.length; row += _cols)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10.0),
+                  child: Row(
+                    // Top-aligned: a label shrunk to fit must not nudge its tile.
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final icon in kAppIcons.skip(row).take(_cols))
+                        Expanded(
+                          child: _AppIconTile(
+                            icon: icon,
+                            colors: colors,
+                            selected: icon.id == current,
+                            onTap: () => notifier.setAppIcon(icon.id),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24.0, 8.0, 24.0, 0.0),
+          child: Text(
+            'Your new icon shows on the home screen once you leave PopCalc. '
+            'No restart needed; some launchers take a moment.',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11.5,
+              color: colors.inkSoft.withValues(alpha: 0.8),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AppIconTile extends StatelessWidget {
+  final AppIconOption icon;
+  final ThemeColors colors;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AppIconTile({
+    required this.icon,
+    required this.colors,
+    required this.selected,
+    required this.onTap,
+  });
+
+  static const double maxSize = 72.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: ValueKey('app-icon-${icon.id}'),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: maxSize + 10),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              margin: const EdgeInsets.symmetric(horizontal: 4.0),
+              padding: const EdgeInsets.all(2.5),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(21.0),
+                border: Border.all(
+                  width: 2.5,
+                  color: selected ? colors.accent : Colors.transparent,
+                ),
+              ),
+              child: AspectRatio(
+                aspectRatio: 1,
+                // A hairline keeps dark icons visible on dark skins.
+                child: Container(
+                  foregroundDecoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16.0),
+                    border: Border.all(
+                      color: colors.ink.withValues(alpha: 0.14),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16.0),
+                    child: Image.asset(
+                      icon.previewAsset,
+                      filterQuality: FilterQuality.medium,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 5.0),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              icon.label,
+              maxLines: 1,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12.0,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? colors.ink : colors.inkSoft,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -14,24 +14,47 @@ const String kAllThemesProductId = 'themes_all';
 /// one at a time on the ??? tile in Settings, each pointing at a feature.
 /// Solved in order (`SettingsNotifier.advanceHunt`):
 ///   0 divide by zero, 1 Typewriter sound pack, 2 Live Preview on,
-///   3 open the converter and come back (needs Scientific & Converter on),
+///   3 tan 90 in degrees, an error like 0 (needs Scientific & Converter on),
 ///   4 tap "today's edition" waiting at the top of History.
 /// The last tap closes History and the skin arrives with an ink spill.
 const kHuntNotes = <String>[
-  'Every teacher told you never to do it. Do it.',
-  "A newsroom doesn't go pop. Find the sound of one.",
-  'Good reporters see the story before it ends.',
-  'The science desk measures everything. Unlock the hidden tools, '
-      'borrow the ruler and bring it back.',
-  "Today's edition just went to the archive. Go find it.",
+  'Split something into nothing.',
+  'Make your keys go clack-clack-ding.',
+  "See the ending before the story's done.",
+  'A guy named Tan tried to do a 90. It broke his brain.',
+  "Today's edition is already in the archive.",
+];
+
+/// The back of each lead card (press and hold to flip): the plain way in.
+const kHuntHints = <String>[
+  'Your maths teacher said never. Do it anyway: any number ÷ 0.',
+  'Settings → Sound → the Typewriter pack.',
+  'Settings → turn on Live Preview on Top.',
+  'Turn on Scientific & Converter in Settings, then type tan 90 =.',
+  "Tap the clock (History) and open Today's Edition.",
+];
+
+/// The pill on the calculator as each lead is cracked (index = leads
+/// solved − 1), followed by the count. Builds like a case coming together.
+const kHuntSolvedLines = <String>[
+  'FIRST LEAD CRACKED',
+  'THE PLOT THICKENS',
+  'HOT ON THE TRAIL',
+  'ONE LEAD LEFT',
+  'CASE CRACKED',
 ];
 
 /// Shown under a note whose setting may already be on.
-const kHuntAgainHint = 'Already done? Do it again for the editor.';
+const kHuntAgainHint = 'Already done? Do it again.';
 
 /// What dividing by zero says while it is the first note (CAPITALS, ≤ 19).
 const kHuntErrorLine = "NOW THAT'S A STORY";
-const kHuntErrorNote = 'Psst. The editor slipped a note under the ??? skin.';
+const kHuntErrorNote =
+    'A tip just came in. The case file is under the ??? skin.';
+
+/// What tan 90 says while it is the fourth note.
+const kHuntTanLine = 'STRAIGHT UP INFINITE';
+const kHuntTanNote = 'Lead cracked. Psst: the ruler up top converts anything.';
 
 /// The planted entry at the top of History for the last note.
 const kHuntEditionTitle = "TODAY'S EDITION";
@@ -347,5 +370,8 @@ final Set<String> kProductIds = {
   for (final skin in kBundleItems) skin.productId!,
 };
 
-SkinInfo skinOf(AppThemeMode mode) =>
-    [...kSkins, ...kMaterials, ...kSecretSkins].firstWhere((s) => s.mode == mode);
+SkinInfo skinOf(AppThemeMode mode) => [
+  ...kSkins,
+  ...kMaterials,
+  ...kSecretSkins,
+].firstWhere((s) => s.mode == mode);

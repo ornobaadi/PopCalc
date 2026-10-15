@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:popcalc/core/app_icon/app_icons.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/engine/evaluator.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
@@ -35,6 +36,13 @@ class AppSettings {
   /// The secret skin is put on once the last one is.
   final int huntStep;
 
+  /// Home-screen icon (an `AppIconOption.id`); the official logo by default.
+  final String appIcon;
+
+  /// The saved settings have been read (until then every field is a default,
+  /// so nothing should be judged on [secretUnlocked] yet).
+  final bool loaded;
+
   /// The hunt is over: every note solved, or the skin found the old way.
   bool get huntDone => secretUnlocked || huntStep >= kHuntLength;
 
@@ -53,6 +61,8 @@ class AppSettings {
     this.angleUnit = AngleUnit.degrees,
     this.secretUnlocked = false,
     this.huntStep = 0,
+    this.appIcon = kClassicIcon,
+    this.loaded = false,
   });
 
   AppSettings copyWith({
@@ -70,6 +80,8 @@ class AppSettings {
     AngleUnit? angleUnit,
     bool? secretUnlocked,
     int? huntStep,
+    String? appIcon,
+    bool? loaded,
   }) {
     return AppSettings(
       showLivePreview: showLivePreview ?? this.showLivePreview,
@@ -86,6 +98,8 @@ class AppSettings {
       angleUnit: angleUnit ?? this.angleUnit,
       secretUnlocked: secretUnlocked ?? this.secretUnlocked,
       huntStep: huntStep ?? this.huntStep,
+      appIcon: appIcon ?? this.appIcon,
+      loaded: loaded ?? this.loaded,
     );
   }
 }
@@ -97,7 +111,7 @@ final secretFoundProvider = StateProvider<int>((ref) => 0);
 /// Number of notes in the newsroom hunt (texts in `kHuntNotes`).
 const int kHuntLength = 5;
 
-/// Counts up each time a hunt note is solved, for the "STORY n OF 4" pill
+/// Counts up each time a hunt lead is cracked, for the calculator's pill
 /// (like [secretFoundProvider], the saved step alone changes at launch).
 final huntSolvedProvider = StateProvider<int>((ref) => 0);
 
@@ -130,15 +144,21 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const _kAngleUnit = 'settings_angle_unit';
   static const _kSecretUnlocked = 'settings_secret_unlocked';
   static const _kHuntStep = 'settings_hunt_step';
+  static const _kAppIcon = 'settings_app_icon';
 
   /// Told when a hunt note is solved (wired in `settingsProvider`).
   void Function()? onHuntSolved;
 
   /// Starts the sound engine with saved settings before the first frame,
   /// so the splash screen's launch sound respects the user's choices.
+  /// The saved app icon, read before the first frame so the splash can
+  /// match the launch screen Android drew from that same icon.
+  static String bootAppIcon = kClassicIcon;
+
   static Future<void> initAudio() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      bootAppIcon = appIconOf(prefs.getString(_kAppIcon) ?? kClassicIcon).id;
       await AppSounds.init(
         enabled: prefs.getBool(_kSoundEnabled) ?? true,
         volume: prefs.getDouble(_kSoundVolume) ?? 0.5,
@@ -152,7 +172,18 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> _loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final huntStep = [
+        state.huntStep,
+        prefs.getInt(_kHuntStep) ?? 0,
+      ].reduce((a, b) => a > b ? a : b);
+      // Only a solved case counts. Newsprint used to open with 1,337; those
+      // finders get the case to play like everyone else (owner's call for
+      // 1.5.0), so their old flag is cleared and the skin locks again.
+      final saved = prefs.getBool(_kSecretUnlocked) ?? false;
+      final earned = saved && huntStep >= kHuntLength;
+      if (saved && !earned) await prefs.setBool(_kSecretUnlocked, false);
       state = AppSettings(
+        loaded: true,
         showLivePreview: prefs.getBool(_kShowLivePreview) ?? false,
         hapticsEnabled: prefs.getBool(_kHapticsEnabled) ?? true,
         hapticStrength: prefs.getDouble(_kHapticStrength) ?? 1.0,
@@ -166,11 +197,13 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
         scientificExpanded: prefs.getBool(_kScientificExpanded) ?? true,
         angleUnit: AngleUnit.fromName(prefs.getString(_kAngleUnit)),
         // Found while the saved settings were still loading: keep it.
-        secretUnlocked:
-            state.secretUnlocked || (prefs.getBool(_kSecretUnlocked) ?? false),
-        huntStep: [state.huntStep, prefs.getInt(_kHuntStep) ?? 0]
-            .reduce((a, b) => a > b ? a : b),
+        secretUnlocked: state.secretUnlocked || earned,
+        huntStep: huntStep,
+        appIcon: appIconOf(prefs.getString(_kAppIcon) ?? kClassicIcon).id,
       );
+      // A reinstall resets the launcher entries while backed-up prefs come
+      // back, so line the icon up with the saved choice (no-op if it matches).
+      if (state.appIcon != kClassicIcon) AppIconService.apply(state.appIcon);
       AppHaptics.enabled = state.hapticsEnabled;
       AppHaptics.strength = state.hapticStrength;
       _applyAudio();
@@ -289,6 +322,14 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     AppHaptics.success();
     onHuntSolved?.call();
     _persist((p) => p.setInt(_kHuntStep, from + 1));
+  }
+
+  Future<void> setAppIcon(String id) async {
+    if (id == state.appIcon) return;
+    state = state.copyWith(appIcon: appIconOf(id).id);
+    AppHaptics.selectionClick();
+    AppIconService.apply(state.appIcon);
+    await _persist((p) => p.setString(_kAppIcon, state.appIcon));
   }
 
   Future<void> setAngleUnit(AngleUnit unit) async {

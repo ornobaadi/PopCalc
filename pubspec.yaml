@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.4.1+13
+version: 1.5.0+13
 
 environment:
   sdk: ^3.13.4
@@ -44,11 +44,12 @@ dependencies:
   url_launcher: ^6.3.3
   in_app_purchase: ^3.3.1
   in_app_purchase_android: ^0.5.3
+  # Runtime too: holds the launch screen until SplashScreen can match it.
+  flutter_native_splash: ^2.4.8
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  flutter_native_splash: ^2.4.8
 
 flutter:
   uses-material-design: true
@@ -58,7 +59,6 @@ flutter:
     - assets/licenses/
     - assets/ornob-aadi-signature/ornob-aadi-signature-bold-dark.png
     - assets/ornob-aadi-signature/ornob-aadi-signature-bold-light.png
-    - assets/splash/
     - assets/sounds/launch.wav
     - assets/sounds/detent.wav
     - assets/sounds/pop/
@@ -73,8 +73,7 @@ flutter:
     - assets/sounds/mech_clicky/
     - assets/sounds/mech_tactile/
     - assets/sounds/mech_linear/
-    - assets/brand_assets/logo/pop_calc_mark_2048.png
-    - assets/brand_assets/logo/pop_calc_mark_dark_2048.png
+    - assets/app_icons/
 
   fonts:
     - family: BebasNeue

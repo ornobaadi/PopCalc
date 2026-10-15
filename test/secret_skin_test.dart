@@ -14,6 +14,7 @@ import 'package:popcalc/features/calculator/presentation/calculator_screen.dart'
 import 'package:popcalc/features/calculator/presentation/widgets/ink_spill.dart';
 import 'package:popcalc/features/history/presentation/history_sheet.dart';
 import 'package:popcalc/features/settings/presentation/settings_sheet.dart';
+import 'package:popcalc/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -97,6 +98,35 @@ void main() {
       expect(prefs.getInt('settings_hunt_step'), kHuntLength);
     });
 
+    test('lead 4: a guy named Tan tried to do a 90', () async {
+      SharedPreferences.setMockInitialValues({'settings_hunt_step': 3});
+      final c4 = ProviderContainer();
+      addTearDown(c4.dispose);
+      final calc4 = c4.read(calculatorProvider.notifier);
+      c4.read(settingsProvider);
+      await settle();
+      void tan(String n) {
+        calc4.onClear();
+        calc4.onOpener(const Token(TokenType.function, 'tan('));
+        n.split('').forEach(calc4.onDigit);
+        calc4.onEquals();
+      }
+
+      // tan 270 is undefined too, but it is not the lead.
+      tan('270');
+      expect(c4.read(settingsProvider).huntStep, 3);
+      expect(calc4.state.resultText, isNot(kHuntTanLine));
+
+      tan('90');
+      expect(calc4.state.resultText, kHuntTanLine);
+      expect(calc4.state.errorNote, kHuntTanNote);
+      expect(c4.read(settingsProvider).huntStep, 4);
+
+      // Afterwards tan 90 is an ordinary joke again.
+      tan('90');
+      expect(calc4.state.resultText, isNot(kHuntTanLine));
+    });
+
     test('1,337 no longer opens anything', () async {
       digits('1000');
       calc.onOperator(TokenType.plus, '+');
@@ -116,19 +146,37 @@ void main() {
       expect(again.read(settingsProvider).huntStep, 2);
     });
 
-    test('anyone who found the skin before is done and unaffected', () async {
+    test('1,337 finders play the case like everyone else', () async {
       SharedPreferences.setMockInitialValues({'settings_secret_unlocked': true});
       final old = ProviderContainer();
       addTearDown(old.dispose);
       final c = old.read(calculatorProvider.notifier);
       old.read(settingsProvider);
       await settle();
-      expect(old.read(settingsProvider).huntDone, isTrue);
+      expect(old.read(settingsProvider).secretUnlocked, isFalse);
+      expect(old.read(settingsProvider).huntDone, isFalse);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('settings_secret_unlocked'), isFalse);
+      // Lead 1 is theirs to crack.
       c.onDigit('5');
       c.onOperator(TokenType.divide, '÷');
       c.onDigit('0');
       c.onEquals();
-      expect(c.state.resultText, isNot(kHuntErrorLine));
+      expect(c.state.resultText, kHuntErrorLine);
+      expect(old.read(settingsProvider).huntStep, 1);
+    });
+
+    test('a solved case stays solved', () async {
+      SharedPreferences.setMockInitialValues({
+        'settings_secret_unlocked': true,
+        'settings_hunt_step': kHuntLength,
+      });
+      final done = ProviderContainer();
+      addTearDown(done.dispose);
+      done.read(settingsProvider);
+      await settle();
+      expect(done.read(settingsProvider).secretUnlocked, isTrue);
+      expect(done.read(settingsProvider).huntDone, isTrue);
     });
   });
 
@@ -207,7 +255,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('mystery-tile')));
       await tester.pumpAndSettle();
       expect(find.text(kHuntNotes[0]), findsOneWidget);
-      expect(find.text('FROM THE EDITOR'), findsOneWidget);
+      expect(find.text("THE EDITOR'S CASE FILE"), findsOneWidget);
+      expect(find.text('CONFIDENTIAL'), findsOneWidget);
     });
 
     testWidgets('mid-hunt the note shows the next clue and the filed ones', (
@@ -218,12 +267,39 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(kHuntNotes[2]), findsOneWidget);
       expect(find.text(kHuntNotes[1]), findsOneWidget);
-      expect(find.text('FILED'), findsNWidgets(2));
+      expect(find.text('CRACKED'), findsNWidgets(2));
+      // The leads still to come are blacked out, numbers only.
+      expect(find.text('LEAD #04'), findsOneWidget);
+      expect(find.text(kHuntNotes[3]), findsNothing);
       expect(find.text(kHuntAgainHint), findsOneWidget);
+
+      // Holding the card flips it to the plain hint.
+      double backOpacity() => tester
+          .widget<Opacity>(
+            find.ancestor(
+              of: find.byKey(const ValueKey('hunt-hint')),
+              matching: find.byType(Opacity),
+            ).first,
+          )
+          .opacity;
+      expect(backOpacity(), 0);
+      final hold = await tester.startGesture(
+        tester.getCenter(find.text(kHuntNotes[2])),
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(backOpacity(), 1);
+      expect(find.text(kHuntHints[2]), findsOneWidget);
+      await hold.up();
+      await tester.pumpAndSettle();
+      expect(backOpacity(), 0);
     });
 
     testWidgets('once found it takes that same slot', (tester) async {
-      await pumpSettings(tester, {'settings_secret_unlocked': true});
+      await pumpSettings(tester, {
+        'settings_secret_unlocked': true,
+        'settings_hunt_step': kHuntLength,
+      });
       expect(find.text('???'), findsNothing);
       expect(find.text('NEWSPRINT'), findsOneWidget);
       expect(before(tester, 'MARIGOLD', 'NEWSPRINT'), isTrue);
@@ -318,5 +394,42 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text(kHuntEditionTitle), findsNothing);
+  });
+
+  testWidgets('wearing Newsprint from 1,337 goes back to Marigold', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'settings_secret_unlocked': true,
+      'settings_theme_mode': AppThemeMode.newsprint.index,
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const PopCalcApp()),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(container.read(themeProvider), AppThemeMode.sunny);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('a solved case keeps Newsprint on', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'settings_secret_unlocked': true,
+      'settings_hunt_step': kHuntLength,
+      'settings_theme_mode': AppThemeMode.newsprint.index,
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const PopCalcApp()),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(container.read(themeProvider), AppThemeMode.newsprint);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 3));
   });
 }

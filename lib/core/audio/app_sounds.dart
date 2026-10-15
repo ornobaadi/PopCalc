@@ -72,6 +72,12 @@ enum Sfx {
 /// no-op until [init] succeeds (so tests never touch the native engine).
 class AppSounds {
   static bool _ready = false;
+
+  /// Bumped when the engine shuts down, so loads still in flight from the
+  /// old engine drop their results instead of storing dead handles.
+  static int _generation = 0;
+  static bool _started = false;
+  static bool _resuming = false;
   static bool _enabled = true;
   static double _volume = 0.5;
   static SoundPack _pack = SoundPack.pop;
@@ -133,17 +139,56 @@ class AppSounds {
       await SoLoud.instance.init(bufferSize: 1024);
       SoLoud.instance.setMaxActiveVoiceCount(32);
       _ready = true;
+      _started = true;
     } catch (_) {
       return; // No audio device: the app simply stays silent.
     }
     unawaited(_loadAll());
   }
 
+  /// Shuts the engine down while the app is out of sight. An open SoLoud
+  /// output stream keeps PopCalc listed as a playing app (some phones show
+  /// it in the volume panel) even though it makes no sound in the
+  /// background. [resume] starts it again; sounds reload in a blink.
+  static void suspend() {
+    if (!_ready) return;
+    _generation++;
+    _ready = false;
+    _sources.clear();
+    _loadingFolders.clear();
+    _launch = null;
+    _detent = null;
+    _pendingSfx = null;
+    try {
+      SoLoud.instance.deinit();
+    } catch (_) {}
+  }
+
+  static Future<void> resume() async {
+    if (_ready || !_started || _resuming) return;
+    _resuming = true;
+    try {
+      await SoLoud.instance.init(bufferSize: 1024);
+      SoLoud.instance.setMaxActiveVoiceCount(32);
+      _ready = true;
+      unawaited(_loadAll());
+    } catch (_) {
+      // Stays silent until the next return to the app.
+    } finally {
+      _resuming = false;
+    }
+  }
+
   static Future<void> _loadAll() async {
     // Launch sound first so the splash can play it, then the current pack,
     // then the rest for previews.
+    final gen = _generation;
     try {
-      _launch = await SoLoud.instance.loadAsset('assets/sounds/launch.wav');
+      final launchSound = await SoLoud.instance.loadAsset(
+        'assets/sounds/launch.wav',
+      );
+      if (gen != _generation) return;
+      _launch = launchSound;
       final at = _launchPendingAt;
       _launchPendingAt = null;
       if (at != null && DateTime.now().difference(at) <= _pendingTtl) {
@@ -151,7 +196,11 @@ class AppSounds {
       }
     } catch (_) {}
     try {
-      _detent = await SoLoud.instance.loadAsset('assets/sounds/detent.wav');
+      final detent = await SoLoud.instance.loadAsset(
+        'assets/sounds/detent.wav',
+      );
+      if (gen != _generation) return;
+      _detent = detent;
     } catch (_) {}
     final material = _material;
     final order = [
@@ -167,12 +216,14 @@ class AppSounds {
 
   static Future<void> _loadFolder(String folder) async {
     if (!_ready || !_loadingFolders.add(folder)) return;
+    final gen = _generation;
     for (final sfx in Sfx.values) {
       if (_sources[folder]?[sfx] != null) continue;
       try {
         final source = await SoLoud.instance.loadAsset(
           'assets/sounds/$folder/${sfx.file}.wav',
         );
+        if (gen != _generation) return;
         (_sources[folder] ??= {})[sfx] = source;
         if (folder == _folder && _pendingSfx == sfx) _flushPending();
       } catch (_) {
@@ -195,9 +246,11 @@ class AppSounds {
     var source = _sources[folder]?[sfx];
     if (source == null) {
       try {
+        final gen = _generation;
         source = await SoLoud.instance.loadAsset(
           'assets/sounds/$folder/${sfx.file}.wav',
         );
+        if (gen != _generation) return;
         (_sources[folder] ??= {})[sfx] = source;
       } catch (_) {
         return;
