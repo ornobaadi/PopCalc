@@ -9,6 +9,11 @@ import 'extruded_number.dart';
 
 /// Manages physical motion, springs, tactile animations, interactive 3D touch rotation,
 /// and real-time physical device tilt via accelerometer for the hero extruded numerals.
+///
+/// Every digit hangs on its own spring. Dragging leans the digits towards
+/// the finger, the ones under it furthest and fastest, so the number ripples;
+/// letting go hands the swipe's speed to the springs, so a flick overshoots
+/// and wobbles home. Past the edge of the swing it pulls like rubber.
 class AnimatedExtrudedNumber extends StatefulWidget {
   final String text;
   final bool isEvaluated;
@@ -46,7 +51,6 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
   late final AnimationController _shakeController;
   late final AnimationController _scaleController;
   late final AnimationController _idleController;
-  late final AnimationController _dragSpringController;
   late final AnimationController _typeController;
   late final AnimationController _celebrateController;
 
@@ -57,10 +61,18 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
   late Animation<double> _depthAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _shakeAnimation;
-  late Animation<Offset> _dragSpringAnimation;
 
-  Offset _dragOffset = Offset.zero;
-  Offset _accumulatedDelta = Offset.zero;
+  // Per-digit springs, stepped by a ticker that sleeps once they settle.
+  late final _motionTicker = createTicker(_onMotionTick);
+  final _motionFrame = ValueNotifier<int>(0);
+  Duration _lastTick = Duration.zero;
+  final List<_DigitSpring> _springs = [];
+
+  bool _dragging = false;
+  Offset _rawDrag = Offset.zero; // finger travel, in swing units (110 px)
+  Offset _drag = Offset.zero; // the same, rubber-banded past the edge
+  double? _fingerFrac; // where the finger is across the number, 0..1
+  bool _pastEdge = false;
   double _totalDragDist = 0.0;
 
   // Real-time device tilt tracking via accelerometer
@@ -108,20 +120,10 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
 
-    // 5. Interactive 3D drag release spring-back controller
-    _dragSpringController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _dragSpringAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _dragSpringController,
-        curve: Curves.elasticOut,
-      ),
-    );
+    // 5. One spring per digit for drag and device tilt. Touch the ticker
+    // here so it is created while the context is live, not in dispose().
+    _syncSprings(widget.text);
+    _motionTicker.stop();
 
     // 6. Typing: the new digit turns into place; the rest stay still
     _typeController = AnimationController(
@@ -141,7 +143,11 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
 
   void _initDeviceMotionSensor() {
     try {
-      _sensorSub = accelerometerEventStream().listen(
+      // Game rate (~50 Hz) rather than the default 5 Hz: the springs smooth
+      // it, and the digits follow the hand without stepping.
+      _sensorSub = accelerometerEventStream(
+        samplingPeriod: SensorInterval.gameInterval,
+      ).listen(
         (AccelerometerEvent event) {
           // In portrait orientation:
           // event.x: tilt left/right (typically -9.8 to +9.8)
@@ -149,11 +155,14 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
           final targetX = (-event.x / 5.5).clamp(-1.0, 1.0);
           final targetY = ((event.y - 6.0) / 5.5).clamp(-1.0, 1.0);
 
-          // Exponential moving average filter for buttery-smooth, jitter-free motion
-          _sensorTiltX = _sensorTiltX * 0.86 + targetX * 0.14;
-          _sensorTiltY = _sensorTiltY * 0.86 + targetY * 0.14;
+          // Exponential moving average to take out hand tremor
+          final x = _sensorTiltX * 0.9 + targetX * 0.1;
+          final y = _sensorTiltY * 0.9 + targetY * 0.1;
+          final moved = (x - _sensorTiltX).abs() + (y - _sensorTiltY).abs();
+          _sensorTiltX = x;
+          _sensorTiltY = y;
 
-          if (mounted) setState(() {});
+          if (moved > 0.0015 && mounted) _wake();
         },
         onError: (_) {
           // Graceful fallback for devices/platforms without accelerometer
@@ -165,6 +174,7 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
   @override
   void didUpdateWidget(covariant AnimatedExtrudedNumber oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.text != oldWidget.text) _syncSprings(widget.text);
 
     if (widget.hasError && !oldWidget.hasError) {
       _shakeController.forward(from: 0.0);
@@ -196,73 +206,169 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
   @override
   void dispose() {
     _sensorSub?.cancel();
+    _motionTicker.dispose();
+    _motionFrame.dispose();
     _depthController.dispose();
     _shakeController.dispose();
     _scaleController.dispose();
     _idleController.dispose();
-    _dragSpringController.dispose();
     _typeController.dispose();
     _celebrateController.dispose();
     super.dispose();
   }
 
+  /// One spring per character; a new digit starts where its left
+  /// neighbour is, so it joins the motion instead of jumping.
+  void _syncSprings(String text) {
+    final n = max(1, text.characters.length);
+    while (_springs.length < n) {
+      final last = _springs.isEmpty ? null : _springs.last;
+      _springs.add(
+        _DigitSpring()
+          ..pos = last?.pos ?? Offset.zero
+          ..vel = last?.vel ?? Offset.zero,
+      );
+    }
+    if (_springs.length > n) _springs.removeRange(n, _springs.length);
+  }
+
+  void _wake() {
+    if (_motionTicker.isActive || widget.isLite) return;
+    _lastTick = Duration.zero;
+    _motionTicker.start();
+  }
+
+  /// 1 for the digit under the finger, falling to 0 half a number away.
+  /// Everyone counts as near when no finger is down.
+  double _nearness(int i, int n) {
+    final finger = _fingerFrac;
+    if (finger == null || n <= 1) return 1.0;
+    // The number fills more of the width the longer it is.
+    final fill = (n * 0.16).clamp(0.2, 0.9);
+    final x = 0.5 + ((i + 0.5) / n - 0.5) * fill;
+    return 1.0 - ((x - finger).abs() / 0.45).clamp(0.0, 1.0);
+  }
+
+  void _onMotionTick(Duration elapsed) {
+    final dt = _lastTick == Duration.zero
+        ? 1.0 / 60.0
+        : ((elapsed - _lastTick).inMicroseconds / 1e6).clamp(1.0 / 240.0, 1.0 / 30.0);
+    _lastTick = elapsed;
+
+    final sensor = Offset(_sensorTiltX, _sensorTiltY) * 0.45;
+    final n = _springs.length;
+    var settled = !_dragging;
+    for (var i = 0; i < n; i++) {
+      final s = _springs[i];
+      final near = _nearness(i, n);
+      final Offset target;
+      final double stiffness;
+      final double damping;
+      if (_dragging) {
+        // Held: the digits under the finger lean furthest and follow
+        // tightly; the far ones trail a little behind.
+        target = _drag * (0.5 + 0.5 * near) + sensor;
+        stiffness = 260.0 + 260.0 * near;
+        damping = 0.75;
+      } else {
+        // Let go: springy, and the ones nearest the finger come home
+        // first, so the wobble travels along the number.
+        target = sensor;
+        stiffness = 170.0 + 130.0 * near;
+        damping = 0.32;
+      }
+      final c = 2.0 * damping * sqrt(stiffness);
+      final acc = (target - s.pos) * stiffness - s.vel * c;
+      s.vel += acc * dt;
+      final p = s.pos + s.vel * dt;
+      s.pos = Offset(p.dx.clamp(-1.6, 1.6), p.dy.clamp(-1.6, 1.6));
+      if ((target - s.pos).distance > 0.002 || s.vel.distance > 0.02) {
+        settled = false;
+      }
+    }
+    if (settled) {
+      for (final s in _springs) {
+        s.pos = sensor;
+        s.vel = Offset.zero;
+      }
+      _motionTicker.stop();
+    }
+    _motionFrame.value++;
+  }
+
+  double? _fingerAt(Offset local) {
+    final box = context.findRenderObject() as RenderBox?;
+    final width = box?.size.width ?? 0.0;
+    return width > 0 ? (local.dx / width).clamp(0.0, 1.0) : null;
+  }
+
+  /// Past the edge of the swing the digits still follow, but heavily.
+  static double _rubber(double x) {
+    final a = x.abs();
+    final r = a <= 1.0 ? a : 1.0 + (1.0 - 1.0 / (1.0 + (a - 1.0) * 1.5)) * 0.35;
+    return x.isNegative ? -r : r;
+  }
+
   void _onPanStart(DragStartDetails details) {
     _idleController.stop();
-    _dragSpringController.stop();
+    _dragging = true;
     _totalDragDist = 0.0;
-    _accumulatedDelta = _dragOffset * 100.0;
+    _pastEdge = false;
+    _rawDrag = Offset.zero;
+    _drag = Offset.zero;
+    _fingerFrac = _fingerAt(details.localPosition);
+    _wake();
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
     _totalDragDist += details.delta.distance;
-    _accumulatedDelta += details.delta;
+    _rawDrag += details.delta / 110.0;
+    _drag = Offset(_rubber(_rawDrag.dx), _rubber(_rawDrag.dy));
+    _fingerFrac = _fingerAt(details.localPosition);
 
-    final normX = (_accumulatedDelta.dx / 110.0).clamp(-1.0, 1.0);
-    final normY = (_accumulatedDelta.dy / 110.0).clamp(-1.0, 1.0);
-
-    setState(() {
-      _dragOffset = Offset(normX, normY);
-    });
+    // A small click as the digits reach the end of their swing.
+    final pastEdge = _rawDrag.dx.abs() > 1.0 || _rawDrag.dy.abs() > 1.0;
+    if (pastEdge && !_pastEdge) AppHaptics.selectionClick();
+    _pastEdge = pastEdge;
+    _wake();
   }
 
   void _onPanEnd(DragEndDetails details) {
     if (_totalDragDist < 7.0) {
       widget.onTap?.call();
-      _snapBack();
+      _release(Offset.zero);
       return;
     }
-    _snapBack();
+    _release(details.velocity.pixelsPerSecond / 110.0);
   }
 
-  void _onPanCancel() {
-    _snapBack();
-  }
+  void _onPanCancel() => _release(Offset.zero);
 
-  void _snapBack() {
-    AppHaptics.lightImpact();
-    _dragSpringAnimation = Tween<Offset>(
-      begin: _dragOffset,
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _dragSpringController,
-        curve: Curves.elasticOut,
-      ),
-    );
-    _dragSpringController.forward(from: 0.0).then((_) {
-      if (mounted) {
-        setState(() {
-          _dragOffset = Offset.zero;
-          _accumulatedDelta = Offset.zero;
-        });
-        _idleController.repeat(reverse: true);
-      }
-    });
+  void _release(Offset velocity) {
+    if (!_dragging) return;
+    final dragged = _totalDragDist >= 7.0;
+    _dragging = false;
+    _rawDrag = Offset.zero;
+    _drag = Offset.zero;
+    // A flick carries on past the middle and wobbles home.
+    final fling = Offset(
+      velocity.dx.clamp(-14.0, 14.0),
+      velocity.dy.clamp(-14.0, 14.0),
+    ) * 0.35;
+    for (final s in _springs) {
+      s.vel += fling;
+    }
+    if (dragged) AppHaptics.lightImpact();
+    _wake();
+    if (!_idleController.isAnimating) _idleController.repeat(reverse: true);
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      // A tap that never moves past the drag slop never starts a pan, so
+      // the tap has its own recogniser rather than relying on _onPanEnd.
+      onTap: widget.onTap,
       onPanStart: _onPanStart,
       onPanUpdate: _onPanUpdate,
       onPanEnd: _onPanEnd,
@@ -275,7 +381,7 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
           _scaleController,
           _shakeController,
           _idleController,
-          _dragSpringController,
+          _motionFrame,
           _typeController,
           _celebrateController,
         ]),
@@ -296,22 +402,22 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
               (_depthAnimation.value * idleMod).clamp(0.0, 1.15) *
               (widget.hasError ? 0.4 : 1.0);
 
-          // Current active touch offset
-          final activeTouchOffset = _dragSpringController.isAnimating
-              ? _dragSpringAnimation.value
-              : _dragOffset;
-
-          // Seamless fusion of touch dragging + physical device orientation movement
-          final double combinedX = (activeTouchOffset.dx + _sensorTiltX * 0.45).clamp(-1.2, 1.2);
-          final double combinedY = (activeTouchOffset.dy + _sensorTiltY * 0.45).clamp(-1.2, 1.2);
-
-          // 3D perspective tilt angles for thick physical block motion
-          final rotateY = combinedX * 0.28;
-          final rotateX = -combinedY * 0.28;
-
-          // Dynamic extrusion lighting angle reacting to device orientation and touch
-          final dynamicTilt = widget.tilt +
-              Offset(combinedX * 12.0, combinedY * 12.0);
+          if (_springs.length != max(1, widget.text.characters.length)) {
+            _syncSprings(widget.text);
+          }
+          // Each digit's own lean (lite mode stays flat), and the number as
+          // a whole drifting a little after the finger.
+          final glyphTilts = widget.isLite
+              ? null
+              : [for (final s in _springs) s.pos];
+          var lead = Offset.zero;
+          if (glyphTilts != null && glyphTilts.isNotEmpty) {
+            for (final t in glyphTilts) {
+              lead += t;
+            }
+            lead = lead / glyphTilts.length.toDouble();
+          }
+          final follow = Offset(lead.dx * 10.0, lead.dy * 7.0);
 
           // Celebration: punch in from small, overshoot, settle with a wobble
           final c = _celebrateController.value;
@@ -326,7 +432,8 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
             text: widget.text,
             depth: currentDepth,
             colors: widget.colors,
-            tilt: dynamicTilt,
+            tilt: widget.tilt,
+            glyphTilts: glyphTilts,
             isLite: widget.isLite,
             isZero: widget.isZero,
             textAlign: TextAlign.center,
@@ -335,8 +442,10 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
             maxFontSize: widget.hasError ? 60.0 : 200.0,
           );
 
+          // The 3D turn is per digit, inside the painter: no card-like
+          // rotation of the whole block any more.
           return Transform.translate(
-            offset: Offset(shakeOffsetX, 0.0),
+            offset: Offset(shakeOffsetX, 0.0) + follow,
             child: Transform(
               alignment: Alignment.bottomCenter,
               transform: Matrix4.diagonal3Values(
@@ -344,20 +453,17 @@ class _AnimatedExtrudedNumberState extends State<AnimatedExtrudedNumber>
                 celebrateScale * _scaleAnimation.value,
                 1.0,
               )..rotateZ(celebrateTilt),
-              child: widget.isLite
-                  ? extruded
-                  : Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.0010) // Natural camera perspective
-                        ..rotateX(rotateX)
-                        ..rotateY(rotateY),
-                      child: extruded,
-                    ),
+              child: extruded,
             ),
           );
         },
       ),
     );
   }
+}
+
+/// One digit's lean (position) and how fast it is moving, in swing units.
+class _DigitSpring {
+  Offset pos = Offset.zero;
+  Offset vel = Offset.zero;
 }
