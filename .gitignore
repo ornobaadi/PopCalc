@@ -72,3 +72,8 @@ assets/Mockup Videos/
 
 # Local calculator history written by test runs
 calc_history.jsonl
+
+# Marketing renders and exports (kept locally, not in the repo)
+assets/brag-output*/
+assets/banners/
+assets/PopCalc Screenshots/

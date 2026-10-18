@@ -192,7 +192,9 @@ List<_Glyph> _glyphsOf(TextPainter painter) {
   var index = 0;
   for (final char in text.characters) {
     final next = offset + char.length;
-    final x = painter.getOffsetForCaret(TextPosition(offset: offset), Rect.zero).dx;
+    final x = painter
+        .getOffsetForCaret(TextPosition(offset: offset), Rect.zero)
+        .dx;
     final end = next >= text.length
         ? painter.width
         : painter.getOffsetForCaret(TextPosition(offset: next), Rect.zero).dx;
@@ -266,7 +268,12 @@ _SideAtlas _atlasFor(String text, double rasterSize) {
   final canvas = Canvas(recorder);
   final cells = <String, Rect>{};
   for (var i = 0; i < sorted.length; i++) {
-    final cell = Rect.fromLTWH((i % cols) * cellW, (i ~/ cols) * cellH, cellW, cellH);
+    final cell = Rect.fromLTWH(
+      (i % cols) * cellW,
+      (i ~/ cols) * cellH,
+      cellW,
+      cellH,
+    );
     painters[i].paint(canvas, cell.topLeft + Offset(pad, pad));
     cells[sorted[i]] = cell;
   }
@@ -296,15 +303,22 @@ class _Pose {
   final Offset tilt;
   final Matrix4? turn; // null: faces straight on, nothing to transform
 
-  const _Pose(this.glyph, this.origin, this.dir, this.pivot, this.tilt, this.turn);
+  const _Pose(
+    this.glyph,
+    this.origin,
+    this.dir,
+    this.pivot,
+    this.tilt,
+    this.turn,
+  );
 }
 
-/// How far a fully tilted digit turns, in radians.
-const double _maxGlyphTurn = 0.4;
+/// How far a fully tilted number turns, in radians.
+const double _maxGlyphTurn = 0.5;
 
-/// Camera strength for a single digit. Stronger than a whole-screen
-/// perspective because a digit is small: the near edge must visibly grow.
-const double _glyphPerspective = 0.0018;
+/// Camera strength. The whole number turns about its own centre as one
+/// solid block, so the near edge grows and the far edge shrinks across it.
+const double _glyphPerspective = 0.0013;
 
 // ─── Painter ──────────────────────────────────────────────────────────────────
 class _ExtrudedNumberPainter extends CustomPainter {
@@ -403,7 +417,9 @@ class _ExtrudedNumberPainter extends CustomPainter {
 
     // Base direction: lower-right (classic block-letter look), shifted by
     // the fixed [tilt]. Each digit then swings it further by its own turn.
-    final double maxOffset = 18.0 * depth;
+    // A slab, not a stamped block letter: the sides are only as thick as
+    // a real object would show. Depth reads from the light and the shadow.
+    final double maxOffset = 7.0 * depth;
     final base = Offset(
       maxOffset * 0.55 + tilt.dx * 0.55,
       maxOffset * 0.82 + tilt.dy * 0.55,
@@ -422,8 +438,7 @@ class _ExtrudedNumberPainter extends CustomPainter {
     // Digits being typed in turn into place on their own; the ones already
     // there do not move for it.
     final stable = stableLength ?? -1;
-    final entering =
-        stable >= 0 && stable < text.length && enterProgress < 1.0;
+    final entering = stable >= 0 && stable < text.length && enterProgress < 1.0;
     final enterT = Curves.easeOutCubic.transform(enterProgress.clamp(0.0, 1.0));
 
     final poses = <_Pose>[];
@@ -432,15 +447,19 @@ class _ExtrudedNumberPainter extends CustomPainter {
       final arriving = entering && glyph.start >= stable;
       final t = _tiltOf(glyph.index);
 
-      // The wall swings with the turn: lean a digit left and its left side
-      // comes into view.
-      var dir = base + Offset(t.dx * maxOffset * 0.95, t.dy * maxOffset * 0.8);
+      // The wall swings against the turn, as on a real block: turn the
+      // right edge towards you and the left side comes into view.
+      var dir = base - Offset(t.dx * maxOffset * 1.1, t.dy * maxOffset * 1.0);
       // Seen edge-on first, then turning to face the front as it thickens.
       final squeeze = arriving ? 0.35 + 0.65 * enterT : 1.0;
       if (arriving) dir = dir * (0.3 + 0.7 * enterT);
 
       final origin = frontOffset + Offset(glyph.x, 0.0);
-      final pivot = origin + Offset(glyph.width / 2, textHeight / 2);
+      // The turn pivots on the middle of the whole number, so the digits
+      // move together as one block; only a digit being typed in squeezes
+      // about its own centre.
+      final pivot = face.center;
+      final own = origin + Offset(glyph.width / 2, textHeight / 2) - pivot;
       final rotY = t.dx * _maxGlyphTurn;
       final rotX = -t.dy * _maxGlyphTurn;
       final turned = rotX.abs() > 1e-4 || rotY.abs() > 1e-4 || squeeze != 1.0;
@@ -449,13 +468,20 @@ class _ExtrudedNumberPainter extends CustomPainter {
               ..setEntry(3, 2, _glyphPerspective)
               ..rotateX(rotX)
               ..rotateY(rotY)
-              ..scaleByDouble(squeeze, 1.0, 1.0, 1.0))
+              ..translateByDouble(own.dx, own.dy, 0.0, 1.0)
+              ..scaleByDouble(squeeze, 1.0, 1.0, 1.0)
+              ..translateByDouble(-own.dx, -own.dy, 0.0, 1.0))
           : null;
       poses.add(_Pose(glyph, origin, dir, pivot, t, matrix));
     }
 
+    // The shadow lies on the background, not on the number, so it is not
+    // turned with it; it slides the other way, which is what sells the gap
+    // between the digits and the surface behind them.
+    _paintCastShadow(canvas, frontOffset, _tiltOf(0));
+
     // Everything underneath first, then every wall, then every face: no
-    // digit's shadow or wall ever falls across its neighbour's face.
+    // digit's halo or wall ever falls across its neighbour's face.
     for (final pose in poses) {
       _posed(canvas, pose, () => _paintUnder(canvas, pose));
     }
@@ -499,13 +525,30 @@ class _ExtrudedNumberPainter extends CustomPainter {
       );
     }
 
-    // ─── 1. Soft ambient contact drop shadow ──────────────────────────────────
-    if (depth > 0.05) {
-      _cachedChar(
-        's|$char|$_sizeKey|${colors.extrudeShadow.toARGB32()}',
-        () => _shadow(char),
-      ).paint(canvas, pose.origin + pose.dir * 1.5);
-    }
+  }
+
+  /// The number's shadow on the surface behind it: one soft silhouette,
+  /// thrown down and to the right by a light at the top left, as if the
+  /// digits floated a little above the background.
+  void _paintCastShadow(Canvas canvas, Offset front, Offset t) {
+    if (depth < 0.05 || colors.extrudeShadow.a == 0) return;
+    final lift = fontSize * depth;
+    final at = front +
+        Offset(lift * 0.14, lift * 0.22) -
+        Offset(t.dx * fontSize * 0.09, t.dy * fontSize * 0.07);
+    _cachedChar('S|$text|$_sizeKey|${colors.extrudeShadow.toARGB32()}', () {
+      return _layout(
+        text,
+        _style.copyWith(
+          foreground: Paint()
+            // Darker than the old contact shadow: it carries the depth now.
+            ..color = colors.extrudeShadow.withValues(
+              alpha: (colors.extrudeShadow.a * 1.5).clamp(0.0, 0.85),
+            )
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, fontSize * 0.05),
+        ),
+      );
+    }).paint(canvas, at);
   }
 
   /// The digit's side wall: its silhouette stamped from the back to the
@@ -581,6 +624,12 @@ class _ExtrudedNumberPainter extends CustomPainter {
       _paintGlyphs(canvas, char, pose.origin, Paint()..shader = finish);
     }
 
+    // ─── 3b'. Light on a plain face: brighter at the top left, falling off ────
+    final light = _lightShader(pose);
+    if (light != null) {
+      _paintGlyphs(canvas, char, pose.origin, Paint()..shader = light);
+    }
+
     // ─── 3c. Glint sliding across a turning face ──────────────────────────────
     final glint = _glintShader(
       pose.origin & Size(pose.glyph.width, fontSize),
@@ -602,6 +651,23 @@ class _ExtrudedNumberPainter extends CustomPainter {
           ..color = colors.extrudeChamfer,
       );
     }
+  }
+
+  /// Shading for skins whose face has no finish of its own, so a plain
+  /// colour reads as a surface under a light. It follows the turn.
+  Shader? _lightShader(_Pose pose) {
+    if (colors.finish != SkinFinish.standard &&
+        colors.finish != SkinFinish.keycap) {
+      return null;
+    }
+    final t = pose.tilt;
+    final cell = pose.origin & Size(pose.glyph.width, fontSize);
+    return LinearGradient(
+      begin: Alignment(-1.0 - t.dx * 0.8, -1.0 - t.dy * 0.8),
+      end: Alignment(1.0 - t.dx * 0.8, 1.0 - t.dy * 0.8),
+      colors: const [Color(0x2EFFFFFF), Color(0x00FFFFFF), Color(0x38000000)],
+      stops: const [0.0, 0.5, 1.0],
+    ).createShader(cell);
   }
 
   /// A soft band of light across a turned face, travelling against the
@@ -627,7 +693,11 @@ class _ExtrudedNumberPainter extends CustomPainter {
     return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [clear, Colors.white.withValues(alpha: 0.32 * strength), clear],
+      colors: [
+        clear,
+        Colors.white.withValues(alpha: 0.32 * strength),
+        clear,
+      ],
       stops: [s0, s1, s2],
     ).createShader(cell);
   }

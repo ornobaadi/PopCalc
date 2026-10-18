@@ -6,7 +6,7 @@ import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/features/calculator/presentation/widgets/extruded_number.dart';
 import 'package:popcalc/features/calculator/presentation/widgets/numeral_animator.dart';
 
-/// The hero numerals: per-digit springs under a drag, a fling that wobbles
+/// The hero numerals: one solid block turned by a drag, a fling that eases
 /// home, and a tap that still reaches [AnimatedExtrudedNumber.onTap].
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -64,9 +64,7 @@ void main() {
     }
   });
 
-  testWidgets('a drag leans the digits, the ones under the finger most', (
-    tester,
-  ) async {
+  testWidgets('a drag turns the whole number as one block', (tester) async {
     await pumpHero(tester);
     final hero = find.byType(AnimatedExtrudedNumber);
     final left = tester.getTopLeft(hero) + const Offset(40, 130);
@@ -80,8 +78,10 @@ void main() {
 
     final tilts = tiltsNow(tester)!;
     expect(tilts.first.dx, greaterThan(0.2));
-    // Grabbed at the left: the first digit leans further than the last.
-    expect(tilts.first.dx, greaterThan(tilts.last.dx));
+    // Wherever it is grabbed, every digit turns by the same amount.
+    for (final t in tilts) {
+      expect(t, tilts.first);
+    }
     expect(tester.takeException(), isNull);
 
     await gesture.up();
@@ -130,7 +130,7 @@ void main() {
     expect(tiltsNow(tester), isNull);
   });
 
-  testWidgets('a new digit joins with its own spring', (tester) async {
+  testWidgets('a new digit joins the turn', (tester) async {
     await pumpHero(tester, text: '12');
     await pumpHero(tester, text: '123');
     expect(tiltsNow(tester), hasLength(3));
