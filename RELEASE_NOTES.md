@@ -1,4 +1,6 @@
-# PopCalc v1.5.1 (build 14) — Fixes, and a joke that's too big
+# PopCalc v1.5.1 (build 15) — Fixes, and a joke that's too big
+
+Build 14 was uploaded but never released; build 15 adds the "Rate PopCalc" row in Settings and a reworded case lead.
 
 ## ✨ What's new
 - **No more freezing on big powers:** calculations like compound interest, (1 + 0.055 ÷ 365)^365, used to freeze the app. They now answer instantly. Thanks to the user who reported it
@@ -6,6 +8,7 @@
 - **Editing can't break your maths anymore:** typing digits while an operator like × is selected no longer turns it into a stray number
 - **Results too big to show** now come with a new set of jokes. That's what she said
 - **The case file has a new lead:** one of the editor's riddles is new. If you were partway through, you keep your progress
+- **Rate PopCalc** from Settings, if you feel like it. One person makes this app, and a review helps others find it
 
 ---
 

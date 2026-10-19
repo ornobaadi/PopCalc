@@ -1,6 +1,6 @@
 # PopCalc
 
-![PopCalc: Math, but make it physical.](assets/brand_assets/feature_graphic_1024x500.png)
+![PopCalc: Math, but make it physical.](assets/brand_assets/store/feature_graphic_1024x500.jpg)
 
 **Math, but make it physical.**
 
@@ -33,12 +33,18 @@ PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, mus
 
 <table>
   <tr>
-    <td><img src="assets/readme/1.png" width="260" alt="Charcoal skin with answer celebration"/><br/>Charcoal: answer celebration</td>
-    <td><img src="assets/readme/2.png" width="260" alt="Skin picker and settings"/><br/>Marigold: skins and settings</td>
+    <td><img src="assets/readme/store/1.jpg" width="240" alt="Neon skin: 20 × 300 = 6,000 with the answer burst"/></td>
+    <td><img src="assets/readme/store/3.jpg" width="240" alt="Chrome: tap the 50 in 25 × 50 × 75 to edit it"/></td>
+    <td><img src="assets/readme/store/6.jpg" width="240" alt="Scientific tray: sin(90) = 1"/></td>
   </tr>
   <tr>
-    <td><img src="assets/readme/3.png" width="260" alt="Divide-by-zero error"/><br/>Frost: error state</td>
-    <td><img src="assets/readme/4.png" width="260" alt="History sheet"/><br/>Matcha: history</td>
+    <td><img src="assets/readme/store/5.jpg" width="240" alt="Unit converter: 100 mph to 160.9344 km/h"/></td>
+    <td><img src="assets/readme/store/7.jpg" width="240" alt="Skin store with the Everything bundle"/></td>
+    <td><img src="assets/readme/store/4.jpg" width="240" alt="History sheet in Velvet"/></td>
+  </tr>
+  <tr>
+    <td><img src="assets/readme/store/2.jpg" width="240" alt="Settings in Marigold"/></td>
+    <td colspan="2"></td>
   </tr>
 </table>
 
@@ -66,7 +72,8 @@ PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, mus
 ### Math
 - Exact decimal arithmetic, so `0.1 + 0.2 = 0.3`
 - Live preview of the answer while you type
-- Tap any number or operator in the expression to edit it, and the answer updates instantly
+- Tap any number or operator in the expression to edit it, and the answer updates instantly; backspace trims a selected number one digit at a time
+- Big powers stay fast, so compound interest like `(1 + 0.055 ÷ 365)^365` answers instantly
 - History restores the full expression so you can keep editing
 
 ### Scientific & Converter
@@ -77,10 +84,10 @@ PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, mus
 ### Make it yours
 - Eight home-screen icons to choose from in Settings, free for everyone (the official logo stays the default)
 - A secret skin, Newsprint, earned by cracking the editor's confidential case: five riddles, each hiding somewhere in the app. Tap the ??? skin in Settings to open the file
-- Errors are written as jokes, with the plain reason underneath
+- Errors are written as jokes, with the plain reason underneath. Results too big to show get a "that's what she said" all of their own
 
 ### Privacy and performance
-- Fully offline, with no internet permission
+- Works fully offline; nothing you type ever leaves your phone
 - No ads, no account, no data collected
 - Lite Effects mode for low-end devices
 

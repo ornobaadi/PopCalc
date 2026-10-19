@@ -21,7 +21,7 @@ const String kAllThemesProductId = 'themes_all';
 const kHuntNotes = <String>[
   'Split something into nothing.',
   'Make your keys go clack-clack-ding.',
-  'A guy named Tan tried to do a 90. It broke his brain.',
+  'A guy named Tan took a 90-degree turn. Sources say he went off the charts.',
   'Some numbers are too big to print. Find one.',
   "Today's edition is already in the archive.",
 ];
@@ -54,7 +54,8 @@ const kHuntErrorNote =
     'A tip just came in. The case file is under the ??? skin.';
 
 /// What tan 90 says while it is the third note (CAPITALS, ≤ 19).
-const kHuntTanLine = 'TAN WENT INFINITE';
+// Not "OFF THE CHARTS": that is one of tan 90's everyday jokes.
+const kHuntTanLine = 'SOURCE CONFIRMED';
 const kHuntTanNote = 'Lead cracked. Now go big. Really big.';
 
 /// Under the overflow punchline while it is the fourth note.

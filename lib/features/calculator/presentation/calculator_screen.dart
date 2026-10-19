@@ -7,6 +7,7 @@ import 'package:popcalc/core/engine/calc_error.dart';
 import 'package:popcalc/core/engine/evaluator.dart';
 import 'package:popcalc/core/engine/expression.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
+import 'package:popcalc/core/review/review_prompter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/storage/history_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
@@ -50,6 +51,10 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
   /// Waits out the error sound before "that's what she said" plays.
   Timer? _punchlineTimer;
 
+  /// Holds Play's review card until the celebration is over and the user
+  /// is idle; any change to the calculator calls it off.
+  Timer? _reviewTimer;
+
   /// The hunt's finale is running (see [InkSpill]).
   bool _spilling = false;
   final _heroKey = GlobalKey();
@@ -65,6 +70,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
     WidgetsBinding.instance.removeObserver(this);
     _pillTimer?.cancel();
     _punchlineTimer?.cancel();
+    _reviewTimer?.cancel();
     super.dispose();
   }
 
@@ -141,6 +147,19 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
         .read(calculatorProvider.notifier)
         .showHeadline(kHuntHeadline, kHuntHeadlineNote);
     AppHaptics.success();
+    // The best moment PopCalc has: let the ink dry and the headline land.
+    ReviewPrompter.onCaseClosed().then((earned) {
+      if (earned) _offerReview(const Duration(seconds: 4), atCase: true);
+    });
+  }
+
+  void _offerReview(Duration after, {bool atCase = false}) {
+    _reviewTimer?.cancel();
+    _reviewTimer = Timer(after, () {
+      if (mounted && (ModalRoute.of(context)?.isCurrent ?? true)) {
+        ReviewPrompter.ask(atCase: atCase);
+      }
+    });
   }
 
   void _copyResult(BuildContext context, String text) {
@@ -177,6 +196,23 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
           const Duration(seconds: 1),
           AppSounds.thatsWhatSheSaid,
         );
+      }
+    });
+    // A good answer may earn Play's review card (see ReviewPrompter); any
+    // later change, a key or an error, means the user is busy, so it waits.
+    ref.listen(calculatorProvider, (prev, next) {
+      if (prev == null) return;
+      // justEvaluated: the hunt's headline pops too, but is not an answer.
+      if (next.celebrationId > prev.celebrationId && next.justEvaluated) {
+        final id = next.celebrationId;
+        ReviewPrompter.onAnswer().then((earned) {
+          if (earned && ref.read(calculatorProvider).celebrationId == id) {
+            _offerReview(const Duration(milliseconds: 1800));
+          }
+        });
+      } else if (next.expressionText != prev.expressionText ||
+          next.resultText != prev.resultText) {
+        _reviewTimer?.cancel();
       }
     });
     ref.listen(secretFoundProvider, (_, _) {

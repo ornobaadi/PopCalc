@@ -12,6 +12,7 @@ import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
+import 'package:popcalc/core/review/review_prompter.dart';
 import 'package:popcalc/features/themes/presentation/store_widgets.dart';
 
 import 'hunt_note_sheet.dart';
@@ -280,6 +281,27 @@ class SettingsSheet extends ConsumerWidget {
                   Divider(color: colors.ink.withValues(alpha: 0.08), height: 1),
                   _SoundSection(colors: colors),
                   const SizedBox(height: 8.0),
+                  Divider(color: colors.ink.withValues(alpha: 0.08), height: 1),
+                  // Always here for whoever wants it; the app only offers
+                  // Play's card itself at a high point (see ReviewPrompter).
+                  InkWell(
+                    key: const ValueKey('rate-popcalc'),
+                    onTap: () {
+                      AppHaptics.selectionClick();
+                      ReviewPrompter.openStore();
+                    },
+                    child: _SettingsRow(
+                      icon: Icons.star_outline_rounded,
+                      label: 'Rate PopCalc',
+                      description:
+                          'One person made this. A review helps others find it.',
+                      colors: colors,
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        color: colors.inkSoft,
+                      ),
+                    ),
+                  ),
                   Divider(color: colors.ink.withValues(alpha: 0.08), height: 1),
                   _SignatureFooter(colors: colors),
                 ],
