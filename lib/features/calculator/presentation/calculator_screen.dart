@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:popcalc/core/audio/app_sounds.dart';
+import 'package:popcalc/core/engine/calc_error.dart';
 import 'package:popcalc/core/engine/evaluator.dart';
 import 'package:popcalc/core/engine/expression.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
@@ -45,6 +47,9 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
   bool _pillShown = false;
   Timer? _pillTimer;
 
+  /// Waits out the error sound before "that's what she said" plays.
+  Timer? _punchlineTimer;
+
   /// The hunt's finale is running (see [InkSpill]).
   bool _spilling = false;
   final _heroKey = GlobalKey();
@@ -59,6 +64,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pillTimer?.cancel();
+    _punchlineTimer?.cancel();
     super.dispose();
   }
 
@@ -158,6 +164,21 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
     final settings = ref.watch(settingsProvider);
     final scientific = settings.advancedTools && settings.scientificActive;
 
+    // A beat after the error sound, the punchline. Any key before then
+    // clears errorPunchline and calls it off, so it never talks over typing.
+    // Keyed on the line (never the same twice running), so pressing = again
+    // gets its own punchline too.
+    ref.listen(
+        calculatorProvider
+            .select((s) => s.errorPunchline ? s.resultText : null), (_, line) {
+      _punchlineTimer?.cancel();
+      if (line != null) {
+        _punchlineTimer = Timer(
+          const Duration(seconds: 1),
+          AppSounds.thatsWhatSheSaid,
+        );
+      }
+    });
     ref.listen(secretFoundProvider, (_, _) {
       _announce('SECRET SKIN FOUND · ${kSecretSkins.first.label}');
     });
@@ -291,18 +312,44 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
               Align(
                 alignment: Alignment.center,
                 child: Transform.translate(
-                  offset: const Offset(0.0, 54.0),
+                  // A punchline adds a second line; shift down so the
+                  // reason stays where it always sits.
+                  offset: Offset(0.0, calcState.errorPunchline ? 64.0 : 54.0),
                   child: IgnorePointer(
-                    child: Text(
-                      calcState.errorNote ?? calcState.error!.plainMessage,
-                      key: const ValueKey('error-reason'),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.0,
-                        letterSpacing: 0.3,
-                        color: colors.inkSoft,
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // The punchline lands right under the setup; the
+                        // sober reason follows, so the joke still makes sense.
+                        if (calcState.errorPunchline)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6.0),
+                            child: Text(
+                              kThatsWhatSheSaid,
+                              key: const ValueKey('error-punchline'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 15.0,
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                                color: colors.accent,
+                              ),
+                            ),
+                          ),
+                        Text(
+                          calcState.errorNote ?? calcState.error!.plainMessage,
+                          key: const ValueKey('error-reason'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.0,
+                            letterSpacing: 0.3,
+                            color: colors.inkSoft,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

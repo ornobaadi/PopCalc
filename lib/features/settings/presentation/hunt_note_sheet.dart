@@ -113,9 +113,7 @@ class HuntNoteSheet extends ConsumerWidget {
                                 index: step,
                                 text: kHuntNotes[step],
                                 backText: kHuntHints[step],
-                                again: step == 1 || step == 2
-                                    ? kHuntAgainHint
-                                    : null,
+                                again: step == 1 ? kHuntAgainHint : null,
                               ),
                             // Cracked leads, newest first.
                             for (var i = step - 1; i >= 0; i--)

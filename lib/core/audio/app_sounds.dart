@@ -103,6 +103,9 @@ class AppSounds {
   static AudioSource? _detent;
   static DateTime _lastDetent = DateTime(0);
 
+  /// "That's what she said", after an overflow line (see CalcError.punchlines).
+  static AudioSource? _twss;
+
   /// A sound requested before it finished loading.
   /// Played as soon as it's ready, unless it has gone stale.
   static Sfx? _pendingSfx;
@@ -158,6 +161,7 @@ class AppSounds {
     _loadingFolders.clear();
     _launch = null;
     _detent = null;
+    _twss = null;
     _pendingSfx = null;
     try {
       SoLoud.instance.deinit();
@@ -201,6 +205,11 @@ class AppSounds {
       );
       if (gen != _generation) return;
       _detent = detent;
+    } catch (_) {}
+    try {
+      final twss = await SoLoud.instance.loadAsset('assets/sounds/twss.mp3');
+      if (gen != _generation) return;
+      _twss = twss;
     } catch (_) {}
     final material = _material;
     final order = [
@@ -341,6 +350,17 @@ class AppSounds {
       source,
       pitch: (up ? 1.05 : 0.95) + (_random.nextDouble() - 0.5) * 0.04,
     );
+  }
+
+  /// The punchline, said out loud. Centred, never pitch-shifted: a voice
+  /// sounds wrong drifted.
+  static void thatsWhatSheSaid() {
+    if (!_canPlay) return;
+    final source = _twss;
+    if (source == null) return;
+    try {
+      SoLoud.instance.play(source, volume: _gain);
+    } catch (_) {}
   }
 
   /// Like [play], but if the sound is still loading (e.g. at app launch),

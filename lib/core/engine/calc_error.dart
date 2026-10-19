@@ -18,7 +18,8 @@ enum CalcError {
   ),
   overflow(
     'The result is too large',
-    ['TOO BIG TO FIT', 'WHOA. HUGE', 'MY BRAIN IS FULL', 'NUMBER TOO THICC'],
+    _overflowSetups,
+    punchlines: {..._overflowSetups},
   ),
 
   /// √ of a negative, or a negative number to a fractional power.
@@ -57,5 +58,28 @@ enum CalcError {
 
   final String plainMessage;
   final List<String> messages;
-  const CalcError(this.plainMessage, this.messages);
+
+  /// Lines that are an innocent-sounding setup: the screen tags them with
+  /// [kThatsWhatSheSaid] instead of the plain reason (The Office).
+  final Set<String> punchlines;
+  const CalcError(this.plainMessage, this.messages, {this.punchlines = const {}});
 }
+
+const _overflowSetups = [
+  "IT WON'T FIT",
+  "THAT'S HUGE",
+  'WAY TOO BIG',
+  'TOO HARD TO HANDLE',
+  "I CAN'T TAKE IT ALL",
+  'HOW IS IT THIS BIG',
+  "THAT'S TOO LONG",
+  "OKAY, THAT'S A LOT",
+  "IT'S SO MUCH BIGGER",
+  "I WASN'T READY",
+  "THAT'S WAY TOO MUCH",
+  'NEED BIGGER SCREEN',
+  'HOW DO I FIT IT ALL',
+  "IT'S OUT OF HAND",
+];
+
+const kThatsWhatSheSaid = "(That's what she said)";

@@ -11,6 +11,10 @@ class CalculatorState {
   /// Small line under the hero: replaces an error's plain reason, or
   /// stands alone under a headline (the hunt). Lasts until the next change.
   final String? errorNote;
+
+  /// The error's line is a setup: tag it "(That's what she said)".
+  /// Like [errorNote], lasts until the next change.
+  final bool errorPunchline;
   final bool justEvaluated;
   final int? editingTokenIndex;
   final bool isReplacingEditedToken;
@@ -25,6 +29,7 @@ class CalculatorState {
     this.previewText,
     this.error,
     this.errorNote,
+    this.errorPunchline = false,
     this.justEvaluated = false,
     this.editingTokenIndex,
     this.isReplacingEditedToken = false,
@@ -48,6 +53,7 @@ class CalculatorState {
     CalcError? error,
     bool clearError = false,
     String? errorNote,
+    bool errorPunchline = false,
     bool? justEvaluated,
     int? editingTokenIndex,
     bool clearEditingTokenIndex = false,
@@ -62,6 +68,7 @@ class CalculatorState {
       error: clearError ? null : (error ?? this.error),
       // Never carried over: it belongs to the moment it was set.
       errorNote: errorNote,
+      errorPunchline: errorPunchline,
       justEvaluated: justEvaluated ?? this.justEvaluated,
       editingTokenIndex: clearEditingTokenIndex
           ? null

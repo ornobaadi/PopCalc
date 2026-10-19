@@ -13,15 +13,16 @@ const String kAllThemesProductId = 'themes_all';
 /// The newsroom hunt that leads to the secret skin: notes from "the editor",
 /// one at a time on the ??? tile in Settings, each pointing at a feature.
 /// Solved in order (`SettingsNotifier.advanceHunt`):
-///   0 divide by zero, 1 Typewriter sound pack, 2 Live Preview on,
-///   3 tan 90 in degrees, an error like 0 (needs Scientific & Converter on),
+///   0 divide by zero, 1 Typewriter sound pack,
+///   2 tan 90 in degrees, an error like 0 (turns people on to Scientific),
+///   3 any overflow ("too big to print"; xʸ or ! from the lead before),
 ///   4 tap "today's edition" waiting at the top of History.
 /// The last tap closes History and the skin arrives with an ink spill.
 const kHuntNotes = <String>[
   'Split something into nothing.',
   'Make your keys go clack-clack-ding.',
-  "See the ending before the story's done.",
   'A guy named Tan tried to do a 90. It broke his brain.',
+  'Some numbers are too big to print. Find one.',
   "Today's edition is already in the archive.",
 ];
 
@@ -29,8 +30,8 @@ const kHuntNotes = <String>[
 const kHuntHints = <String>[
   'Your maths teacher said never. Do it anyway: any number ÷ 0.',
   'Settings → Sound → the Typewriter pack.',
-  'Settings → turn on Live Preview on Top.',
   'Turn on Scientific & Converter in Settings, then type tan 90 =.',
+  "Try 9 ^ 9999 =. The paper won't have room.",
   "Tap the clock (History) and open Today's Edition.",
 ];
 
@@ -52,9 +53,12 @@ const kHuntErrorLine = "NOW THAT'S A STORY";
 const kHuntErrorNote =
     'A tip just came in. The case file is under the ??? skin.';
 
-/// What tan 90 says while it is the fourth note.
-const kHuntTanLine = 'STRAIGHT UP INFINITE';
-const kHuntTanNote = 'Lead cracked. Psst: the ruler up top converts anything.';
+/// What tan 90 says while it is the third note (CAPITALS, ≤ 19).
+const kHuntTanLine = 'TAN WENT INFINITE';
+const kHuntTanNote = 'Lead cracked. Now go big. Really big.';
+
+/// Under the overflow punchline while it is the fourth note.
+const kHuntBigNote = "Lead cracked. The archive has today's paper.";
 
 /// The planted entry at the top of History for the last note.
 const kHuntEditionTitle = "TODAY'S EDITION";

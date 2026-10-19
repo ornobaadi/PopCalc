@@ -57,6 +57,16 @@ void main() {
         () => expect(calc(['-2', '^', '2']), '4'));
     test('power before multiply: 2 × 3^2 = 18',
         () => expect(calc(['2', '×', '3', '^', '2']), '18'));
+    test('compound interest stays fast: (1 + 0.055 ÷ 365)^365', () {
+      final watch = Stopwatch()..start();
+      expect(calc(['(', '1', '+', '0.055', '÷', '365', ')', '^', '365']),
+          '1.0565362369937');
+      expect(calc(['(', '1', '+', '0.055', '÷', '365', ')', '^', '36']),
+          '1.00543898674136');
+      expect(calc(['(', '1', '+', '0.055', '÷', '365', ')', '^', '-', '365']),
+          '0.94648906964652');
+      expect(watch.elapsedMilliseconds, lessThan(500));
+    });
     test('negative exponent: 2^-2 = 0.25',
         () => expect(calc(['2', '^', '-', '2']), '0.25'));
     test('parentheses: (2 + 3) × 4 = 20',
@@ -159,6 +169,7 @@ void main() {
       for (final error in CalcError.values) {
         expect(error.plainMessage, isNotEmpty);
         expect(error.messages.length, greaterThanOrEqualTo(3), reason: '$error');
+        expect(error.messages, containsAll(error.punchlines), reason: '$error');
         for (final line in error.messages) {
           expect(line.length, lessThanOrEqualTo(19), reason: line);
           expect(line, line.toUpperCase(), reason: 'Bebas Neue has capitals only');

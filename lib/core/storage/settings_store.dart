@@ -262,7 +262,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   Future<void> setShowLivePreview(bool value) async {
     state = state.copyWith(showLivePreview: value);
-    if (value) advanceHunt(2);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kShowLivePreview, value);

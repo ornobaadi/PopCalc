@@ -25,8 +25,15 @@ final calculatorProvider =
       ref.read(settingsProvider.notifier).advanceHunt(0);
       return true;
     },
-    // The hunt's fourth note: "a guy named Tan tried to do a 90".
+    // The hunt's third note: "a guy named Tan tried to do a 90".
     onTanUndefined: () {
+      final settings = ref.read(settingsProvider);
+      if (settings.huntDone || settings.huntStep != 2) return false;
+      ref.read(settingsProvider.notifier).advanceHunt(2);
+      return true;
+    },
+    // The fourth: "some numbers are too big to print".
+    onOverflow: () {
       final settings = ref.read(settingsProvider);
       if (settings.huntDone || settings.huntStep != 3) return false;
       ref.read(settingsProvider.notifier).advanceHunt(3);
@@ -48,14 +55,19 @@ class CalculatorController extends StateNotifier<CalculatorState> {
   final bool Function()? onDivideByZero;
 
   /// Asked when exactly tan 90 (degrees) is undefined; true means it
-  /// solved the hunt's fourth note, so the hunt's line replaces the joke.
+  /// solved the hunt's third note, so the hunt's line replaces the joke.
   final bool Function()? onTanUndefined;
+
+  /// Asked on an overflow; true means it solved the hunt's fourth note.
+  /// The joke and its punchline stay; the note replaces the plain reason.
+  final bool Function()? onOverflow;
 
   CalculatorController({
     this.onHistoryAdded,
     this.angleUnit,
     this.onDivideByZero,
     this.onTanUndefined,
+    this.onOverflow,
     Random? random,
   })
       : _random = random ?? Random(),
@@ -563,9 +575,14 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     final line = lines[_random.nextInt(lines.length)];
     _lastErrorLine = line;
 
+    final crackedBig =
+        error == CalcError.overflow && (onOverflow?.call() ?? false);
+
     state = state.copyWith(
       error: error,
+      errorNote: crackedBig ? kHuntBigNote : null,
       resultText: line,
+      errorPunchline: error.punchlines.contains(line),
       clearEditingTokenIndex: true,
       isReplacingEditedToken: false,
       clearPreview: true,
@@ -584,8 +601,12 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     }
 
     final token = allTokens[idx];
+    // A digit only edits a number. Typed over a selected operator, % or
+    // bracket it would leave two numbers side by side (9999 9999), which
+    // is not maths; operators are changed with the operator keys.
+    if (!token.isNumber) return;
     String newText;
-    if (state.isReplacingEditedToken || !token.isNumber) {
+    if (state.isReplacingEditedToken) {
       newText = digit;
     } else {
       if (token.text == '0') {
@@ -624,8 +645,9 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     }
 
     final token = allTokens[idx];
+    if (!token.isNumber) return; // See _handleEditedTokenDigit.
     String newText;
-    if (state.isReplacingEditedToken || !token.isNumber) {
+    if (state.isReplacingEditedToken) {
       newText = '0.';
     } else {
       if (token.text.contains('.')) return;
@@ -770,8 +792,11 @@ class CalculatorController extends StateNotifier<CalculatorState> {
 
     final token = allTokens[idx];
     if (token.isNumber) {
-      if (state.isReplacingEditedToken ||
-          token.text.length <= 1 ||
+      // Backspace trims the selected number one digit at a time, even right
+      // after selecting it (fixing 9999 → 9990 used to mean retyping it all).
+      // Only the last digit takes the number, its operator and the
+      // highlight with it, like backspacing it in normal typing.
+      if (token.text.length <= 1 ||
           (token.text.length == 2 && token.text.startsWith('-'))) {
         final newExpr = state.expression.removeTokenCleanly(idx);
         final preview = _computePreview(newExpr);

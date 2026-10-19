@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
+import 'package:popcalc/core/engine/calc_error.dart';
 import 'package:popcalc/core/engine/token.dart';
 import 'package:popcalc/core/storage/entitlement_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
@@ -68,23 +69,23 @@ void main() {
 
     test('notes only count in order', () async {
       settings.setSoundPack(SoundPack.typewriter);
-      settings.setShowLivePreview(true);
       settings.advanceHunt(3);
       await settle();
       expect(step(), 0);
 
       divideByZero();
-      settings.setShowLivePreview(true); // note 3 before note 2
+      settings.advanceHunt(2); // note 3 before note 2
       expect(step(), 1);
       settings.setSoundPack(SoundPack.mellow);
       expect(step(), 1);
       settings.setSoundPack(SoundPack.typewriter);
       expect(step(), 2);
-      settings.setShowLivePreview(false);
-      expect(step(), 2);
+      // Live Preview is no longer a lead.
       settings.setShowLivePreview(true);
+      expect(step(), 2);
+      settings.advanceHunt(2);
       expect(step(), 3);
-      settings.advanceHunt(4); // the edition before the ruler
+      settings.advanceHunt(4); // the edition before the big number
       expect(step(), 3);
       settings.advanceHunt(3);
       expect(step(), 4);
@@ -98,8 +99,45 @@ void main() {
       expect(prefs.getInt('settings_hunt_step'), kHuntLength);
     });
 
-    test('lead 4: a guy named Tan tried to do a 90', () async {
+    test('lead 4: some numbers are too big to print', () async {
       SharedPreferences.setMockInitialValues({'settings_hunt_step': 3});
+      final c4 = ProviderContainer();
+      addTearDown(c4.dispose);
+      final calc4 = c4.read(calculatorProvider.notifier);
+      c4.read(settingsProvider);
+      await settle();
+      void huge() {
+        calc4.onClear();
+        calc4.onDigit('9');
+        calc4.onOperator(TokenType.power, '^');
+        '9999'.split('').forEach(calc4.onDigit);
+        calc4.onEquals();
+      }
+
+      huge();
+      expect(c4.read(settingsProvider).huntStep, 4);
+      expect(calc4.state.error, CalcError.overflow);
+      // The joke and its punchline stay; the note replaces the reason.
+      expect(calc4.state.errorPunchline, isTrue);
+      expect(calc4.state.errorNote, kHuntBigNote);
+
+      huge();
+      expect(calc4.state.errorNote, isNull);
+      expect(c4.read(settingsProvider).huntStep, 4);
+    });
+
+    test('an overflow before its lead does nothing', () async {
+      calc.onDigit('9');
+      calc.onOperator(TokenType.power, '^');
+      digits('9999');
+      calc.onEquals();
+      await settle();
+      expect(step(), 0);
+      expect(calc.state.errorNote, isNull);
+    });
+
+    test('lead 3: a guy named Tan tried to do a 90', () async {
+      SharedPreferences.setMockInitialValues({'settings_hunt_step': 2});
       final c4 = ProviderContainer();
       addTearDown(c4.dispose);
       final calc4 = c4.read(calculatorProvider.notifier);
@@ -114,13 +152,13 @@ void main() {
 
       // tan 270 is undefined too, but it is not the lead.
       tan('270');
-      expect(c4.read(settingsProvider).huntStep, 3);
+      expect(c4.read(settingsProvider).huntStep, 2);
       expect(calc4.state.resultText, isNot(kHuntTanLine));
 
       tan('90');
       expect(calc4.state.resultText, kHuntTanLine);
       expect(calc4.state.errorNote, kHuntTanNote);
-      expect(c4.read(settingsProvider).huntStep, 4);
+      expect(c4.read(settingsProvider).huntStep, 3);
 
       // Afterwards tan 90 is an ordinary joke again.
       tan('90');
@@ -271,7 +309,9 @@ void main() {
       // The leads still to come are blacked out, numbers only.
       expect(find.text('LEAD #04'), findsOneWidget);
       expect(find.text(kHuntNotes[3]), findsNothing);
-      expect(find.text(kHuntAgainHint), findsOneWidget);
+      // Only the Typewriter lead (a setting people may already have) says
+      // "do it again".
+      expect(find.text(kHuntAgainHint), findsNothing);
 
       // Holding the card flips it to the plain hint.
       double backOpacity() => tester

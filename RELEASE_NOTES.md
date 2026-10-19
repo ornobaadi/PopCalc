@@ -1,3 +1,26 @@
+# PopCalc v1.5.1 (build 14) — Fixes, and a joke that's too big
+
+## ✨ What's new
+- **No more freezing on big powers:** calculations like compound interest, (1 + 0.055 ÷ 365)^365, used to freeze the app. They now answer instantly. Thanks to the user who reported it
+- **Editing a number is easier:** tap a number in your calculation and backspace now removes one digit at a time, so you can fix 9999 into 9990 without retyping it all
+- **Editing can't break your maths anymore:** typing digits while an operator like × is selected no longer turns it into a stray number
+- **Results too big to show** now come with a new set of jokes. That's what she said
+- **The case file has a new lead:** one of the editor's riddles is new. If you were partway through, you keep your progress
+
+---
+
+### Play Store "What's new" (under 500 chars)
+```
+New in 1.5.1:
+• Fixed a freeze on big powers like (1 + 0.055 ÷ 365)^365
+• Backspace on a selected number now removes one digit at a time
+• Editing a selected × or ÷ can no longer break your calculation
+• Too-big results come with new jokes. That's what she said
+• A new lead in the editor's case file
+```
+
+---
+
 # PopCalc v1.5.0 (build 13) — Make it yours, and a case to crack
 
 ## ✨ What's new

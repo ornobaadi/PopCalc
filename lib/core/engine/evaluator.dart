@@ -166,7 +166,15 @@ class _Evaluation {
       if (magnitude < -Evaluator._maxDigits) {
         return Decimal.zero; // Far below what the display can show.
       }
-      final result = base.toRational().pow(exponent.toBigInt().toInt());
+      final n = exponent.toBigInt().toInt();
+      // Exact digits grow as scale × n: (1 + 0.055 ÷ 365)^365 has a 32-digit
+      // base and would need ~12,000 exact digits, freezing the UI thread on
+      // every keystroke of live preview. Past a small budget, keep 40
+      // significant digits per step instead; the display shows 15.
+      if (base.scale * n.abs() > _exactPowerDigits) {
+        return _roundedPower(base, n);
+      }
+      final result = base.toRational().pow(n);
       return result.toDecimal(scaleOnInfinitePrecision: 32);
     }
 
@@ -174,6 +182,29 @@ class _Evaluation {
       throw CalcException(CalcError.negativeRoot);
     }
     return _fromDouble(math.pow(base.toDouble(), exponent.toDouble()).toDouble());
+  }
+
+  static const _exactPowerDigits = 200;
+  static const _powerPrecision = 40;
+
+  /// Square-and-multiply, rounding to [_powerPrecision] significant digits
+  /// after each step so the numbers never grow.
+  Decimal _roundedPower(Decimal base, int n) {
+    var result = Decimal.one;
+    var square = base;
+    var k = n.abs();
+    while (k > 0) {
+      if (k.isOdd) result = _significant(result * square);
+      k >>= 1;
+      if (k > 0) square = _significant(square * square);
+    }
+    return n < 0 ? Evaluator._divide(Decimal.one, result) : result.round(scale: 32);
+  }
+
+  static Decimal _significant(Decimal x) {
+    final integerDigits = x.precision - x.scale;
+    final keep = _powerPrecision - integerDigits;
+    return x.shift(keep).round().shift(-keep);
   }
 
   Decimal _factorial(Decimal n) {

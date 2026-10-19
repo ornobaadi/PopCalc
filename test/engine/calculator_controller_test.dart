@@ -92,6 +92,27 @@ void main() {
     }
   });
 
+  test('Every overflow line is a setup with the punchline tag', () {
+    var sawSetup = false;
+    for (var i = 0; i < 10; i++) {
+      controller.onClear();
+      controller.onDigit('9');
+      controller.onOperator(TokenType.power, '^');
+      for (final d in '99999'.split('')) {
+        controller.onDigit(d);
+      }
+      controller.onEquals();
+      final s = controller.state;
+      expect(s.error, CalcError.overflow);
+      expect(CalcError.overflow.punchlines, contains(s.resultText));
+      expect(s.errorPunchline, isTrue);
+      sawSetup = true;
+      controller.onDigit('1');
+      expect(controller.state.errorPunchline, isFalse);
+    }
+    expect(sawSetup, isTrue);
+  });
+
   test('Percent displays on the big hero display', () {
     controller.onDigit('8');
     controller.onDigit('8');
@@ -341,9 +362,38 @@ void main() {
     test('deleting a middle number removes its operator too', () {
       type('10x11+5');
       controller.selectToken(2);
-      controller.onBackspace(); // replacing mode: removes whole token
+      controller.onBackspace(); // 11 → 1
+      controller.onBackspace(); // last digit: the number goes
+      expect(controller.state.editingTokenIndex, isNull);
       controller.onEquals();
       expect(controller.state.resultText, '15');
+    });
+
+    test('digits on a selected operator are ignored, never 9999 9999', () {
+      type('9999x9999x9999');
+      controller.selectToken(1);
+      for (final d in '9999'.split('')) {
+        controller.onDigit(d);
+      }
+      controller.onDecimal();
+      expect(controller.state.expressionText, '9999 × 9999 × 9999');
+      // The operator keys still change it.
+      controller.onOperator(TokenType.plus, '+');
+      controller.onEquals();
+      expect(controller.state.error, isNull);
+      expect(controller.state.resultText, '99,990,000');
+    });
+
+    test('backspace on a selected number trims one digit, then digits append',
+        () {
+      type('999x9999x99999');
+      controller.selectToken(2);
+      controller.onBackspace();
+      expect(controller.state.resultText, '999');
+      expect(controller.state.editingTokenIndex, 2);
+      controller.onDigit('0');
+      expect(controller.state.resultText, '9,990');
+      expect(controller.state.expressionText, contains('9990'));
     });
 
     test('deleting an operator joins the numbers around it', () {

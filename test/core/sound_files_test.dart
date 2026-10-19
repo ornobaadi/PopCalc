@@ -16,6 +16,9 @@ void main() {
   test('shared sounds ship outside the packs', () {
     expect(File('assets/sounds/launch.wav').existsSync(), isTrue);
     expect(File('assets/sounds/detent.wav').existsSync(), isTrue);
+    expect(File('assets/sounds/twss.mp3').existsSync(), isTrue);
+    expect(File('pubspec.yaml').readAsStringSync(),
+        contains('assets/sounds/twss.mp3'));
   });
 
   test('file names are snake_case', () {
