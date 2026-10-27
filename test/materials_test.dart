@@ -18,7 +18,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('every material ships a full sound set for each of its feels', () {
-    for (final material in kMaterials) {
+    for (final material in [...kMaterials, ...kDrops]) {
       expect(material.isMaterial, isTrue);
       for (final feel in material.feels) {
         for (final sfx in Sfx.values) {
@@ -31,9 +31,9 @@ void main() {
 
   test('materials have a finish, a price and their own haptics', () {
     final feels = <HapticFeel>{};
-    for (final material in kMaterials) {
+    for (final material in [...kMaterials, ...kDrops]) {
       expect(material.colors.finish, isNot(SkinFinish.standard));
-      expect(material.productId, startsWith('material_'));
+      expect(material.productId, matches(RegExp('^(material|drop)_')));
       for (final feel in material.feels) {
         expect(feel.haptics, isNot(HapticFeel.standard));
         expect(feels.add(feel.haptics), isTrue, reason: 'shared haptics');
@@ -55,11 +55,11 @@ void main() {
   });
 
   test('a material is unlocked by its own product or the bundle', () {
-    final clay = skinOf(AppThemeMode.clay);
+    final chrome = skinOf(AppThemeMode.chrome);
     final wood = skinOf(AppThemeMode.wood);
-    expect(ownsSkin(const {}, clay, locked: true), isFalse);
-    expect(ownsSkin({clay.productId!}, clay, locked: true), isTrue);
-    expect(ownsSkin({clay.productId!}, wood, locked: true), isFalse);
+    expect(ownsSkin(const {}, chrome, locked: true), isFalse);
+    expect(ownsSkin({chrome.productId!}, chrome, locked: true), isTrue);
+    expect(ownsSkin({chrome.productId!}, wood, locked: true), isFalse);
     expect(ownsSkin({kAllThemesProductId}, wood, locked: true), isTrue);
   });
 

@@ -67,9 +67,8 @@ class PurchaseState {
     final bundle = amounts[kAllThemesProductId];
     if (bundle == null) return null;
     var singly = 0.0;
-    for (final id in kProductIds) {
-      if (id == kAllThemesProductId) continue;
-      final amount = amounts[id];
+    for (final skin in kBundleItems) {
+      final amount = amounts[skin.productId];
       if (amount == null) return null;
       singly += amount;
     }
@@ -132,6 +131,8 @@ class FakePurchaseService extends PurchaseService {
       ? 6.99
       : productId == 'material_mechanical'
       ? 2.99
+      : productId.startsWith('drop_')
+      ? 2.99
       : productId.startsWith('material_')
       ? 1.99
       : 0.99;
@@ -187,5 +188,5 @@ bool ownsSkin(
 }) =>
     !skin.premium ||
     !locked ||
-    owned.contains(kAllThemesProductId) ||
+    (skin.drop == null && owned.contains(kAllThemesProductId)) ||
     owned.contains(skin.productId);

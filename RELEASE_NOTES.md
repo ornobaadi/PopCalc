@@ -1,3 +1,29 @@
+# PopCalc v1.5.5 (build 16) — Two limited-edition skins, Quick Settings tile, clearer units
+
+Last version on Google Play was 1.5.1 (build 15).
+
+## ✨ What's new
+- **Two limited-edition skins, for a short time only:** **Mirage** (living dunes under a sun that follows your clock) and **Reckoning** (a doomsday clock running on your phone's own time). Each is a full look with its own key sounds and haptics, and each hides a surprise for anyone curious enough to find it. Available until 11 January 2027, and yours for good once bought. They are not part of the Everything bundle
+- **PopCalc in Quick Settings:** add a PopCalc tile to your pull-down panel and open the calculator from anywhere with one tap. Find it in Settings → Quick Settings Tile. Thanks to the user who asked for it
+- **Data units, made clear:** 1 GB really is 1000 MB (the decimal unit phones and drive makers use), while 1 GiB is 1024 MiB (what Windows calls "GB"). The converter now names which is which and puts each pair side by side. Added TiB, and kilobits, megabits and gigabits for internet speeds
+- **Tiny answers no longer show as 0:** results smaller than 0.000001 now appear in scientific notation, such as 1.234e-15, and you can keep calculating with them
+- **Huge rounding fix:** a result like 999,999,999,999,999.9 now shows as 1e15 instead of spilling past the 15-digit limit
+- **A leaner store:** Obsidian, Synthwave, Clay and Candy have been retired to keep the collection focused
+
+---
+
+### Play Store "What's new" (under 500 chars)
+```
+New in 1.5.5:
+• Two limited-edition skins until 11 Jan: Mirage (living dunes) and Reckoning (a doomsday clock on your phone's time), each with its own sounds and a hidden surprise
+• PopCalc in Quick Settings
+• Clearer data units (GB vs GiB), plus TiB and Mbit/Gbit
+• Tiny answers show properly instead of 0
+• Obsidian, Synthwave, Clay and Candy retired
+```
+
+---
+
 # PopCalc v1.5.1 (build 15) — Fixes, and a joke that's too big
 
 Build 14 was uploaded but never released; build 15 adds the "Rate PopCalc" row in Settings and a reworded case lead.

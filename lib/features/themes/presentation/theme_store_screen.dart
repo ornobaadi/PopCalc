@@ -94,7 +94,13 @@ class _ThemeStoreScreenState extends ConsumerState<ThemeStoreScreen> {
 
     final premiumSkins = kSkins.where((s) => s.premium).toList();
     // What is theirs already steps out of the way of what is still on sale.
-    final yours = [...premiumSkins, ...kMaterials].where(has).toList();
+    final yours = [
+      ...premiumSkins,
+      ...kMaterials,
+      ...kDrops,
+    ].where(has).toList();
+    // Drops still to come or on sale; once over they are gone for good.
+    final drops = kDrops.where((s) => !has(s) && !s.drop!.over).toList();
 
     Widget card(SkinInfo skin) {
       final SkinStanding standing;
@@ -105,6 +111,9 @@ class _ThemeStoreScreenState extends ConsumerState<ThemeStoreScreen> {
       } else if (has(skin)) {
         standing = SkinStanding.owned;
         status = 'OWNED';
+      } else if (skin.drop?.upcoming ?? false) {
+        standing = SkinStanding.notForSale;
+        status = dropOpens(skin.drop!);
       } else {
         final productId = skin.productId!;
         standing = purchases.canBuy(productId)
@@ -255,6 +264,12 @@ class _ThemeStoreScreenState extends ConsumerState<ThemeStoreScreen> {
                         },
                       ),
                     ),
+                    if (drops.isNotEmpty)
+                      ...section(
+                        'LIMITED DROP',
+                        dropLine(drops.first.drop!),
+                        drops,
+                      ),
                     ...section(
                       'MATERIALS',
                       'Look, sound and haptics, made as one set.',
@@ -327,8 +342,8 @@ class _BundleCard extends StatelessWidget {
   // Mode, distance from the right edge, from the top, width and lean.
   // Back to front.
   static const _phones = [
-    (AppThemeMode.synthwave, 104.0, 46.0, 84.0, -0.16),
-    (AppThemeMode.clay, 4.0, 52.0, 84.0, 0.14),
+    (AppThemeMode.velvet, 104.0, 46.0, 84.0, -0.16),
+    (AppThemeMode.chrome, 4.0, 52.0, 84.0, 0.14),
     (AppThemeMode.neon, 48.0, 22.0, 98.0, -0.02),
   ];
 

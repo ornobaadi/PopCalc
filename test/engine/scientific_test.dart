@@ -57,6 +57,12 @@ void main() {
         () => expect(calc(['-2', '^', '2']), '4'));
     test('power before multiply: 2 × 3^2 = 18',
         () => expect(calc(['2', '×', '3', '^', '2']), '18'));
+    test('tiny results show in scientific notation, never as 0', () {
+      expect(calc(['1', '÷', '100000000000000', '÷', '100000000']), '1e-22');
+      expect(calc(['0.000000001234', '×', '0.001']), '1.234e-12');
+      expect(calc(['999999999999999', '+', '0.9']), '1e15');
+      expect(calc(['0.000001']), '0.000001');
+    });
     test('compound interest stays fast: (1 + 0.055 ÷ 365)^365', () {
       final watch = Stopwatch()..start();
       expect(calc(['(', '1', '+', '0.055', '÷', '365', ')', '^', '365']),

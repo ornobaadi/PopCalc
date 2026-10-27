@@ -35,7 +35,7 @@ Future<ProviderContainer> pumpStore(
 }) async {
   SharedPreferences.setMockInitialValues({});
   // Tall enough that the whole store (materials, then skins) is built.
-  tester.view.physicalSize = const Size(1080, 7800); // 360 × 2600 dp
+  tester.view.physicalSize = const Size(1080, 9000); // 360 × 3000 dp
   tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);
 
@@ -55,18 +55,22 @@ Future<ProviderContainer> pumpStore(
   return container;
 }
 
-Future<void> openObsidian(WidgetTester tester) async {
-  await tester.ensureVisible(find.text('OBSIDIAN'));
+Future<void> openMatcha(WidgetTester tester) async {
+  await tester.ensureVisible(find.text('MATCHA'));
   await tester.pump();
-  await tester.tap(find.text('OBSIDIAN'));
+  await tester.tap(find.text('MATCHA'));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
 }
 
 void main() {
+  // The drops are dated; keep them waiting for their day (27 Oct).
+  setUp(() => DropWindow.now = () => DateTime.utc(2026, 10, 1));
+  tearDown(() => DropWindow.now = DateTime.now);
+
   testWidgets('Locked skin: buy, then apply', (tester) async {
     final container = await pumpStore(tester);
-    await openObsidian(tester);
+    await openMatcha(tester);
 
     expect(find.text('HOLD TO PREVIEW'), findsOneWidget);
     expect(find.text('APPLY'), findsNothing);
@@ -82,27 +86,27 @@ void main() {
     await tester.tap(find.text('APPLY'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(container.read(themeProvider), AppThemeMode.obsidian);
+    expect(container.read(themeProvider), AppThemeMode.matcha);
   });
 
   testWidgets('Hold to preview shows the calculator, release restores', (
     tester,
   ) async {
     final container = await pumpStore(tester);
-    await openObsidian(tester);
+    await openMatcha(tester);
 
     final hold = await tester.startGesture(
       tester.getCenter(find.text('HOLD TO PREVIEW')),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('PREVIEWING OBSIDIAN'), findsOneWidget);
+    expect(find.text('PREVIEWING MATCHA'), findsOneWidget);
     expect(find.text('7'), findsWidgets); // keypad is on screen
 
     await hold.up();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('PREVIEWING OBSIDIAN'), findsNothing);
+    expect(find.text('PREVIEWING MATCHA'), findsNothing);
     expect(container.read(themeProvider), AppThemeMode.sunny);
   });
 
@@ -110,11 +114,11 @@ void main() {
     tester,
   ) async {
     await pumpStore(tester);
-    expect(find.text(r'$0.99'), findsNWidgets(5));
+    expect(find.text(r'$0.99'), findsNWidgets(3));
     // The card itself carries no price or buy button, only the saving:
-    // $19.88 singly against $6.99.
+    // $13.92 singly against $6.99.
     expect(find.text(r'$6.99'), findsNothing);
-    expect(find.text('64% OFF'), findsOneWidget);
+    expect(find.text('49% OFF'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('bundle-card')));
     await tester.pump();
@@ -122,11 +126,11 @@ void main() {
     expect(find.text('EVERYTHING BUNDLE'), findsOneWidget);
 
     // The sum that sells it, in the store's own money.
-    expect(find.text('64% OFF'), findsNWidgets(2));
-    expect(find.text(r'$4.95'), findsOneWidget); // 5 skins
-    expect(find.text(r'$14.93'), findsOneWidget); // 7 materials
-    expect(find.text(r'$19.88'), findsOneWidget);
-    expect(find.text(r'You save $12.89'), findsOneWidget);
+    expect(find.text('49% OFF'), findsNWidgets(2));
+    expect(find.text(r'$2.97'), findsOneWidget); // 3 skins
+    expect(find.text(r'$10.95'), findsOneWidget); // 5 materials
+    expect(find.text(r'$13.92'), findsOneWidget);
+    expect(find.text(r'You save $6.93'), findsOneWidget);
 
     await tester.tap(find.text('GET EVERYTHING'));
     await tester.pump(const Duration(milliseconds: 50));
@@ -137,7 +141,7 @@ void main() {
     expect(find.text(r'$0.99'), findsNothing);
     expect(find.text(r'$1.99'), findsNothing);
     // 5 skins + 7 materials + the sheet
-    expect(find.text('OWNED'), findsNWidgets(13));
+    expect(find.text('OWNED'), findsNWidgets(9));
   });
 
   testWidgets('what is owned steps aside under YOURS', (tester) async {
@@ -147,18 +151,18 @@ void main() {
         PurchaseState(
           loaded: true,
           prices: allPriced,
-          owned: const {'theme_velvet', 'material_clay'},
+          owned: const {'theme_velvet', 'material_chrome'},
         ),
       ),
     );
     expect(find.text('YOURS'), findsOneWidget);
     expect(find.text('OWNED'), findsNWidgets(2));
-    expect(find.text('BDT 120.00'), findsNWidgets(10));
+    expect(find.text('BDT 120.00'), findsNWidgets(6));
     // Below everything still for sale.
     final yours = tester.getTopLeft(find.text('YOURS')).dy;
     expect(tester.getTopLeft(find.text('VELVET')).dy, greaterThan(yours));
-    expect(tester.getTopLeft(find.text('CLAY')).dy, greaterThan(yours));
-    expect(tester.getTopLeft(find.text('OBSIDIAN')).dy, lessThan(yours));
+    expect(tester.getTopLeft(find.text('CHROME')).dy, greaterThan(yours));
+    expect(tester.getTopLeft(find.text('MATCHA')).dy, lessThan(yours));
   });
 
   testWidgets('nothing owned: no YOURS section', (tester) async {
@@ -172,11 +176,14 @@ void main() {
     ) async {
       final store = FixedStore(const PurchaseState(loaded: true));
       await pumpStore(tester, store: store);
-      // Still on show, each with a lock: 5 skins + 7 materials.
-      expect(find.text('SOON'), findsNWidgets(12));
-      expect(find.byIcon(Icons.lock_rounded), findsNWidgets(12));
+      // Still on show, each with a lock: 5 skins + 7 materials + 2 drops.
+      expect(find.text('SOON'), findsNWidgets(8));
+      // The drops wait for their date instead.
+      expect(find.text('FROM 27 OCT'), findsNWidgets(2));
+      expect(find.byIcon(Icons.lock_rounded), findsNWidgets(10));
+      expect(find.byKey(const ValueKey('limited-mark')), findsNWidgets(2));
 
-      await openObsidian(tester);
+      await openMatcha(tester);
       expect(find.text('HOLD TO PREVIEW'), findsOneWidget);
       expect(find.textContaining('Not available yet'), findsOneWidget);
 
@@ -191,9 +198,9 @@ void main() {
         const PurchaseState(loaded: true, checking: true),
       );
       await pumpStore(tester, store: store);
-      expect(find.text('...'), findsNWidgets(12));
+      expect(find.text('...'), findsNWidgets(8));
 
-      await openObsidian(tester);
+      await openMatcha(tester);
       await tester.tap(find.text('...').last);
       await tester.pump(const Duration(milliseconds: 50));
       expect(store.buys, 0);
@@ -205,7 +212,7 @@ void main() {
         tester,
         store: FixedStore(PurchaseState(loaded: true, prices: allPriced)),
       );
-      expect(find.text('BDT 120.00'), findsNWidgets(12));
+      expect(find.text('BDT 120.00'), findsNWidgets(8));
       expect(find.text(r'$0.99'), findsNothing);
     });
 
@@ -216,13 +223,13 @@ void main() {
         PurchaseState(
           loaded: true,
           prices: allPriced,
-          pending: const {'theme_obsidian'},
+          pending: const {'theme_matcha'},
         ),
       );
       await pumpStore(tester, store: store);
       expect(find.text('PENDING'), findsOneWidget);
 
-      await openObsidian(tester);
+      await openMatcha(tester);
       expect(find.textContaining('Payment pending'), findsOneWidget);
       await tester.tap(find.text('PENDING').last);
       await tester.pump(const Duration(milliseconds: 50));
@@ -234,7 +241,7 @@ void main() {
     ) async {
       final store = FixedStore(PurchaseState(loaded: true, prices: allPriced));
       await pumpStore(tester, store: store);
-      await openObsidian(tester);
+      await openMatcha(tester);
 
       await tester.tap(find.text('BDT 120.00').last);
       await tester.pump(const Duration(milliseconds: 50));
@@ -250,7 +257,7 @@ void main() {
         outcome: BuyOutcome.cancelled,
       );
       await pumpStore(tester, store: store);
-      await openObsidian(tester);
+      await openMatcha(tester);
 
       await tester.tap(find.text('BDT 120.00').last);
       await tester.pump(const Duration(milliseconds: 50));
@@ -258,7 +265,7 @@ void main() {
       expect(store.buys, 1);
       expect(find.textContaining('did not go through'), findsNothing);
       // Still for sale: 12 cards and the sheet.
-      expect(find.text('BDT 120.00'), findsNWidgets(13));
+      expect(find.text('BDT 120.00'), findsNWidgets(9));
     });
 
     testWidgets('the bundle is not sold before Play has it either', (
@@ -283,7 +290,7 @@ void main() {
         PurchaseState(
           loaded: true,
           prices: allPriced,
-          amounts: {kAllThemesProductId: 6.99, 'theme_obsidian': 0.99},
+          amounts: {kAllThemesProductId: 6.99, 'theme_matcha': 0.99},
         ),
       );
       await pumpStore(tester, store: store);
@@ -299,7 +306,7 @@ void main() {
       tester,
     ) async {
       await pumpStore(tester);
-      await openObsidian(tester);
+      await openMatcha(tester);
       expect(find.text('UNLOCK'), findsOneWidget);
 
       await tester.tap(find.text(r'Or everything for $6.99'));
@@ -345,7 +352,7 @@ void main() {
       Set<String> owned,
     ) async {
       SharedPreferences.setMockInitialValues({
-        'settings_theme_mode': AppThemeMode.obsidian.index,
+        'settings_theme_mode': AppThemeMode.matcha.index,
       });
       final container = ProviderContainer(
         overrides: [
@@ -367,13 +374,13 @@ void main() {
     }
 
     testWidgets('stays on while it is owned', (tester) async {
-      final container = await pumpApp(tester, {'theme_obsidian'});
-      expect(container.read(themeProvider), AppThemeMode.obsidian);
+      final container = await pumpApp(tester, {'theme_matcha'});
+      expect(container.read(themeProvider), AppThemeMode.matcha);
     });
 
     testWidgets('stays on with the bundle', (tester) async {
       final container = await pumpApp(tester, {kAllThemesProductId});
-      expect(container.read(themeProvider), AppThemeMode.obsidian);
+      expect(container.read(themeProvider), AppThemeMode.matcha);
     });
 
     testWidgets('goes back to Marigold once it is no longer owned', (

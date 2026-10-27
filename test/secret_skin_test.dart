@@ -269,12 +269,12 @@ void main() {
       tester,
     ) async {
       await pumpSettings(tester, {
-        'settings_owned_products': ['theme_velvet', 'material_clay'],
+        'settings_owned_products': ['theme_velvet', 'material_chrome'],
       });
       expect(before(tester, 'BLUEPRINT', 'VELVET'), isTrue);
-      expect(before(tester, 'VELVET', 'CLAY'), isTrue);
+      expect(before(tester, 'VELVET', 'CHROME'), isTrue);
       // Not owned: only in the store.
-      for (final locked in ['OBSIDIAN', 'SYNTHWAVE', 'MATCHA', 'FROST']) {
+      for (final locked in ['MATCHA', 'SYNTHWAVE', 'MATCHA', 'FROST']) {
         expect(find.text(locked), findsNothing);
       }
       expect(find.byIcon(Icons.lock_rounded), findsNothing);

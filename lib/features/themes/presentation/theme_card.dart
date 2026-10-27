@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
+import 'package:popcalc/features/calculator/presentation/widgets/drop_backdrop.dart';
+import 'purchase_feedback.dart';
 
 import 'package:popcalc/features/calculator/presentation/widgets/backspace_icon.dart';
 import 'package:popcalc/features/calculator/presentation/widgets/extruded_number.dart';
@@ -104,6 +106,7 @@ class SkinPhone extends StatelessWidget {
             ),
             child: Stack(
               children: [
+                DropBackdrop(colors: c),
                 if (c.finish == SkinFinish.wireframe)
                   Positioned.fill(
                     child: GridPaper(
@@ -297,14 +300,44 @@ class SkinCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SkinSwatch(
-            skin: skin,
-            radius: 24.0,
-            aspectRatio: swatchAspect,
-            borderColor: active
-                ? colors.accent
-                : colors.ink.withValues(alpha: 0.1),
-            borderWidth: active ? 2.5 : 1.0,
+          Stack(
+            children: [
+              SkinSwatch(
+                skin: skin,
+                radius: 24.0,
+                aspectRatio: swatchAspect,
+                borderColor: active
+                    ? colors.accent
+                    : colors.ink.withValues(alpha: 0.1),
+                borderWidth: active ? 2.5 : 1.0,
+              ),
+              if (skin.drop != null)
+                Positioned(
+                  top: 10.0,
+                  left: 10.0,
+                  child: Container(
+                    key: const ValueKey('limited-mark'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 3.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: skin.colors.accent,
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    child: Text(
+                      dropMark,
+                      style: TextStyle(
+                        fontFamily: 'BebasNeue',
+                        fontSize: 11.0,
+                        letterSpacing: 1.2,
+                        height: 1.1,
+                        color: skin.colors.bg,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(4.0, 10.0, 2.0, 0.0),

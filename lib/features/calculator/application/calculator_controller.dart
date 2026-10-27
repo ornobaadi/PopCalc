@@ -10,41 +10,44 @@ import 'package:popcalc/core/engine/token.dart';
 import 'package:popcalc/core/storage/history_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/skin_catalog.dart';
+
 import 'calculator_state.dart';
 
 final calculatorProvider =
     StateNotifierProvider<CalculatorController, CalculatorState>((ref) {
-  final controller = CalculatorController(
-    onHistoryAdded: (expr, res) {
-      ref.read(historyProvider.notifier).addEntry(expr, res);
-    },
-    // The hunt's first note: "never do it" means dividing by zero.
-    onDivideByZero: () {
-      final settings = ref.read(settingsProvider);
-      if (settings.huntDone || settings.huntStep != 0) return false;
-      ref.read(settingsProvider.notifier).advanceHunt(0);
-      return true;
-    },
-    // The hunt's third note: "a guy named Tan tried to do a 90".
-    onTanUndefined: () {
-      final settings = ref.read(settingsProvider);
-      if (settings.huntDone || settings.huntStep != 2) return false;
-      ref.read(settingsProvider.notifier).advanceHunt(2);
-      return true;
-    },
-    // The fourth: "some numbers are too big to print".
-    onOverflow: () {
-      final settings = ref.read(settingsProvider);
-      if (settings.huntDone || settings.huntStep != 3) return false;
-      ref.read(settingsProvider.notifier).advanceHunt(3);
-      return true;
-    },
-    angleUnit: () => ref.read(settingsProvider).angleUnit,
-  );
-  ref.listen(settingsProvider.select((s) => s.angleUnit),
-      (_, _) => controller.refreshPreview());
-  return controller;
-});
+      final controller = CalculatorController(
+        onHistoryAdded: (expr, res) {
+          ref.read(historyProvider.notifier).addEntry(expr, res);
+        },
+        // The hunt's first note: "never do it" means dividing by zero.
+        onDivideByZero: () {
+          final settings = ref.read(settingsProvider);
+          if (settings.huntDone || settings.huntStep != 0) return false;
+          ref.read(settingsProvider.notifier).advanceHunt(0);
+          return true;
+        },
+        // The hunt's third note: "a guy named Tan tried to do a 90".
+        onTanUndefined: () {
+          final settings = ref.read(settingsProvider);
+          if (settings.huntDone || settings.huntStep != 2) return false;
+          ref.read(settingsProvider.notifier).advanceHunt(2);
+          return true;
+        },
+        // The fourth: "some numbers are too big to print".
+        onOverflow: () {
+          final settings = ref.read(settingsProvider);
+          if (settings.huntDone || settings.huntStep != 3) return false;
+          ref.read(settingsProvider.notifier).advanceHunt(3);
+          return true;
+        },
+        angleUnit: () => ref.read(settingsProvider).angleUnit,
+      );
+      ref.listen(
+        settingsProvider.select((s) => s.angleUnit),
+        (_, _) => controller.refreshPreview(),
+      );
+      return controller;
+    });
 
 class CalculatorController extends StateNotifier<CalculatorState> {
   final void Function(String expression, String result)? onHistoryAdded;
@@ -69,9 +72,8 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     this.onTanUndefined,
     this.onOverflow,
     Random? random,
-  })
-      : _random = random ?? Random(),
-        super(const CalculatorState());
+  }) : _random = random ?? Random(),
+       super(const CalculatorState());
 
   /// Picks which of an error's lines to show.
   final Random _random;
@@ -225,7 +227,8 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       if (lastNum.type == TokenType.number) {
         percentDisplay = '${NumberFormatter.formatInputNumber(lastNum.text)}%';
       }
-    } else if (allTokens.isNotEmpty && allTokens.last.type == TokenType.percent) {
+    } else if (allTokens.isNotEmpty &&
+        allTokens.last.type == TokenType.percent) {
       percentDisplay = '%';
     }
 
@@ -312,34 +315,38 @@ class CalculatorController extends StateNotifier<CalculatorState> {
   void onRightParen() => _applyAdvanced((e) => e.appendRightParen());
 
   void onConstant(String symbol) => _applyAdvanced(
-      (e) => e.appendConstant(symbol),
-      continueFromResult: false);
+    (e) => e.appendConstant(symbol),
+    continueFromResult: false,
+  );
 
   void onFactorial() => _applyAdvanced((e) => e.appendFactorial());
 
   /// x²: "^2" on the current operand.
   void onSquare() => _applyAdvanced((e) {
-        final withPower = e.appendOperator(TokenType.power, '^');
-        final all = withPower.getAllTokens();
-        return all.isNotEmpty && all.last.type == TokenType.power
-            ? withPower.appendDigit('2')
-            : e;
-      });
+    final withPower = e.appendOperator(TokenType.power, '^');
+    final all = withPower.getAllTokens();
+    return all.isNotEmpty && all.last.type == TokenType.power
+        ? withPower.appendDigit('2')
+        : e;
+  });
 
   /// eˣ: "e^".
   void onExpE() => _applyAdvanced(
-      (e) => e.appendConstant('e').appendOperator(TokenType.power, '^'),
-      continueFromResult: false);
+    (e) => e.appendConstant('e').appendOperator(TokenType.power, '^'),
+    continueFromResult: false,
+  );
 
   /// 10ˣ: "10^", multiplying whatever came before.
-  void onExp10() => _applyAdvanced((e) => e.appendPowerOf('10'),
-      continueFromResult: false);
+  void onExp10() =>
+      _applyAdvanced((e) => e.appendPowerOf('10'), continueFromResult: false);
 
   /// Shared path for advanced keys. [continueFromResult] decides whether,
   /// after "=", the key applies to the answer (like an operator) or starts
   /// fresh (like a digit).
-  void _applyAdvanced(Expression Function(Expression) edit,
-      {bool continueFromResult = true}) {
+  void _applyAdvanced(
+    Expression Function(Expression) edit, {
+    bool continueFromResult = true,
+  }) {
     if (state.editingTokenIndex != null) deselectToken();
 
     var expr = state.expression;
@@ -353,7 +360,8 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     final preview = _computePreview(newExpr);
     final shown = newExpr.currentNumber.isNotEmpty
         ? NumberFormatter.formatInputNumber(newExpr.currentNumber)
-        : _tryEvaluate(newExpr) ?? (state.justEvaluated ? '0' : state.resultText);
+        : _tryEvaluate(newExpr) ??
+              (state.justEvaluated ? '0' : state.resultText);
 
     state = state.copyWith(
       expression: newExpr,
@@ -399,29 +407,86 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     int i = 0;
     while (i < clean.length) {
       final ch = clean[i];
-      if (ch == ' ') { i++; continue; }
-      if (ch == '+') { tokens.add(const Token(TokenType.plus, '+')); i++; continue; }
-      if (ch == '−' || ch == '-') { tokens.add(const Token(TokenType.minus, '−')); i++; continue; }
-      if (ch == '×' || ch == '*') { tokens.add(const Token(TokenType.multiply, '×')); i++; continue; }
-      if (ch == '÷' || ch == '/') { tokens.add(const Token(TokenType.divide, '÷')); i++; continue; }
-      if (ch == '%') { tokens.add(const Token(TokenType.percent, '%')); i++; continue; }
-      if (ch == '^') { tokens.add(const Token(TokenType.power, '^')); i++; continue; }
-      if (ch == '(') { tokens.add(const Token(TokenType.leftParen, '(')); i++; continue; }
-      if (ch == ')') { tokens.add(const Token(TokenType.rightParen, ')')); i++; continue; }
-      if (ch == '!') { tokens.add(const Token(TokenType.factorial, '!')); i++; continue; }
-      if (ch == 'π' || ch == 'e') { tokens.add(Token(TokenType.constant, ch)); i++; continue; }
-      final fn = _functionNames.where((f) => clean.startsWith(f, i)).firstOrNull;
-      if (fn != null) { tokens.add(Token(TokenType.function, fn)); i += fn.length; continue; }
+      if (ch == ' ') {
+        i++;
+        continue;
+      }
+      if (ch == '+') {
+        tokens.add(const Token(TokenType.plus, '+'));
+        i++;
+        continue;
+      }
+      if (ch == '−' || ch == '-') {
+        tokens.add(const Token(TokenType.minus, '−'));
+        i++;
+        continue;
+      }
+      if (ch == '×' || ch == '*') {
+        tokens.add(const Token(TokenType.multiply, '×'));
+        i++;
+        continue;
+      }
+      if (ch == '÷' || ch == '/') {
+        tokens.add(const Token(TokenType.divide, '÷'));
+        i++;
+        continue;
+      }
+      if (ch == '%') {
+        tokens.add(const Token(TokenType.percent, '%'));
+        i++;
+        continue;
+      }
+      if (ch == '^') {
+        tokens.add(const Token(TokenType.power, '^'));
+        i++;
+        continue;
+      }
+      if (ch == '(') {
+        tokens.add(const Token(TokenType.leftParen, '('));
+        i++;
+        continue;
+      }
+      if (ch == ')') {
+        tokens.add(const Token(TokenType.rightParen, ')'));
+        i++;
+        continue;
+      }
+      if (ch == '!') {
+        tokens.add(const Token(TokenType.factorial, '!'));
+        i++;
+        continue;
+      }
+      if (ch == 'π' || ch == 'e') {
+        tokens.add(Token(TokenType.constant, ch));
+        i++;
+        continue;
+      }
+      final fn = _functionNames
+          .where((f) => clean.startsWith(f, i))
+          .firstOrNull;
+      if (fn != null) {
+        tokens.add(Token(TokenType.function, fn));
+        i += fn.length;
+        continue;
+      }
       // Number: collect digits, commas (thousands separator), dots
       if (RegExp(r'[0-9.,\-]').hasMatch(ch)) {
         final start = i;
         // 'e' keeps scientific results (e.g. "1.5e20") in one token, but
-        // only when a digit follows; otherwise it is the constant e ("2e").
+        // only when a digit (or a minus and a digit: "1.2e-15") follows;
+        // otherwise it is the constant e ("2e").
+        bool digitAt(int j) =>
+            j < clean.length && RegExp(r'[0-9]').hasMatch(clean[j]);
         while (i < clean.length &&
             (RegExp(r'[0-9.,]').hasMatch(clean[i]) ||
                 (clean[i] == 'e' &&
-                    i + 1 < clean.length &&
-                    RegExp(r'[0-9]').hasMatch(clean[i + 1])))) { i++; }
+                    (digitAt(i + 1) ||
+                        (i + 1 < clean.length &&
+                            clean[i + 1] == '-' &&
+                            digitAt(i + 2)))) ||
+                (clean[i] == '-' && i > start && clean[i - 1] == 'e'))) {
+          i++;
+        }
         final raw = clean.substring(start, i).replaceAll(',', '');
         tokens.add(Token(TokenType.number, raw));
         continue;
@@ -449,8 +514,16 @@ class CalculatorController extends StateNotifier<CalculatorState> {
 
   /// Function openers as they appear in expression strings.
   static const _functionNames = [
-    'sin⁻¹(', 'cos⁻¹(', 'tan⁻¹(', 'sin(', 'cos(', 'tan(',
-    'ln(', 'log(', '√(', '∛(',
+    'sin⁻¹(',
+    'cos⁻¹(',
+    'tan⁻¹(',
+    'sin(',
+    'cos(',
+    'tan(',
+    'ln(',
+    'log(',
+    '√(',
+    '∛(',
   ];
 
   String? _tryEvaluate(Expression expr) {
@@ -704,8 +777,8 @@ class CalculatorController extends StateNotifier<CalculatorState> {
       final opToken = Token(op, symbol);
       final newExpr =
           after + 1 < allTokens.length && allTokens[after + 1].isOperator
-              ? state.expression.replaceTokenAt(after + 1, opToken)
-              : state.expression.insertTokenAfter(after, opToken);
+          ? state.expression.replaceTokenAt(after + 1, opToken)
+          : state.expression.insertTokenAfter(after, opToken);
       final preview = _computePreview(newExpr);
 
       state = state.copyWith(
@@ -736,7 +809,10 @@ class CalculatorController extends StateNotifier<CalculatorState> {
     if (idx + 1 < allTokens.length && allTokens[idx + 1].isPercent) return;
 
     // Number token: append percent after it
-    final newExpr = state.expression.insertTokenAfter(idx, const Token(TokenType.percent, '%'));
+    final newExpr = state.expression.insertTokenAfter(
+      idx,
+      const Token(TokenType.percent, '%'),
+    );
     final preview = _computePreview(newExpr);
 
     state = state.copyWith(
@@ -852,7 +928,9 @@ class CalculatorController extends StateNotifier<CalculatorState> {
   String _displayFor(List<Token> tokens) {
     if (tokens.isEmpty) return '0';
     final last = tokens.last;
-    return last.isNumber ? NumberFormatter.formatInputNumber(last.text) : last.text;
+    return last.isNumber
+        ? NumberFormatter.formatInputNumber(last.text)
+        : last.text;
   }
 
   String? _computePreview(Expression expr) {

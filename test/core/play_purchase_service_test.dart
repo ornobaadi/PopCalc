@@ -10,8 +10,8 @@ import 'package:popcalc/features/themes/presentation/purchase_feedback.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _savedKey = 'purchases_owned';
-const _obsidian = 'theme_obsidian';
-const _clay = 'material_clay';
+const _matcha = 'theme_matcha';
+const _chrome = 'material_chrome';
 
 ProductDetails _product(String id, String price) => ProductDetails(
   id: id,
@@ -131,9 +131,9 @@ void main() {
         expect(state.loaded, isTrue);
         expect(state.checking, isFalse);
         expect(state.prices, isEmpty);
-        expect(state.canBuy(_obsidian), isFalse);
+        expect(state.canBuy(_matcha), isFalse);
         expect(
-          await container.read(purchasesProvider.notifier).buy(_obsidian),
+          await container.read(purchasesProvider.notifier).buy(_matcha),
           BuyOutcome.unavailable,
         );
         expect(play.launched, isEmpty);
@@ -155,12 +155,12 @@ void main() {
 
   test('prices are whatever Play says, only for products on sale', () async {
     final play = _Play()
-      ..onSale = [_product(_obsidian, 'BDT 120.00'), _product(_clay, '€1,99')];
+      ..onSale = [_product(_matcha, 'BDT 120.00'), _product(_chrome, '€1,99')];
     final container = await _start(play);
     final state = container.read(purchasesProvider);
 
-    expect(state.prices, {_obsidian: 'BDT 120.00', _clay: '€1,99'});
-    expect(state.canBuy(_obsidian), isTrue);
+    expect(state.prices, {_matcha: 'BDT 120.00', _chrome: '€1,99'});
+    expect(state.canBuy(_matcha), isTrue);
     expect(state.canBuy(kAllThemesProductId), isFalse);
   });
 
@@ -169,20 +169,20 @@ void main() {
     late ProviderContainer container;
 
     setUp(() async {
-      play = _Play()..onSale = [_product(_obsidian, r'$0.99')];
+      play = _Play()..onSale = [_product(_matcha, r'$0.99')];
       container = await _start(play);
     });
 
     Future<BuyOutcome> buy() =>
-        container.read(purchasesProvider.notifier).buy(_obsidian);
+        container.read(purchasesProvider.notifier).buy(_matcha);
 
     test('a purchase unlocks, is acknowledged and is saved', () async {
       play.onLaunch = (p) => [_purchase(p.id, PurchaseStatus.purchased)];
 
       expect(await buy(), BuyOutcome.purchased);
-      expect(container.read(entitlementProvider), {_obsidian});
-      expect(play.acknowledged, [_obsidian]);
-      expect(await _savedNow(), [_obsidian]);
+      expect(container.read(entitlementProvider), {_matcha});
+      expect(play.acknowledged, [_matcha]);
+      expect(await _savedNow(), [_matcha]);
     });
 
     test('closing the sheet changes nothing', () async {
@@ -216,7 +216,7 @@ void main() {
       };
 
       expect(await buy(), BuyOutcome.purchased);
-      expect(container.read(entitlementProvider), {_obsidian});
+      expect(container.read(entitlementProvider), {_matcha});
     });
 
     test('a pending payment stays locked until Play confirms it', () async {
@@ -225,17 +225,17 @@ void main() {
       expect(await buy(), BuyOutcome.pending);
       var state = container.read(purchasesProvider);
       expect(state.owned, isEmpty);
-      expect(state.pending, {_obsidian});
-      expect(state.canBuy(_obsidian), isFalse);
+      expect(state.pending, {_matcha});
+      expect(state.canBuy(_matcha), isFalse);
       // Acknowledging before the money arrives would be refused by Play.
       expect(play.acknowledged, isEmpty);
 
-      play.report([_purchase(_obsidian, PurchaseStatus.purchased)]);
+      play.report([_purchase(_matcha, PurchaseStatus.purchased)]);
       await _settle();
       state = container.read(purchasesProvider);
-      expect(state.owned, {_obsidian});
+      expect(state.owned, {_matcha});
       expect(state.pending, isEmpty);
-      expect(play.acknowledged, [_obsidian]);
+      expect(play.acknowledged, [_matcha]);
     });
 
     test(
@@ -253,10 +253,10 @@ void main() {
   group('checking with the Play account on start', () {
     test('saved purchases unlock at once and survive being offline', () async {
       final play = _Play()..account = null;
-      final container = await _start(play, saved: [_obsidian]);
+      final container = await _start(play, saved: [_matcha]);
 
-      expect(container.read(entitlementProvider), {_obsidian});
-      expect(await _savedNow(), [_obsidian]);
+      expect(container.read(entitlementProvider), {_matcha});
+      expect(await _savedNow(), [_matcha]);
     });
 
     test('saved purchases survive a store that is not available', () async {
@@ -268,7 +268,7 @@ void main() {
 
     test('a refunded purchase is taken back', () async {
       final play = _Play()..account = [];
-      final container = await _start(play, saved: [_obsidian]);
+      final container = await _start(play, saved: [_matcha]);
 
       expect(container.read(entitlementProvider), isEmpty);
       expect(await _savedNow(), isEmpty);
@@ -294,22 +294,22 @@ void main() {
       'a purchase that was never acknowledged is acknowledged now',
       () async {
         final play = _Play()
-          ..account = [_purchase(_clay, PurchaseStatus.purchased)];
+          ..account = [_purchase(_chrome, PurchaseStatus.purchased)];
         await _start(play);
 
-        expect(play.acknowledged, [_clay]);
+        expect(play.acknowledged, [_chrome]);
       },
     );
 
     test('a payment still pending is neither owned nor acknowledged', () async {
       final play = _Play()
-        ..onSale = [_product(_clay, r'$1.99')]
-        ..account = [_purchase(_clay, PurchaseStatus.pending)];
+        ..onSale = [_product(_chrome, r'$1.99')]
+        ..account = [_purchase(_chrome, PurchaseStatus.pending)];
       final container = await _start(play);
       final state = container.read(purchasesProvider);
 
       expect(state.owned, isEmpty);
-      expect(state.pending, {_clay});
+      expect(state.pending, {_chrome});
       expect(play.acknowledged, isEmpty);
     });
   });
@@ -320,14 +320,14 @@ void main() {
     final service = container.read(purchasesProvider.notifier);
 
     play.account = [
-      _purchase(_obsidian, PurchaseStatus.purchased, acknowledged: true),
+      _purchase(_matcha, PurchaseStatus.purchased, acknowledged: true),
     ];
     expect(await service.refresh(), isTrue);
-    expect(container.read(entitlementProvider), {_obsidian});
+    expect(container.read(entitlementProvider), {_matcha});
 
     play.account = null;
     expect(await service.refresh(), isFalse);
-    expect(container.read(entitlementProvider), {_obsidian});
+    expect(container.read(entitlementProvider), {_matcha});
   });
 
   group('bundle saving', () {
@@ -337,18 +337,18 @@ void main() {
     };
 
     test('is the whole percent off buying everything singly', () {
-      // 12 items at 10 each = 120; the bundle at 40 is two thirds off.
+      // 8 items at 10 each = 80; the bundle at 40 is half off.
       final state = PurchaseState(
         amounts: {...singles(10.0), kAllThemesProductId: 40.0},
       );
-      expect(state.bundleSaving, 66);
+      expect(state.bundleSaving, 50);
     });
 
     test('is not claimed while any price is missing', () {
       expect(const PurchaseState().bundleSaving, isNull);
       expect(PurchaseState(amounts: singles(10.0)).bundleSaving, isNull);
       final partial = {...singles(10.0), kAllThemesProductId: 40.0}
-        ..remove('material_clay');
+        ..remove('material_chrome');
       expect(PurchaseState(amounts: partial).bundleSaving, isNull);
     });
 
@@ -360,9 +360,9 @@ void main() {
     });
 
     test('uses the numbers Play gives', () async {
-      final play = _Play()..onSale = [_product(_obsidian, 'BDT 60.00')];
+      final play = _Play()..onSale = [_product(_matcha, 'BDT 60.00')];
       final container = await _start(play);
-      expect(container.read(purchasesProvider).amounts, {_obsidian: 1.0});
+      expect(container.read(purchasesProvider).amounts, {_matcha: 1.0});
     });
   });
 
@@ -406,6 +406,6 @@ void main() {
 
   test('every product id is unique and the bundle is among them', () {
     expect(kProductIds, contains(kAllThemesProductId));
-    expect(kProductIds.length, kBundleItems.length + 1);
+    expect(kProductIds.length, kBundleItems.length + kDrops.length + 1);
   });
 }

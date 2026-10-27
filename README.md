@@ -6,7 +6,7 @@
 
 PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, musical sound effects, eight hand-crafted skins, seven materials and one secret skin you have to earn.
 
-- Version: 1.5.1
+- Version: 1.5.5
 - Platform: Android
 - Built with: Flutter
 - 100% offline, no ads, no account, zero data collected
@@ -79,7 +79,10 @@ PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, mus
 ### Scientific & Converter
 - One switch in Settings adds two buttons to the top bar
 - **Scientific:** powers, roots, brackets, trig (DEG/RAD), logs, π, e and factorial, in a tray that folds away. Switch between simple and scientific with one tap
-- **Unit converter:** ten categories with exact factors, on its own screen. Swipe through units and categories like a slider
+- **Unit converter:** ten categories with exact factors, on its own screen. Swipe through units and categories like a slider. Data units show both families side by side: decimal (1 GB = 1000 MB) and binary (1 GiB = 1024 MiB), plus bits for internet speeds
+
+### Quick Settings tile
+- Add a PopCalc tile to the pull-down Quick Settings panel (Settings → Quick Settings Tile) and open the calculator from anywhere with one tap
 
 ### Make it yours
 - Eight home-screen icons to choose from in Settings, free for everyone (the official logo stays the default)
@@ -102,13 +105,11 @@ Each skin restyles the whole app: numerals, keys, sheets, celebration and status
 | Charcoal | Dark, white numerals, amber operators | `#141414` | `#FFA000` | Free |
 | Marigold | Sunny gold and vermilion | `#FFAE00` | `#D61800` | Free |
 | Blueprint | Cyanotype paper, hollow line-drawn numerals | `#0B3C8C` | `#FFD23F` | Free |
-| Obsidian | Black lacquer and brushed gold | `#0B0B0C` | `#E8C877` | Pro |
-| Synthwave | Retro-80s neon | `#120A2A` | `#00E5FF` | Pro |
 | Matcha | Sage paper, ink and terracotta | `#DDE4D0` | `#A8431F` | Pro |
 | Frost | Nordic ice, navy numerals | `#E8EFF5` | `#BF360C` | Pro |
 | Velvet | Deep wine, cream and rose gold | `#3A0A1B` | `#E8A87C` | Pro |
 
-Pro skins and the seven materials (Clay, Chrome, Glass, Wood, Candy, Neon, Mechanical: a look with its own sound and haptics) are one-time purchases through Google Play, singly or all together in the Everything bundle. Nothing needed to do math will ever be locked.
+Pro skins and the five materials (Chrome, Glass, Wood, Neon, Mechanical: a look with its own sound and haptics) are one-time purchases through Google Play, singly or all together in the Everything bundle. Nothing needed to do math will ever be locked.
 
 ---
 

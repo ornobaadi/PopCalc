@@ -103,6 +103,10 @@ class SkinInfo {
   /// Not sold and not shown until it has been found (see [kSecretSkins]).
   final bool secret;
 
+  /// Set for a limited drop (see [kDrops]): only on sale inside it, never in
+  /// the bundle, and kept for good by whoever bought it.
+  final DropWindow? drop;
+
   const SkinInfo({
     required this.mode,
     required this.label,
@@ -112,6 +116,7 @@ class SkinInfo {
     this.productId,
     this.feels = const [],
     this.secret = false,
+    this.drop,
   });
 
   bool get premium => productId != null;
@@ -149,22 +154,6 @@ const kSkins = <SkinInfo>[
     modelCode: 'BP-03',
   ),
   SkinInfo(
-    mode: AppThemeMode.obsidian,
-    label: 'OBSIDIAN',
-    tagline: 'Black lacquer, brushed gold.',
-    description: 'A luxury-watch face for your numbers. Gold on deep black.',
-    modelCode: 'OBS-04',
-    productId: 'theme_obsidian',
-  ),
-  SkinInfo(
-    mode: AppThemeMode.synthwave,
-    label: 'SYNTHWAVE',
-    tagline: 'Neon night drive.',
-    description: 'Midnight violet, electric cyan and a hot-magenta glow.',
-    modelCode: 'SYN-05',
-    productId: 'theme_synthwave',
-  ),
-  SkinInfo(
     mode: AppThemeMode.matcha,
     label: 'MATCHA',
     tagline: 'Calm as a tea house.',
@@ -193,25 +182,6 @@ const kSkins = <SkinInfo>[
 /// Materials: exclusive sets of look, sound and haptics. Each is sold on its
 /// own, and the everything bundle includes them all.
 const kMaterials = <SkinInfo>[
-  SkinInfo(
-    mode: AppThemeMode.clay,
-    label: 'CLAY',
-    tagline: 'Soft, warm, hand-pressed.',
-    description:
-        'Matte terracotta numerals on putty. Keys land with a damp thump '
-        'and a soft press under your thumb.',
-    modelCode: 'M-CLY',
-    productId: 'material_clay',
-    feels: [
-      MaterialFeel(
-        id: 'clay',
-        label: 'CLAY',
-        description: 'Damp thumps, soft presses',
-        soundFolder: 'clay',
-        haptics: HapticFeel.clay,
-      ),
-    ],
-  ),
   SkinInfo(
     mode: AppThemeMode.chrome,
     label: 'CHROME',
@@ -266,25 +236,6 @@ const kMaterials = <SkinInfo>[
         description: 'Woodblock knocks, firm raps',
         soundFolder: 'wood',
         haptics: HapticFeel.wood,
-      ),
-    ],
-  ),
-  SkinInfo(
-    mode: AppThemeMode.candy,
-    label: 'CANDY',
-    tagline: 'Glossy, sweet, a little bouncy.',
-    description:
-        'Hot-pink hard-candy numerals with a wet shine. Bouncy blips and '
-        'a springy press that pops back.',
-    modelCode: 'M-CDY',
-    productId: 'material_candy',
-    feels: [
-      MaterialFeel(
-        id: 'candy',
-        label: 'CANDY',
-        description: 'Bouncy blips, springy presses',
-        soundFolder: 'candy',
-        haptics: HapticFeel.candy,
       ),
     ],
   ),
@@ -355,6 +306,80 @@ const kSecretSkins = <SkinInfo>[
   ),
 ];
 
+/// When a limited drop is on sale, as UTC calendar days: from the start of
+/// [from] until the start of [until]. Kept fixed once announced, or
+/// "limited" stops meaning anything.
+class DropWindow {
+  final (int, int, int) from;
+  final (int, int, int) until;
+
+  const DropWindow({required this.from, required this.until});
+
+  static DateTime _day((int, int, int) d) => DateTime.utc(d.$1, d.$2, d.$3);
+  DateTime get start => _day(from);
+  DateTime get end => _day(until);
+
+  /// Swapped by tests to move the calendar.
+  static DateTime Function() now = DateTime.now;
+
+  bool get upcoming => now().isBefore(start);
+  bool get open => !upcoming && now().isBefore(end);
+  bool get over => !now().isBefore(end);
+
+  /// Whole days left on sale, counting a part day as one (0 once over).
+  int get daysLeft {
+    final left = end.difference(now().toUtc());
+    if (left.isNegative) return 0;
+    return (left.inHours / 24).ceil();
+  }
+}
+
+/// Limited drops: materials made for a moment (both open with the big
+/// December 2026 films) and sold only inside their [DropWindow]. Original
+/// looks and names, nothing borrowed from the films. Not in the bundle.
+const _dropWindow = DropWindow(from: (2026, 10, 27), until: (2027, 1, 11));
+
+const kDrops = <SkinInfo>[
+  SkinInfo(
+    mode: AppThemeMode.mirage,
+    label: 'MIRAGE',
+    tagline: 'Hold still. Listen.',
+    description:
+        'Sunlit sand over drifting dunes. Hold the sun, and see what rises.',
+    modelCode: 'LTD-MRG',
+    productId: 'drop_mirage',
+    drop: _dropWindow,
+    feels: [
+      MaterialFeel(
+        id: 'mirage',
+        label: 'MIRAGE',
+        description: 'Thumper drums, falling sand, a wailing choir',
+        soundFolder: 'mirage',
+        haptics: HapticFeel.mirage,
+      ),
+    ],
+  ),
+  SkinInfo(
+    mode: AppThemeMode.reckoning,
+    label: 'RECKONING',
+    tagline: 'Every number, the last one.',
+    description:
+        'Cracked iron over a doomsday clock. Hold the clock, and see what answers.',
+    modelCode: 'LTD-RCK',
+    productId: 'drop_reckoning',
+    drop: _dropWindow,
+    feels: [
+      MaterialFeel(
+        id: 'reckoning',
+        label: 'RECKONING',
+        description: 'Clock ticks, struck iron, brass and a tolling bell',
+        soundFolder: 'reckoning',
+        haptics: HapticFeel.reckoning,
+      ),
+    ],
+  ),
+];
+
 /// Everything the bundle unlocks, premium skins and materials alternating so
 /// the store carousel mixes the two.
 final List<SkinInfo> kBundleItems = () {
@@ -373,10 +398,12 @@ final List<SkinInfo> kBundleItems = () {
 final Set<String> kProductIds = {
   kAllThemesProductId,
   for (final skin in kBundleItems) skin.productId!,
+  for (final skin in kDrops) skin.productId!,
 };
 
 SkinInfo skinOf(AppThemeMode mode) => [
   ...kSkins,
   ...kMaterials,
   ...kSecretSkins,
+  ...kDrops,
 ].firstWhere((s) => s.mode == mode);

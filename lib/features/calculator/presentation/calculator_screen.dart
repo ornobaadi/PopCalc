@@ -19,6 +19,9 @@ import 'package:popcalc/features/converter/presentation/converter_screen.dart';
 import 'package:popcalc/features/history/presentation/history_sheet.dart';
 
 import 'widgets/celebration_burst.dart';
+import 'widgets/doom_incursion.dart';
+import 'widgets/drop_backdrop.dart';
+import 'widgets/sand_worm.dart';
 import 'widgets/expression_line.dart';
 import 'widgets/grain_overlay.dart';
 import 'widgets/ink_spill.dart';
@@ -39,6 +42,16 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
   /// When true, the result zone is in "edit/highlight" mode.
   /// The next digit press will replace the entire current number.
   bool _resultHighlighted = false;
+
+  /// Reckoning's hold-the-clock egg: its state, and whether a touch is part
+  /// of it (so the hero ignores the tap or long press the same touch makes).
+  final _warp = DoomWarp();
+  bool _warpBusy = false;
+
+  bool get _eggTouch => _warpBusy;
+
+  /// How far the screen is shaken right now (the eggs' rumbles).
+  final _shake = ValueNotifier<Offset>(Offset.zero);
 
   /// Whether the device may currently rotate (null until first decided).
   bool? _landscapeAllowed;
@@ -71,6 +84,8 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
     _pillTimer?.cancel();
     _punchlineTimer?.cancel();
     _reviewTimer?.cancel();
+    _warp.dispose();
+    _shake.dispose();
     super.dispose();
   }
 
@@ -188,16 +203,17 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
     // Keyed on the line (never the same twice running), so pressing = again
     // gets its own punchline too.
     ref.listen(
-        calculatorProvider
-            .select((s) => s.errorPunchline ? s.resultText : null), (_, line) {
-      _punchlineTimer?.cancel();
-      if (line != null) {
-        _punchlineTimer = Timer(
-          const Duration(seconds: 1),
-          AppSounds.thatsWhatSheSaid,
-        );
-      }
-    });
+      calculatorProvider.select((s) => s.errorPunchline ? s.resultText : null),
+      (_, line) {
+        _punchlineTimer?.cancel();
+        if (line != null) {
+          _punchlineTimer = Timer(
+            const Duration(seconds: 1),
+            AppSounds.thatsWhatSheSaid,
+          );
+        }
+      },
+    );
     // A good answer may earn Play's review card (see ReviewPrompter); any
     // later change, a key or an error, means the user is busy, so it waits.
     ref.listen(calculatorProvider, (prev, next) {
@@ -326,6 +342,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
                 isZero: calcState.isZeroState,
                 celebrationId: calcState.celebrationId,
                 onTap: () {
+                  if (_eggTouch) return;
                   if (calcState.editingTokenIndex != null) {
                     ref.read(calculatorProvider.notifier).deselectToken();
                   } else {
@@ -336,6 +353,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
                   }
                 },
                 onLongPress: () {
+                  if (_eggTouch) return;
                   setState(() => _resultHighlighted = false);
                   _copyResult(context, calcState.resultText);
                 },
@@ -555,84 +573,115 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen>
 
     return Scaffold(
       backgroundColor: colors.bg,
-      body: Stack(
-        children: [
-          // Background subtle radiant lighting gradient
-          RepaintBoundary(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0.2, -0.3),
-                  radius: 1.3,
-                  colors: [colors.bgShade, colors.bg],
-                ),
-              ),
-            ),
-          ),
-
-          // Blueprint: a drafting grid under everything
-          if (colors.finish == SkinFinish.wireframe)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: GridPaper(
-                  color: colors.ink.withValues(alpha: 0.14),
-                  interval: 96.0,
-                  divisions: 1,
-                  subdivisions: 4,
+      body: ValueListenableBuilder<Offset>(
+        valueListenable: _shake,
+        builder: (_, shake, child) =>
+            Transform.translate(offset: shake, child: child),
+        child: Stack(
+          children: [
+            // Background subtle radiant lighting gradient
+            RepaintBoundary(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0.2, -0.3),
+                    radius: 1.3,
+                    colors: [colors.bgShade, colors.bg],
+                  ),
                 ),
               ),
             ),
 
-          // Tactile film grain overlay
-          const GrainOverlay(),
-
-          content,
-
-          if (_spilling)
-            Positioned.fill(
-              child: InkSpill(
-                origin: _heroCentre(),
-                isLite: settings.liteMode,
-                onCovered: _finishHunt,
-                onDone: () {
-                  if (mounted) setState(() => _spilling = false);
-                },
+            // Blueprint: a drafting grid under everything
+            if (colors.finish == SkinFinish.wireframe)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: GridPaper(
+                    color: colors.ink.withValues(alpha: 0.14),
+                    interval: 96.0,
+                    divisions: 1,
+                    subdivisions: 4,
+                  ),
+                ),
               ),
+
+            // Limited drops bring their own scenery
+            DropBackdrop(
+              colors: colors,
+              motion: settings.liteMode ? DropMotion.calm : DropMotion.live,
+              warp: _warp,
             ),
 
-          // Hunt progress and the secret skin, announced as they land
-          Align(
-            alignment: Alignment.topCenter,
-            child: SafeArea(
-              child: IgnorePointer(
-                child: AnimatedOpacity(
-                  opacity: _pillShown ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 260),
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 10.0),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14.0,
-                      vertical: 6.0,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.accent,
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    child: Text(
-                      _pill ?? '',
-                      style: TextStyle(
-                        fontFamily: 'BebasNeue',
-                        fontSize: 15.0,
-                        letterSpacing: 1.6,
-                        color: colors.bg,
+            // Tactile film grain overlay
+            const GrainOverlay(),
+
+            content,
+
+            // Reckoning: hold the clock
+            if (colors.finish == SkinFinish.doom)
+              DoomIncursion(
+                warp: _warp,
+                light: colors.accent,
+                lite: settings.liteMode,
+                shake: _shake,
+                onBusy: (busy) => _warpBusy = busy,
+              ),
+
+            // Mirage: hold the sun or the moon
+            if (colors.finish == SkinFinish.dune)
+              SandWormEgg(
+                warp: _warp,
+                shake: _shake,
+                lite: settings.liteMode,
+                onBusy: (busy) => _warpBusy = busy,
+              ),
+
+            if (_spilling)
+              Positioned.fill(
+                child: InkSpill(
+                  origin: _heroCentre(),
+                  isLite: settings.liteMode,
+                  onCovered: _finishHunt,
+                  onDone: () {
+                    if (mounted) setState(() => _spilling = false);
+                  },
+                ),
+              ),
+
+            // Hunt progress and the secret skin, announced as they land
+            Align(
+              alignment: Alignment.topCenter,
+              child: SafeArea(
+                child: IgnorePointer(
+                  child: AnimatedOpacity(
+                    opacity: _pillShown ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 260),
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 10.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14.0,
+                        vertical: 6.0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.accent,
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      child: Text(
+                        _pill ?? '',
+                        style: TextStyle(
+                          fontFamily: 'BebasNeue',
+                          fontSize: 15.0,
+                          letterSpacing: 1.6,
+                          color: colors.bg,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

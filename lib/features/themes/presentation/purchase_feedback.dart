@@ -219,3 +219,37 @@ class BundleValue {
     );
   }
 }
+
+const _months = [
+  'JAN',
+  'FEB',
+  'MAR',
+  'APR',
+  'MAY',
+  'JUN',
+  'JUL',
+  'AUG',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DEC',
+];
+
+String _date(DateTime d) => '${d.day} ${_months[d.month - 1]}';
+
+/// Stands in for the price of a drop that is not on sale yet.
+String dropOpens(DropWindow drop) => 'FROM ${_date(drop.start)}';
+
+/// Short mark on a drop's card.
+const dropMark = 'LIMITED EDITION';
+
+/// One line on how long a drop lasts, for its section and its sheet.
+String dropLine(DropWindow drop) {
+  if (drop.upcoming) {
+    return 'Lands ${_date(drop.start)}, gone ${_date(drop.end)}. '
+        'Not in the bundle.';
+  }
+  final days = drop.daysLeft;
+  final left = days <= 1 ? 'Last day' : 'Leaves in $days days';
+  return '$left. Yours for good once bought. Not in the bundle.';
+}

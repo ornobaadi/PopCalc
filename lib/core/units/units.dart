@@ -170,16 +170,26 @@ class Units {
     UnitCategory(
       'data',
       'Data',
+      // Two families that people mix up (a user reported "1 GB should be
+      // 1024 MB"): SI units step by 1000 (phones, drive makers, Android's
+      // own storage screen), binary ones by 1024 (Windows, RAM, which
+      // still calls them "GB"). Both are exact; the names say which is
+      // which, and each binary unit sits next to its decimal twin.
       [
-        Unit('bit', 'Bit', 'bit', _f(1, 8)),
         Unit('b', 'Byte', 'B', Rational.one),
-        Unit('kb', 'Kilobyte', 'KB', _r('1000')),
-        Unit('mb', 'Megabyte', 'MB', _r('1000000')),
-        Unit('gb', 'Gigabyte', 'GB', _r('1000000000')),
-        Unit('tb', 'Terabyte', 'TB', _r('1000000000000')),
-        Unit('kib', 'Kibibyte', 'KiB', _r('1024')),
-        Unit('mib', 'Mebibyte', 'MiB', _r('1048576')),
-        Unit('gib', 'Gibibyte', 'GiB', _r('1073741824')),
+        Unit('kb', 'Kilobyte (1000 B)', 'KB', _r('1000')),
+        Unit('kib', 'Kibibyte (1024 B)', 'KiB', _r('1024')),
+        Unit('mb', 'Megabyte (1000 KB)', 'MB', _r('1000000')),
+        Unit('mib', 'Mebibyte (1024 KiB)', 'MiB', _r('1048576')),
+        Unit('gb', 'Gigabyte (1000 MB)', 'GB', _r('1000000000')),
+        Unit('gib', 'Gibibyte (1024 MiB)', 'GiB', _r('1073741824')),
+        Unit('tb', 'Terabyte (1000 GB)', 'TB', _r('1000000000000')),
+        Unit('tib', 'Tebibyte (1024 GiB)', 'TiB', _r('1099511627776')),
+        // Bits, for internet speeds (100 Mbps = 12.5 MB per second).
+        Unit('bit', 'Bit', 'bit', _f(1, 8)),
+        Unit('kbit', 'Kilobit', 'kbit', _r('125')),
+        Unit('mbit', 'Megabit', 'Mbit', _r('125000')),
+        Unit('gbit', 'Gigabit', 'Gbit', _r('125000000')),
       ],
       defaultFrom: 'gb',
       defaultTo: 'mb',

@@ -342,17 +342,6 @@ def material_pack(voice, rng, op_st=-5, win=(0, 4, 7, 12), win_gap=0.06,
     return s
 
 
-def pack_clay(rng):
-    """Soft, damp thumps: a dull body with a short squish, no ring."""
-    def voice(st, dur, decay):
-        f = note_hz(st - 17)
-        body = chirp(f * 1.9, f, dur, decay * 0.9, curve=0.009)
-        mix(body, [v * 0.22 for v in noise_burst(0.03, 0.008, rng, hp=300, lp=1400)])
-        return lowpass(body, 1500)
-    return material_pack(voice, rng, clear_from=2600, clear_to=500,
-                         win=(0, 4, 7, 12), win_gap=0.07)
-
-
 def pack_chrome(rng):
     """Cold, hard pings: bright inharmonic metal with a quick shimmer."""
     spec = [(1.0, 1.0, 0.09), (2.41, 0.55, 0.06), (3.93, 0.35, 0.04),
@@ -392,18 +381,6 @@ def pack_wood(rng):
                          win=(0, 7, 12, 16), win_gap=0.075)
 
 
-def pack_candy(rng):
-    """Sweet, bouncy blips that hop upward, like popping candy."""
-    def voice(st, dur, decay):
-        f = note_hz(st + 7)
-        pop = chirp(f * 0.62, f, dur, decay, curve=0.016)
-        mix(pop, [v * 0.3 for v in chirp(f * 1.3, f * 2, dur * 0.7, decay * 0.5,
-                                         curve=0.02)], at=int(0.012 * SR))
-        return pop
-    return material_pack(voice, rng, clear_from=9000, clear_to=2000,
-                         win=(0, 4, 7, 12, 16), win_gap=0.05)
-
-
 def pack_neon(rng):
     """Buzzing synth zaps: a square-wave tube flickering on."""
     def voice(st, dur, decay):
@@ -415,6 +392,332 @@ def pack_neon(rng):
         return lowpass(zap, 6500)
     return material_pack(voice, rng, clear_from=10000, clear_to=900,
                          win=(0, 7, 12, 19), win_gap=0.055)
+
+
+# ─── Cinematic drops ──────────────────────────────────────────────────────────
+# Mirage and Reckoning are built from film-score ingredients instead of
+# pitched blips: low drums, choir vowels, brass, clock ticks and tolling metal,
+# each with a short hall tail. Original synthesis only; no sample, melody or
+# score is borrowed.
+
+def biquad_bp(buf, freq, q):
+    """Band-pass resonator (constant 0 dB peak), used for choir formants."""
+    w0 = 2 * math.pi * freq / SR
+    alpha = math.sin(w0) / (2 * q)
+    a0 = 1 + alpha
+    a1 = -2 * math.cos(w0) / a0
+    a2 = (1 - alpha) / a0
+    b0 = alpha / a0
+    out, x1, x2, y1, y2 = [], 0.0, 0.0, 0.0, 0.0
+    for x in buf:
+        y = b0 * (x - x2) - a1 * y1 - a2 * y2
+        x2, x1 = x1, x
+        y2, y1 = y1, y
+        out.append(y)
+    return out
+
+
+def fade_out(buf, ms=80):
+    n = min(len(buf), int(SR * ms / 1000))
+    for i in range(n):
+        buf[-1 - i] *= i / n
+    return buf
+
+
+def hall(buf, wet=0.3, size=1.0, tail=0.6):
+    """A small Schroeder hall: four combs and two all-passes, plus a tail."""
+    n = len(buf) + int(tail * SR)
+    src = list(buf) + [0.0] * (n - len(buf))
+    acc = [0.0] * n
+    for d, fb in ((0.0297, 0.80), (0.0371, 0.78), (0.0411, 0.76), (0.0437, 0.74)):
+        dl = max(2, int(d * size * SR))
+        line, idx = [0.0] * dl, 0
+        for i in range(n):
+            y = line[idx]
+            line[idx] = src[i] + y * fb
+            acc[i] += y
+            idx = idx + 1 if idx + 1 < dl else 0
+    for d, g in ((0.005, 0.7), (0.0017, 0.7)):
+        dl = max(2, int(d * SR))
+        line, idx = [0.0] * dl, 0
+        for i in range(n):
+            wd = line[idx]
+            w = acc[i] + g * wd
+            line[idx] = w
+            acc[i] = -g * w + wd
+            idx = idx + 1 if idx + 1 < dl else 0
+    return fade_out([src[i] + wet * 0.5 * acc[i] for i in range(n)])
+
+
+def sub_drum(f, dur, decay, rng, punch=1.0):
+    """A big skin drum: the pitch drops onto [f]; two harmonics ride along so
+    phone speakers, which cannot play the fundamental, still carry it."""
+    n = int(dur * SR)
+    out, ph = [], 0.0
+    for i in range(n):
+        t = i / SR
+        ph += 2 * math.pi * f * (1 + 1.2 * math.exp(-t / 0.018)) / SR
+        s = math.sin(ph) + 0.55 * math.sin(2 * ph) + 0.3 * math.sin(3 * ph)
+        out.append(s * min(1.0, t / 0.0008) * math.exp(-t / decay))
+    mix(out, [v * 0.5 * punch for v in noise_burst(0.02, 0.004, rng, hp=300, lp=2500)])
+    return out
+
+
+def bronze(f, dur, decay):
+    return partials(f, [(1.0, 1.0, decay), (2.0, 0.5, decay * 0.7),
+                        (2.76, 0.45, decay * 0.55), (5.4, 0.2, decay * 0.3),
+                        (8.1, 0.1, decay * 0.2)], dur, attack=0.002)
+
+
+def iron(f, dur, decay):
+    """Struck iron: inharmonic, hard, short."""
+    return partials(f, [(1.0, 1.0, decay), (1.5, 0.35, decay * 0.8),
+                        (2.32, 0.55, decay * 0.6), (3.8, 0.3, decay * 0.4),
+                        (5.9, 0.18, decay * 0.25)], dur, attack=0.0008)
+
+
+def toll(f, dur):
+    """A great bell: a hum below, a minor third in the strike."""
+    return partials(f, [(0.5, 0.6, dur * 0.5), (1.0, 1.0, dur * 0.45),
+                        (1.19, 0.5, dur * 0.35), (1.5, 0.4, dur * 0.3),
+                        (2.0, 0.45, dur * 0.25), (2.51, 0.25, dur * 0.15),
+                        (3.9, 0.15, dur * 0.1)], dur, attack=0.003)
+
+
+VOWELS = {  # (centre Hz, level, Q) for the first three formants
+    'aa': [(730, 1.0, 11), (1090, 0.5, 12), (2440, 0.25, 14)],
+    'oo': [(300, 1.0, 8), (870, 0.35, 10), (2240, 0.12, 14)],
+    'ee': [(270, 1.0, 8), (2290, 0.45, 14), (3010, 0.2, 16)],
+}
+
+
+def choir(freq, dur, vowel, rng, attack=0.3, release=0.4, vib=5.2):
+    """One sustained sung voice: a breathy saw through vowel formants."""
+    n = int(dur * SR)
+    src, ph = [], 0.0
+    for i in range(n):
+        t = i / SR
+        ph = (ph + freq * (1 + 0.006 * math.sin(2 * math.pi * vib * t)
+                           * min(1.0, t / 0.4)) / SR) % 1.0
+        src.append((2 * ph - 1) * 0.8 + rng.uniform(-1, 1) * 0.08)
+    out = [0.0] * n
+    for fc, g, q in VOWELS[vowel]:
+        for i, v in enumerate(biquad_bp(src, fc, q)):
+            out[i] += v * g
+    for i in range(n):
+        t = i / SR
+        out[i] *= min(1.0, t / attack) * min(1.0, (dur - t) / release)
+    return out
+
+
+def brass(freq, dur, rng, swell=0.06, bright=3000, cents=(-9, 0, 9, -4, 6)):
+    """Low brass: detuned saws whose filter opens with the swell, then closes."""
+    n = int(dur * SR)
+    ratios = [2 ** (c / 1200) for c in cents]
+    phases = [rng.random() for _ in cents]
+    out, y = [], 0.0
+    for i in range(n):
+        t = i / SR
+        s = 0.0
+        for k, r in enumerate(ratios):
+            phases[k] = (phases[k] + freq * r / SR) % 1.0
+            s += 2 * phases[k] - 1
+        s /= len(ratios)
+        cut = 250 + (bright - 250) * min(1.0, t / swell) * math.exp(
+            -max(0.0, t - swell) / (dur * 0.5))
+        y += (1 - math.exp(-2 * math.pi * cut / SR)) * (s - y)
+        out.append(y * min(1.0, t / (swell * 0.6)) * math.exp(-t / (dur * 0.45)))
+    return out
+
+
+def clock_tick(rng, tock=False):
+    """A mechanical clock tick; the tock is a little lower and duller."""
+    t = noise_burst(0.02, 0.0025, rng, hp=3500, lp=12000)
+    mix(t, [v * 0.7 for v in resonant_click(1900 if tock else 2400, 0.03, 0.004)])
+    mix(t, [v * 0.5 for v in resonant_click(200 if tock else 260, 0.05, 0.01)])
+    return t
+
+
+def riser(dur, rng, f0, f1):
+    """Noise that brightens and swells into the beat."""
+    n = int(dur * SR)
+    out, y = [], 0.0
+    for i in range(n):
+        p = i / n
+        rc = 1.0 / (2 * math.pi * f0 * (f1 / f0) ** p)
+        y += ((1 / SR) / (rc + 1 / SR)) * (rng.uniform(-1, 1) - y)
+        out.append(y * p ** 2.2)
+    return out
+
+
+DUNE_SCALE = [0, 1, 4, 5, 7, 8, 10, 12, 13, 16]   # D phrygian dominant
+DOOM_SCALE = [0, 2, 3, 5, 7, 8, 10, 12, 14, 15]   # D natural minor
+D2, D3, D4 = -34, -22, -10                        # semitones from C5
+
+
+def pack_mirage(rng):
+    """Dune at night: thumper drums, falling sand, a wailing choir."""
+    def thump(st, dur=0.3, decay=0.09, punch=1.0, sand=0.5):
+        k = sub_drum(note_hz(D3 + st), dur, decay, rng, punch)
+        mix(k, [v * 0.6 for v in sub_drum(note_hz(D2 + st), dur, decay * 1.2, rng, 0.0)])
+        mix(k, [v * sand for v in noise_burst(0.07, 0.02, rng, hp=2200, lp=8000)])
+        return k
+
+    s = {}
+    for d in range(10):
+        s[f'digit_{d}'] = normalize(hall(thump(DUNE_SCALE[d]), 0.16, 0.7, 0.25), 0.52)
+    op = sub_drum(note_hz(D2), 0.5, 0.16, rng, 1.3)
+    mix(op, [v * 0.45 for v in bronze(note_hz(D4), 0.6, 0.35)], at=int(0.012 * SR))
+    s['operator'] = normalize(hall(op, 0.3, 0.9, 0.4), 0.58)
+    flick = noise_burst(0.06, 0.012, rng, hp=3000, lp=11000)
+    mix(flick, [v * 0.4 for v in bronze(note_hz(12), 0.2, 0.05)])
+    s['utility'] = normalize(flick, 0.45)
+    back = list(reversed(noise_burst(0.14, 0.04, rng, hp=1500, lp=7000)))
+    mix(back, [v * 0.7 for v in sub_drum(note_hz(D3 - 5), 0.15, 0.05, rng)],
+        at=int(0.1 * SR))
+    s['backspace'] = normalize(back, 0.5)
+    storm = riser(0.55, rng, 600, 7000)
+    mix(storm, sub_drum(note_hz(D2 - 5), 0.7, 0.25, rng, 1.5), at=int(0.4 * SR))
+    s['clear'] = normalize(hall(storm, 0.25, 1.0, 0.5), 0.6)
+    win = []
+    for st, vowel in ((D3, 'oo'), (D3 + 7, 'aa'), (D4, 'aa'), (D4 + 7, 'ee')):
+        mix(win, [v * (0.8 if st < D4 else 0.6)
+                  for v in choir(note_hz(st), 1.25, vowel, rng, attack=0.22, release=0.5)])
+    mix(win, [v * 0.9 for v in thump(0, 0.5, 0.18, 1.4)])
+    mix(win, [v * 0.8 for v in thump(7, 0.4, 0.14, 1.2)], at=int(0.17 * SR))
+    mix(win, [v * 0.4 for v in bronze(note_hz(D4), 1.0, 0.5)])
+    s['success'] = normalize(hall(win, 0.38, 1.2, 0.9), 0.7)
+    # The worm: a low growl sliding down, a voice moaning under it.
+    n = int(0.8 * SR)
+    ph, worm = 0.0, []
+    for i in range(n):
+        t = i / SR
+        ph += 2 * math.pi * (70 - 36 * t / 0.8) / SR
+        amp = math.sin(math.pi * min(1.0, t / 0.8)) ** 0.7
+        growl = 0.6 + 0.4 * math.sin(2 * math.pi * 23 * t)
+        worm.append((math.sin(ph) + 0.6 * math.sin(2 * ph) + 0.45 * math.sin(3 * ph)
+                     + 0.3 * math.sin(4 * ph)) * growl * amp)
+    mix(worm, [v * 0.6 for v in choir(note_hz(D2 + 12), 0.8, 'oo', rng, 0.15, 0.4)])
+    mix(worm, [v * 0.15 for v in noise_burst(0.8, 0.3, rng, hp=100, lp=900)])
+    s['error'] = normalize(hall(worm, 0.25, 1.0, 0.4), 0.62)
+
+    # The hold-the-sun egg (played by the screen, not by keys): a thumper that
+    # speeds up under a rising rumble, then the worm rising out of the sand
+    # with a warm, enormous hum rather than a snarl.
+    charge = []
+    gap, at, k = 0.55, 0.0, 0
+    while at < 2.1:
+        mix(charge, [v * (0.5 + 0.5 * at / 2.2) for v in
+                     sub_drum(note_hz(D2 + (0 if k % 2 == 0 else -5)), 0.28, 0.09, rng, 1.2)],
+            at=int(at * SR))
+        gap = max(0.1, gap * 0.86)
+        at += gap
+        k += 1
+    mix(charge, [v * 0.5 for v in riser(2.2, rng, 300, 5000)])
+    s['worm_charge'] = normalize(charge, 0.62)
+    rise = sub_drum(note_hz(D2 - 5), 1.6, 0.5, rng, 1.8)
+    mix(rise, [v * 0.7 for v in riser(1.4, rng, 700, 3500)])
+    mix(rise, [v * 0.6 * math.sin(math.pi * i / int(4.5 * SR)) ** 0.8 for i, v in
+               enumerate(noise_burst(4.5, 9.0, rng, hp=700, lp=4500))], at=int(0.2 * SR))
+    for st, vowel, lvl in ((D2 + 12, 'oo', 1.0), (D3 + 7, 'aa', 0.75), (D4, 'oo', 0.5)):
+        mix(rise, [v * lvl for v in choir(note_hz(st), 5.0, vowel, rng,
+                                          attack=1.4, release=1.6, vib=3.6)], at=int(0.5 * SR))
+    mix(rise, [v * 0.6 for v in brass(note_hz(D2), 4.5, rng, swell=1.4, bright=1500)],
+        at=int(0.6 * SR))
+    for k, st in enumerate((D4, D4 + 7, D4 + 12)):
+        mix(rise, [v * 0.35 for v in bronze(note_hz(st), 1.6, 0.8)], at=int((2.5 + 0.12 * k) * SR))
+    s['worm_rise'] = normalize(hall(rise, 0.4, 1.4, 1.6), 0.72)
+
+    def tone(st, dur, decay):
+        p = partials(note_hz(st - 5), [(1.0, 1.0, decay * 2), (2.0, 0.25, decay * 1.2),
+                                       (3.0, 0.1, decay * 0.7)], dur * 1.4, attack=0.004)
+        mix(p, [v * 0.25 for v in noise_burst(dur, decay, rng, hp=3000, lp=8000)])
+        return p
+    s.update(scientific_sounds(tone))
+    return s
+
+
+def pack_reckoning(rng):
+    """The last minute: clock ticks, struck iron, brass, a tolling bell."""
+    def strike(st, dur=0.26, decay=0.07, tock=False):
+        k = clock_tick(rng, tock)
+        mix(k, [v * 0.9 for v in iron(note_hz(D3 + st), dur, decay)], at=int(0.003 * SR))
+        mix(k, [v * 0.6 for v in sub_drum(note_hz(D2 + st), 0.18, 0.05, rng, 0.8)])
+        return k
+
+    s = {}
+    for d in range(10):
+        s[f'digit_{d}'] = normalize(hall(strike(DOOM_SCALE[d], tock=d % 2 == 1), 0.14, 0.6, 0.2), 0.52)
+    op = brass(note_hz(D2), 0.42, rng, swell=0.05, bright=2600)
+    mix(op, [v * 0.7 for v in brass(note_hz(D2 + 7), 0.42, rng, swell=0.05, bright=2600)])
+    mix(op, sub_drum(note_hz(D2), 0.3, 0.09, rng, 1.2))
+    mix(op, [v * 0.5 for v in iron(note_hz(D3), 0.3, 0.1)])
+    s['operator'] = normalize(hall(op, 0.25, 0.9, 0.35), 0.58)
+    tk = clock_tick(rng)
+    mix(tk, [v * 0.35 for v in iron(note_hz(12), 0.12, 0.03)])
+    s['utility'] = normalize(tk, 0.45)
+    back = list(reversed(noise_burst(0.12, 0.03, rng, hp=1200, lp=8000)))
+    mix(back, clock_tick(rng, True), at=int(0.11 * SR))
+    s['backspace'] = normalize(back, 0.5)
+    rise = riser(0.5, rng, 300, 6000)
+    mix(rise, sub_drum(note_hz(D2), 0.8, 0.28, rng, 1.6), at=int(0.45 * SR))
+    mix(rise, [v * 0.6 for v in iron(note_hz(D2 + 12), 0.7, 0.3)], at=int(0.45 * SR))
+    s['clear'] = normalize(hall(rise, 0.28, 1.0, 0.5), 0.6)
+    win = []
+    for st, lvl in ((D2, 1.0), (D2 + 7, 0.85), (D3, 0.9), (D3 + 3, 0.65)):
+        mix(win, [v * lvl for v in brass(note_hz(st), 1.1, rng, swell=0.12, bright=3400)])
+    mix(win, [v * 1.2 for v in sub_drum(note_hz(D2 - 5), 1.0, 0.3, rng, 1.8)])
+    mix(win, [v * 0.35 for v in bronze(note_hz(D4 + 12), 1.0, 0.45)], at=int(0.06 * SR))
+    s['success'] = normalize(hall(win, 0.34, 1.2, 0.9), 0.7)
+    err = toll(note_hz(D3), 1.1)
+    mix(err, toll(note_hz(D3 - 6), 1.0), at=int(0.36 * SR))
+    mix(err, [v * 0.8 for v in brass(note_hz(D2 - 6), 0.7, rng, swell=0.08, bright=1800)])
+    mix(err, sub_drum(note_hz(D2 - 6), 0.5, 0.2, rng, 1.4))
+    s['error'] = normalize(hall(err, 0.3, 1.1, 0.5), 0.62)
+
+    # The hold-the-clock egg (not keys, played by the screen itself): a charge
+    # that climbs three octaves under accelerating ticks, a boom that tolls,
+    # and the low voice that arrives with the mask.
+    n = int(2.2 * SR)
+    ph = [0.0, 0.0, 0.0]
+    charge = []
+    for i in range(n):
+        p = i / n
+        f = note_hz(D2) * 8 ** p
+        v = 0.0
+        for k, det in enumerate((0.994, 1.0, 1.007)):
+            ph[k] = (ph[k] + f * det / SR) % 1.0
+            v += 2 * ph[k] - 1
+        charge.append(v / 3 * (0.15 + 0.85 * p ** 1.6))
+    charge = lowpass(charge, 3500)
+    mix(charge, [v * 0.8 for v in riser(2.2, rng, 400, 9000)])
+    gap, at, k = 0.34, 0.0, 0
+    while at < 2.15:
+        mix(charge, [v * (0.4 + 0.6 * at / 2.2) for v in clock_tick(rng, k % 2 == 1)],
+            at=int(at * SR))
+        gap = max(0.05, gap * 0.9)
+        at += gap
+        k += 1
+    s['warp_charge'] = normalize(charge, 0.62)
+    boom = sub_drum(note_hz(D2 - 5), 1.8, 0.5, rng, 2.0)
+    mix(boom, [v * 0.9 for v in noise_burst(0.9, 0.22, rng, hp=120, lp=7000)])
+    mix(boom, [v * 0.8 for v in toll(note_hz(D3), 2.6)], at=int(0.04 * SR))
+    mix(boom, [v * 0.6 for v in iron(note_hz(D2), 1.6, 0.6)])
+    mix(boom, [v * 0.7 for v in brass(note_hz(D2), 2.0, rng, swell=0.05, bright=3600)])
+    s['warp_boom'] = normalize(hall(boom, 0.4, 1.3, 1.4), 0.75)
+    voice = []
+    for st, vowel, lvl in ((D3, 'oo', 1.0), (D3 + 7, 'aa', 0.7), (D4, 'oo', 0.5)):
+        mix(voice, [v * lvl for v in choir(note_hz(st), 2.8, vowel, rng,
+                                           attack=0.9, release=1.0, vib=4.2)])
+    mix(voice, [v * 0.8 for v in brass(note_hz(D2), 2.6, rng, swell=0.7, bright=1800)])
+    mix(voice, [v * 1.1 for v in sub_drum(note_hz(D2), 1.2, 0.4, rng, 1.2)],
+        at=int(0.9 * SR))
+    s['warp_voice'] = normalize(hall(voice, 0.4, 1.3, 1.2), 0.7)
+
+    def tone(st, dur, decay):
+        return lowpass(iron(note_hz(st - 12), dur * 1.4, decay * 1.5), 7000)
+    s.update(scientific_sounds(tone))
+    return s
 
 
 # Mechanical: three switch types. Keys are unpitched, with a tiny per-key
@@ -484,11 +787,15 @@ def pack_mech(kind):
 
 
 MATERIAL_PACKS = [
-    ('clay', pack_clay), ('chrome', pack_chrome), ('glass', pack_glass),
-    ('wood', pack_wood), ('candy', pack_candy), ('neon', pack_neon),
+    # Clay and candy were retired; None keeps their slots because the seed
+    # is 100 + index and moving the rest would change their sounds.
+    None, ('chrome', pack_chrome), ('glass', pack_glass),
+    ('wood', pack_wood), None, ('neon', pack_neon),
     ('mech_clicky', pack_mech('clicky')),
     ('mech_tactile', pack_mech('tactile')),
     ('mech_linear', pack_mech('linear')),
+    # Appended last: the seed is 100 + index, so order must never change.
+    ('mirage', pack_mirage), ('reckoning', pack_reckoning),
 ]
 
 
@@ -548,7 +855,10 @@ def main():
     print('shared sounds: done')
     # Material packs get their own seeds, so adding one never changes the
     # packs above.
-    for k, (name, builder) in enumerate(MATERIAL_PACKS):
+    for k, entry in enumerate(MATERIAL_PACKS):
+        if entry is None:
+            continue
+        name, builder = entry
         for sfx, buf in builder(random.Random(100 + k)).items():
             write_wav(os.path.join(ROOT, name, f'{sfx}.wav'), fade_edges(buf))
         print(f'material {name}: done')

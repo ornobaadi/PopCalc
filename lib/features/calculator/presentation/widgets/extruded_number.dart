@@ -122,6 +122,39 @@ final ui.Image _halftoneTile = () {
   return recorder.endRecording().toImageSync(cell.toInt(), cell.toInt());
 }();
 
+/// One cell of the Reckoning cracks: thin green fault lines of light on
+/// nothing, tiled over the iron face. Drawn once.
+final ui.Image _crackTile = () {
+  const cell = 48.0;
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  final glow = Paint()
+    ..color = const Color(0x552FE274)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 4.0
+    ..strokeJoin = StrokeJoin.round
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
+  final line = Paint()
+    ..color = const Color(0xE6A8FFC8)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.1
+    ..strokeJoin = StrokeJoin.round;
+  final crack = Path()
+    ..moveTo(0.0, 12.0)
+    ..lineTo(11.0, 17.0)
+    ..lineTo(15.0, 9.0)
+    ..lineTo(27.0, 24.0)
+    ..lineTo(24.0, 34.0)
+    ..lineTo(37.0, 41.0)
+    ..lineTo(41.0, 48.0)
+    ..moveTo(27.0, 24.0)
+    ..lineTo(40.0, 19.0)
+    ..lineTo(48.0, 23.0);
+  canvas.drawPath(crack, glow);
+  canvas.drawPath(crack, line);
+  return recorder.endRecording().toImageSync(cell.toInt(), cell.toInt());
+}();
+
 // ─── Fit cache ────────────────────────────────────────────────────────────────
 final _fitCache = <String, double>{};
 
@@ -403,14 +436,6 @@ class _ExtrudedNumberPainter extends CustomPainter {
   Shader? _finishShader(Rect face) {
     const clear = Color(0x00FFFFFF);
     switch (colors.finish) {
-      case SkinFinish.matte:
-        // Soft light from the top left, falling into shade: no hard edge.
-        return const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0x40FFFFFF), clear, Color(0x30000000)],
-          stops: [0.0, 0.45, 1.0],
-        ).createShader(face);
       case SkinFinish.mirror:
         // Chrome: bright sky, a dark horizon line, then lit ground.
         return const LinearGradient(
@@ -455,14 +480,6 @@ class _ExtrudedNumberPainter extends CustomPainter {
         ).createShader(
           Rect.fromLTWH(face.left, face.top, face.width, face.height * 0.085),
         );
-      case SkinFinish.gloss:
-        // Hard candy: a wet highlight across the top that stops dead.
-        return const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xA6FFFFFF), Color(0x40FFFFFF), clear, clear],
-          stops: [0.0, 0.4, 0.41, 1.0],
-        ).createShader(face);
       case SkinFinish.glow:
         // Lit tube: white-hot through the middle, coloured at the edges.
         return const LinearGradient(
@@ -471,6 +488,33 @@ class _ExtrudedNumberPainter extends CustomPainter {
           colors: [clear, Color(0x8CFFFFFF), clear],
           stops: [0.12, 0.5, 0.88],
         ).createShader(face);
+      case SkinFinish.dune:
+        // Wind ripples: slanted bands of shade across pale sand.
+        return const LinearGradient(
+          begin: Alignment(-0.6, -1.0),
+          end: Alignment(0.6, 1.0),
+          colors: [
+            Color(0x00A5521C),
+            Color(0x52A5521C),
+            Color(0x00A5521C),
+            Color(0x2E7A3410),
+            Color(0x00A5521C),
+          ],
+          stops: [0.0, 0.34, 0.5, 0.82, 1.0],
+          tileMode: TileMode.repeated,
+        ).createShader(
+          Rect.fromLTWH(face.left, face.top, face.width, face.height * 0.11),
+        );
+      case SkinFinish.doom:
+        // Fault lines of green light through the iron, sized to the numeral.
+        final crackScale = fontSize / 150.0;
+        return ui.ImageShader(
+          _crackTile,
+          TileMode.repeated,
+          TileMode.repeated,
+          (Matrix4.identity()..scaleByDouble(crackScale, crackScale, 1.0, 1.0))
+              .storage,
+        );
       case SkinFinish.halftone:
         // Printed dots, sized to the numeral so they read at any scale.
         final scale = (fontSize / 34.0) / _halftoneTile.width;

@@ -119,8 +119,14 @@ class _SkinDetailSheetState extends ConsumerState<SkinDetailSheet> {
       onPrimary = _apply;
     } else {
       final productId = skin.productId!;
-      final canBuy = purchases.canBuy(productId);
-      final price = Text(priceTag(purchases, productId));
+      final drop = skin.drop;
+      // A drop sells only inside its window; outside it the button says when.
+      final canBuy = purchases.canBuy(productId) && (drop?.open ?? true);
+      final price = Text(
+        drop != null && !drop.open
+            ? (drop.upcoming ? dropOpens(drop) : 'GONE')
+            : priceTag(purchases, productId),
+      );
       primary = canBuy
           ? Row(
               mainAxisSize: MainAxisSize.min,
@@ -135,6 +141,7 @@ class _SkinDetailSheetState extends ConsumerState<SkinDetailSheet> {
       note = purchaseNote(purchases, productId, _outcome);
       offerBundle =
           !widget.fromBundle &&
+          drop == null &&
           purchases.canBuy(kAllThemesProductId) &&
           purchases.bundleSaving != null;
     }
@@ -202,6 +209,15 @@ class _SkinDetailSheetState extends ConsumerState<SkinDetailSheet> {
             color: c.inkSoft,
           ),
         ),
+        if (skin.drop != null && !owned) ...[
+          const SizedBox(height: 10.0),
+          Text(
+            dropLine(skin.drop!).toUpperCase(),
+            key: const ValueKey('drop-line'),
+            textAlign: TextAlign.center,
+            style: small(color: c.accent),
+          ),
+        ],
         if (skin.isMaterial) ...[
           const SizedBox(height: 22.0),
           Text(

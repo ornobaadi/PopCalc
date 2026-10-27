@@ -7,18 +7,32 @@ class NumberFormatter {
   /// Formats a [Decimal] into a human-readable string.
   /// Formats with thousands separators, trims trailing zeros,
   /// and switches to scientific notation if the length exceeds [maxSignificantDigits].
+  /// Below this, a plain decimal would round its digits away (1e-20
+  /// showed as 0), so it is written in scientific notation instead.
+  static final Decimal _smallest = Decimal.parse('0.000001');
+
   static String format(Decimal value) {
+    if (value == Decimal.zero) return '0';
+
     // Integer digits of |value| decide how many decimals fit in the cap.
     final intDigits = value.abs().truncate().toString().length;
 
     if (intDigits > maxSignificantDigits) {
       return _scientific(value, intDigits - 1);
     }
+    if (value.abs() < _smallest) {
+      return _scientificSmall(value);
+    }
 
     // Round (not truncate) so 1 ÷ 3 × 3 shows 1, not 0.999999999999.
     final rounded = value.round(scale: maxSignificantDigits - intDigits);
     if (rounded == Decimal.zero) {
       return '0'; // Also avoids displaying "-0" for tiny negatives.
+    }
+    // 999,999,999,999,999.9 rounds up to 16 digits: past the cap.
+    final roundedDigits = rounded.abs().truncate().toString().length;
+    if (roundedDigits > maxSignificantDigits) {
+      return _scientific(rounded, roundedDigits - 1);
     }
 
     final isNegative = rounded < Decimal.zero;
@@ -60,16 +74,32 @@ class NumberFormatter {
       }
     }
 
-    final result = trimmedFrac.isNotEmpty ? '$formattedInt.$trimmedFrac' : formattedInt;
+    final result = trimmedFrac.isNotEmpty
+        ? '$formattedInt.$trimmedFrac'
+        : formattedInt;
     return isNegative ? '-$result' : result;
   }
 
   /// Scientific notation computed from the exact decimal, so huge values
   /// never overflow to "Infinity" the way a double conversion would.
   static String _scientific(Decimal value, int exponent) {
-    final isNegative = value < Decimal.zero;
-    final digits = value.abs().truncate().toString();
-    var mantissa = Decimal.parse('${digits[0]}.${digits.substring(1)}')
+    return _mantissa(
+      value < Decimal.zero,
+      value.abs().truncate().toString(),
+      exponent,
+    );
+  }
+
+  /// 0.000000000000001234 → 1.234e-15, from the exact digits.
+  static String _scientificSmall(Decimal value) {
+    final frac = value.abs().toString().split('.').last;
+    final lead = frac.indexOf(RegExp('[1-9]'));
+    return _mantissa(value < Decimal.zero, frac.substring(lead), -(lead + 1));
+  }
+
+  /// [digits] are the significant digits, the first one before the point.
+  static String _mantissa(bool isNegative, String digits, int exponent) {
+    var mantissa = Decimal.parse('${digits[0]}.${digits.substring(1)}0')
         .round(scale: 6);
     if (mantissa >= Decimal.ten) {
       mantissa = Decimal.one;

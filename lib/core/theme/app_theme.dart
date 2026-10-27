@@ -26,7 +26,8 @@ class ThemeNotifier extends StateNotifier<AppThemeMode> {
       final prefs = await SharedPreferences.getInstance();
       final index = prefs.getInt(_kThemeKey);
       if (index != null && index >= 0 && index < AppThemeMode.values.length) {
-        state = AppThemeMode.values[index];
+        final saved = AppThemeMode.values[index];
+        state = kRetiredThemes.contains(saved) ? AppThemeMode.sunny : saved;
       }
     } catch (_) {}
   }

@@ -96,6 +96,45 @@ class PopCalcActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "popcalc/qs_tile")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "request" -> requestTile { result.success(it) }
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    /**
+     * Asks Android to add the Quick Settings tile (Android 13+ shows its own
+     * "Add tile?" card). Answers with StatusBarManager's code: 2 added,
+     * 1 already there, 0 declined, negative = failed. Older versions answer
+     * [TILE_UNSUPPORTED] so Settings can explain how to add it by hand.
+     */
+    private fun requestTile(done: (Int) -> Unit) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            done(TILE_UNSUPPORTED)
+            return
+        }
+        try {
+            val bar = getSystemService(android.app.StatusBarManager::class.java)
+            if (bar == null) {
+                done(TILE_UNSUPPORTED)
+                return
+            }
+            bar.requestAddTileService(
+                ComponentName(this, PopCalcTileService::class.java),
+                "PopCalc",
+                android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_qs_popcalc),
+                mainExecutor,
+            ) { code -> done(code) }
+        } catch (e: Exception) {
+            done(TILE_UNSUPPORTED)
+        }
+    }
+
+    private companion object {
+        const val TILE_UNSUPPORTED = -100
     }
 
     // Alias classes resolve against the namespace, not the app id (debug builds add ".dev").

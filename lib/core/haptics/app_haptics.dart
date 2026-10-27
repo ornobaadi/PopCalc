@@ -24,15 +24,15 @@ class _Hit {
 /// native change: they are built from the same primitives as the rest.
 enum HapticFeel {
   standard,
-  clay,
   chrome,
   glass,
   wood,
-  candy,
   neon,
   mechClicky,
   mechTactile,
   mechLinear,
+  mirage,
+  reckoning,
 }
 
 enum _Key { digit, operator, utility, backspace }
@@ -95,13 +95,6 @@ class AppHaptics {
   static HapticFeel feel = HapticFeel.standard;
 
   static const Map<HapticFeel, Map<_Key, List<_Hit>>> _feels = {
-    // Clay: soft, damp presses with no snap.
-    HapticFeel.clay: {
-      _Key.digit: [_Hit('thud', 0.55)],
-      _Key.operator: [_Hit('thud', 0.85), _Hit('lowTick', 0.5, 45)],
-      _Key.utility: [_Hit('lowTick', 0.8)],
-      _Key.backspace: [_Hit('lowTick', 0.65)],
-    },
     // Chrome: hard and precise, with a tiny ring after each hit.
     HapticFeel.chrome: {
       _Key.digit: [_Hit('tick', 1.0), _Hit('tick', 0.45, 18)],
@@ -127,19 +120,26 @@ class AppHaptics {
       _Key.utility: [_Hit('click', 0.5)],
       _Key.backspace: [_Hit('lowTick', 0.9)],
     },
-    // Candy: springy, bouncing up into each press.
-    HapticFeel.candy: {
-      _Key.digit: [_Hit('quickRise', 0.5), _Hit('tick', 0.7, 25)],
-      _Key.operator: [_Hit('quickRise', 0.7), _Hit('click', 0.9, 30)],
-      _Key.utility: [_Hit('tick', 0.8)],
-      _Key.backspace: [_Hit('quickFall', 0.5)],
-    },
     // Neon: a short electric buzz.
     HapticFeel.neon: {
       _Key.digit: [_Hit('tick', 0.9), _Hit('lowTick', 0.5, 14)],
       _Key.operator: [_Hit('quickFall', 0.8), _Hit('tick', 0.8, 30)],
       _Key.utility: [_Hit('tick', 0.7)],
       _Key.backspace: [_Hit('quickFall', 0.5)],
+    },
+    // Mirage: a drum beat in the ground, sand hissing after it.
+    HapticFeel.mirage: {
+      _Key.digit: [_Hit('thud', 0.85), _Hit('quickFall', 0.3, 45)],
+      _Key.operator: [_Hit('thud', 1.0), _Hit('thud', 0.6, 95)],
+      _Key.utility: [_Hit('lowTick', 0.6)],
+      _Key.backspace: [_Hit('quickFall', 0.6), _Hit('thud', 0.5, 70)],
+    },
+    // Reckoning: a clock tick with weight behind it, brass on the big keys.
+    HapticFeel.reckoning: {
+      _Key.digit: [_Hit('tick', 1.0), _Hit('thud', 0.5, 12)],
+      _Key.operator: [_Hit('thud', 1.0), _Hit('quickRise', 0.6, 40)],
+      _Key.utility: [_Hit('tick', 0.8)],
+      _Key.backspace: [_Hit('lowTick', 0.7), _Hit('tick', 0.6, 60)],
     },
     // Clicky switch: the click on the way down, then the bottom-out.
     HapticFeel.mechClicky: {
@@ -203,17 +203,14 @@ class AppHaptics {
 
   /// Clear: a ratcheting "skrrr" that fades out, then lands — in sync with
   /// the clear sound's sweep.
-  static void clear() => _play(
-        const [
-          _Hit('lowTick', 1.0),
-          _Hit('lowTick', 0.9, 22),
-          _Hit('lowTick', 0.8, 22),
-          _Hit('lowTick', 0.7, 22),
-          _Hit('lowTick', 0.6, 22),
-          _Hit('thud', 0.8, 40),
-        ],
-        HapticFeedback.heavyImpact,
-      );
+  static void clear() => _play(const [
+    _Hit('lowTick', 1.0),
+    _Hit('lowTick', 0.9, 22),
+    _Hit('lowTick', 0.8, 22),
+    _Hit('lowTick', 0.7, 22),
+    _Hit('lowTick', 0.6, 22),
+    _Hit('thud', 0.8, 40),
+  ], HapticFeedback.heavyImpact);
 
   // ─── Scientific keys ───────────────────────────────────────────────────────
   // As firm as the main keypad. Each kind of key gets the shape of its
@@ -315,22 +312,39 @@ class AppHaptics {
 
   /// Answer lands: a rising swell into a strong click and a sparkle tick,
   /// timed with the success chime and the pop animation.
-  static void success() => _play(
-        const [
-          _Hit('quickRise', 0.7),
-          _Hit('click', 1.0, 40),
-          _Hit('tick', 0.6, 90),
-        ],
-        HapticFeedback.heavyImpact,
-      );
+  static void success() => _play(const [
+    _Hit('quickRise', 0.7),
+    _Hit('click', 1.0, 40),
+    _Hit('tick', 0.6, 90),
+  ], HapticFeedback.heavyImpact);
+
+  /// The hold-the-clock egg: a tick that grows stronger as the charge [c]
+  /// (0..1) climbs.
+  static void charge(double c) =>
+      _play([_Hit('tick', 0.25 + 0.75 * c.clamp(0.0, 1.0))], HapticFeedback.selectionClick);
+
+  /// The release: a hit, a swell, and three beats rolling away.
+  static void boom() => _play(const [
+    _Hit('thud', 1.0),
+    _Hit('slowRise', 1.0, 60),
+    _Hit('thud', 1.0, 180),
+    _Hit('thud', 0.8, 120),
+    _Hit('thud', 0.6, 120),
+  ], HapticFeedback.heavyImpact);
+
+  /// Something big moves below: a slow swell and three heavy beats (the mask
+  /// arriving).
+  static void rumble() => _play(const [
+    _Hit('slowRise', 0.8),
+    _Hit('thud', 0.6, 120),
+    _Hit('thud', 0.8, 140),
+    _Hit('thud', 1.0, 140),
+  ], HapticFeedback.heavyImpact);
 
   /// Error: three hard knocks, synced with the shake.
-  static void error() => _play(
-        const [
-          _Hit('thud', 1.0),
-          _Hit('thud', 1.0, 60),
-          _Hit('thud', 1.0, 60),
-        ],
-        HapticFeedback.vibrate,
-      );
+  static void error() => _play(const [
+    _Hit('thud', 1.0),
+    _Hit('thud', 1.0, 60),
+    _Hit('thud', 1.0, 60),
+  ], HapticFeedback.vibrate);
 }

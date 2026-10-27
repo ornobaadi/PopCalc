@@ -21,6 +21,19 @@ void main() {
         () => expect(convert('100', 'speed', 'kph', 'mps'), '27.7777777777778'));
     test('1 GiB = 1,073.741824 MB',
         () => expect(convert('1', 'data', 'gib', 'mb'), '1,073.741824'));
+    test('decimal and binary data units are both exact', () {
+      expect(convert('1', 'data', 'gb', 'mb'), '1,000');
+      expect(convert('1', 'data', 'gib', 'mib'), '1,024');
+      expect(convert('1', 'data', 'tib', 'gib'), '1,024');
+      expect(convert('1', 'data', 'tb', 'gib'), '931.322574615479');
+      expect(convert('100', 'data', 'mbit', 'mb'), '12.5');
+      expect(convert('1', 'data', 'gbit', 'mbit'), '1,000');
+    });
+    test('names tell decimal from binary units', () {
+      final d = Units.byId('data');
+      expect(d.unit('gb').name, contains('1000'));
+      expect(d.unit('gib').name, contains('1024'));
+    });
     test('1 gal = 3.785411784 L',
         () => expect(convert('1', 'volume', 'gal', 'l'), '3.785411784'));
     test('1 acre = 43,560 ft²',

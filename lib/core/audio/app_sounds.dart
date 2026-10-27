@@ -106,6 +106,10 @@ class AppSounds {
   /// "That's what she said", after an overflow line (see CalcError.punchlines).
   static AudioSource? _twss;
 
+  /// One-off sounds played by name from a folder (the long sounds of a limited
+  /// drop's egg), loaded on first use.
+  static final Map<String, AudioSource> _extras = {};
+
   /// A sound requested before it finished loading.
   /// Played as soon as it's ready, unless it has gone stale.
   static Sfx? _pendingSfx;
@@ -162,6 +166,7 @@ class AppSounds {
     _launch = null;
     _detent = null;
     _twss = null;
+    _extras.clear();
     _pendingSfx = null;
     try {
       SoLoud.instance.deinit();
@@ -266,6 +271,45 @@ class AppSounds {
       }
     }
     _playSource(source);
+  }
+
+  /// Loads sounds ahead of time so the first [playExtra] is not late.
+  static Future<void> warmExtras(String folder, List<String> names) async {
+    if (!_ready) return;
+    final gen = _generation;
+    for (final name in names) {
+      final key = '$folder/$name';
+      if (_extras.containsKey(key)) continue;
+      try {
+        final source = await SoLoud.instance.loadAsset('assets/sounds/$key.wav');
+        if (gen != _generation) return;
+        _extras[key] = source;
+      } catch (_) {}
+    }
+  }
+
+  /// Plays `assets/sounds/<folder>/<name>.wav`; the handle lets a long sound
+  /// be cut short with [stopExtra].
+  static SoundHandle? playExtra(String folder, String name, {double pitch = 1.0}) {
+    if (!_canPlay) return null;
+    final source = _extras['$folder/$name'];
+    if (source == null) return null;
+    try {
+      if (pitch == 1.0) return SoLoud.instance.play(source, volume: _gain);
+      final handle = SoLoud.instance.play(source, volume: _gain, paused: true);
+      SoLoud.instance.setRelativePlaySpeed(handle, pitch);
+      SoLoud.instance.setPause(handle, false);
+      return handle;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static void stopExtra(SoundHandle? handle) {
+    if (handle == null) return;
+    try {
+      SoLoud.instance.stop(handle);
+    } catch (_) {}
   }
 
   static void configure({bool? enabled, double? volume, SoundPack? pack}) {

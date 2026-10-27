@@ -7,36 +7,48 @@ enum AppThemeMode {
   // Third free skin. Took over from Peony (and Bubblegum before it) and
   // keeps the index, so anyone who had those saved lands here.
   blueprint,
-  obsidian,
-  synthwave,
+  obsidian, // retired, slot kept
+  synthwave, // retired, slot kept
   matcha,
   frost,
   velvet,
   // Materials: look, sound and haptics sold as one set (see skin_catalog).
-  clay,
+  clay, // retired, slot kept
   chrome,
   glass,
   wood,
-  candy,
+  candy, // retired, slot kept
   neon,
   mechanical,
   // Secret: found, not bought (see kSecretSkins in skin_catalog).
   newsprint,
+  // Limited drops: materials sold only for a while (see kDrops).
+  mirage,
+  reckoning,
 }
+
+/// Skins that were sold once and are gone. Their [AppThemeMode] slots stay
+/// (the index is saved); anyone who had one saved is moved to Marigold.
+const kRetiredThemes = {
+  AppThemeMode.obsidian,
+  AppThemeMode.synthwave,
+  AppThemeMode.clay,
+  AppThemeMode.candy,
+};
 
 /// Surface treatment of the 3D numerals (and, for keycaps, the keys).
 /// Only materials use anything but [standard].
 enum SkinFinish {
   standard,
-  matte, // soft, lit from above, no hard edge
   mirror, // chrome: sky-and-horizon reflection
   glass, // frosted, brightest at the top edge
   grain, // wood grain bands
-  gloss, // hard candy highlight across the top
   glow, // neon tube with a halo
   keycap, // plain numerals, keys drawn as keycaps
   wireframe, // hollow line-drawn blocks over a drafting grid
   halftone, // printed dots across the face
+  dune, // wind ripples in sunlit sand (Mirage)
+  doom, // cold iron cracked with green light (Reckoning)
 }
 
 class ThemeColors {
@@ -69,23 +81,59 @@ class ThemeColors {
   });
 
   static ThemeColors of(AppThemeMode mode) => switch (mode) {
+    // Retired skins keep their enum slot (the index is saved) but look like
+    // Marigold, in case a saved choice survives somewhere.
     AppThemeMode.ink => inkTheme,
-    AppThemeMode.sunny => sunnyTheme,
+    AppThemeMode.sunny ||
+    AppThemeMode.obsidian ||
+    AppThemeMode.synthwave ||
+    AppThemeMode.clay ||
+    AppThemeMode.candy => sunnyTheme,
     AppThemeMode.blueprint => blueprintTheme,
-    AppThemeMode.obsidian => obsidianTheme,
-    AppThemeMode.synthwave => synthwaveTheme,
     AppThemeMode.matcha => matchaTheme,
     AppThemeMode.frost => frostTheme,
     AppThemeMode.velvet => velvetTheme,
-    AppThemeMode.clay => clayTheme,
     AppThemeMode.chrome => chromeTheme,
     AppThemeMode.glass => glassTheme,
     AppThemeMode.wood => woodTheme,
-    AppThemeMode.candy => candyTheme,
     AppThemeMode.neon => neonTheme,
     AppThemeMode.mechanical => mechanicalTheme,
     AppThemeMode.newsprint => newsprintTheme,
+    AppThemeMode.mirage => mirageTheme,
+    AppThemeMode.reckoning => reckoningTheme,
   };
+
+  /// Mirage (a low sun over dark dunes, pale sand lit orange, spice blue)
+  static const mirageTheme = ThemeColors(
+    bg: Color(0xFF1F0D04), // Shadow side of the dunes
+    bgShade: Color(0xFFC2511A), // The sky the sun left behind
+    ink: Color(0xFFFFE8C2),
+    inkSoft: Color(0xFFD29A62),
+    accent: Color(0xFF4A9BFF), // Spice-blue operators and equals
+    extrudeTop: Color(0xFFF7E4B8), // Sunlit sand
+    extrudeSide: Color(0xFF9A3D14),
+    extrudeShadow: Color(0x99000000),
+    extrudeChamfer: Color(0xCCFFF1D0),
+    burst: Color(0xFFFFB35C),
+    isDark: true,
+    finish: SkinFinish.dune,
+  );
+
+  /// Reckoning (grey iron, cracked with green light, on a stopped clock)
+  static const reckoningTheme = ThemeColors(
+    bg: Color(0xFF030705), // The dark before it
+    bgShade: Color(0xFF123324),
+    ink: Color(0xFFDCE8E0),
+    inkSoft: Color(0xFF6A8173),
+    accent: Color(0xFF2FE274), // Doom-green energy
+    extrudeTop: Color(0xFF8C9993), // Cold iron
+    extrudeSide: Color(0xFF16301F),
+    extrudeShadow: Color(0xCC000000),
+    extrudeChamfer: Color(0xB32FE274),
+    burst: Color(0xFF2FE274),
+    isDark: true,
+    finish: SkinFinish.doom,
+  );
 
   /// Blueprint (cyanotype paper, the numerals as hollow line drawings)
   static const blueprintTheme = ThemeColors(
@@ -121,21 +169,6 @@ class ThemeColors {
 
   // ─── Materials ─────────────────────────────────────────────────────────────
 
-  /// Clay (hand-pressed terracotta on putty, matte and soft)
-  static const clayTheme = ThemeColors(
-    bg: Color(0xFFE9DCCB), // Putty
-    bgShade: Color(0xFFF1E6D7),
-    ink: Color(0xFF5A3A2E), // Fired-earth brown
-    inkSoft: Color(0xFF9A7B6A),
-    accent: Color(0xFFB8452E), // Terracotta operators and equals
-    extrudeTop: Color(0xFFD9694C), // Wet clay face
-    extrudeSide: Color(0xFF9E4530), // Darker fired side
-    extrudeShadow: Color(0x385A3A2E),
-    extrudeChamfer: Colors.transparent, // Matte: no catch light
-    burst: Color(0xFFD9694C),
-    isDark: false,
-    finish: SkinFinish.matte,
-  );
 
   /// Chrome (polished steel on a dark bench, mirror finish)
   static const chromeTheme = ThemeColors(
@@ -185,21 +218,6 @@ class ThemeColors {
     finish: SkinFinish.grain,
   );
 
-  /// Candy (hot-pink hard candy on bubblegum, glossy)
-  static const candyTheme = ThemeColors(
-    bg: Color(0xFFFFD9E8), // Bubblegum
-    bgShade: Color(0xFFFFE6F0),
-    ink: Color(0xFF6B1242),
-    inkSoft: Color(0xFFB05A86),
-    accent: Color(0xFF008577), // Mint operators and equals
-    extrudeTop: Color(0xFFFF4F9A), // Hot-pink face
-    extrudeSide: Color(0xFFB81F64),
-    extrudeShadow: Color(0x33B81F64),
-    extrudeChamfer: Color(0xFFFFFFFF),
-    burst: Color(0xFFFFFFFF),
-    isDark: false,
-    finish: SkinFinish.gloss,
-  );
 
   /// Neon (a green tube sign on a night wall, glowing)
   static const neonTheme = ThemeColors(
@@ -273,35 +291,7 @@ class ThemeColors {
     isDark: true,
   );
 
-  /// Obsidian (black lacquer and brushed gold, luxury-watch feel)
-  static const obsidianTheme = ThemeColors(
-    bg: Color(0xFF0B0B0C), // Black lacquer
-    bgShade: Color(0xFF161512),
-    ink: Color(0xFFF1D48A), // Brushed gold numerals
-    inkSoft: Color(0xFF8C7A52), // Aged brass utility keys
-    accent: Color(0xFFE8C877), // Champagne operators and equals
-    extrudeTop: Color(0xFFF1D48A), // Gold front face
-    extrudeSide: Color(0xFF6B4E17), // Deep bronze block
-    extrudeShadow: Color(0x99000000),
-    extrudeChamfer: Color(0x80FFF3D0), // Polished gold catch light
-    burst: Color(0xFFF1D48A),
-    isDark: true,
-  );
 
-  /// Synthwave (retro-80s neon night drive)
-  static const synthwaveTheme = ThemeColors(
-    bg: Color(0xFF120A2A), // Midnight violet
-    bgShade: Color(0xFF1C1238),
-    ink: Color(0xFFF5F2FF), // Neon-white numerals
-    inkSoft: Color(0xFF9A8CC8), // Dusk lavender utility keys
-    accent: Color(0xFF00E5FF), // Electric cyan operators and equals
-    extrudeTop: Color(0xFFF5F2FF),
-    extrudeSide: Color(0xFFFF2E88), // Hot-magenta glowing block
-    extrudeShadow: Color(0x99000000),
-    extrudeChamfer: Color(0x80FFB3D9), // Pink neon rim
-    burst: Color(0xFF00E5FF),
-    isDark: true,
-  );
 
   /// Matcha (calm Japanese paper: sage, sumi ink, terracotta seal)
   static const matchaTheme = ThemeColors(

@@ -12,6 +12,7 @@ import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
+import 'package:popcalc/core/quick_tile/quick_tile.dart';
 import 'package:popcalc/core/review/review_prompter.dart';
 import 'package:popcalc/features/themes/presentation/store_widgets.dart';
 
@@ -55,6 +56,7 @@ class SettingsSheet extends ConsumerWidget {
       ...free.skip(1),
       ...kSkins.where((s) => s.premium && has(s)),
       ...kMaterials.where(has),
+      ...kDrops.where(has),
     ];
     final ownsAll = kBundleItems.every((s) => ownsSkin(owned, s));
     final saving = ref.watch(purchasesProvider.select((s) => s.bundleSaving));
@@ -273,6 +275,8 @@ class SettingsSheet extends ConsumerWidget {
                               ),
                             ),
                           ),
+
+                          _QuickTileRow(colors: colors),
                         ],
                       );
                     },
@@ -293,8 +297,7 @@ class SettingsSheet extends ConsumerWidget {
                     child: _SettingsRow(
                       icon: Icons.star_outline_rounded,
                       label: 'Rate PopCalc',
-                      description:
-                          'One person made this. A review helps others find it.',
+                      description: 'One person made this. A review helps others find it.',
                       colors: colors,
                       trailing: Icon(
                         Icons.chevron_right_rounded,
@@ -366,6 +369,74 @@ class _SettingsRow extends StatelessWidget {
             ),
           ),
           ?trailing,
+        ],
+      ),
+    );
+  }
+}
+
+/// "Quick Settings tile": asks Android to add the PopCalc tile to the
+/// pull-down panel (a user's request). The answer is written under the row,
+/// since a snackbar would sit behind this sheet.
+class _QuickTileRow extends StatefulWidget {
+  final ThemeColors colors;
+  const _QuickTileRow({required this.colors});
+
+  @override
+  State<_QuickTileRow> createState() => _QuickTileRowState();
+}
+
+class _QuickTileRowState extends State<_QuickTileRow> {
+  String? _note;
+  bool _asking = false;
+
+  Future<void> _add() async {
+    if (_asking) return;
+    AppHaptics.selectionClick();
+    _asking = true;
+    final result = await QuickTile.request();
+    _asking = false;
+    if (result == QuickTileResult.added) AppHaptics.success();
+    if (mounted) setState(() => _note = QuickTile.noteFor(result));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors;
+    return InkWell(
+      key: const ValueKey('quick-tile'),
+      onTap: _add,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SettingsRow(
+            icon: Icons.dashboard_customize_outlined,
+            label: 'Quick Settings Tile',
+            description: 'Open PopCalc from the pull-down panel, anywhere',
+            colors: colors,
+            trailing: Text(
+              'ADD',
+              style: TextStyle(
+                fontFamily: 'BebasNeue',
+                fontSize: 20.0,
+                letterSpacing: 1.0,
+                color: colors.accent,
+              ),
+            ),
+          ),
+          if (_note != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(60.0, 0, 24.0, 10.0),
+              child: Text(
+                _note!,
+                key: const ValueKey('quick-tile-note'),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11.5,
+                  color: colors.ink.withValues(alpha: 0.85),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -863,9 +934,9 @@ class _StoreBanner extends StatelessWidget {
   });
 
   static const _fan = [
-    (AppThemeMode.synthwave, -24.0, 6.0, -0.2),
+    (AppThemeMode.velvet, -24.0, 6.0, -0.2),
     (AppThemeMode.frost, 24.0, 6.0, 0.2),
-    (AppThemeMode.clay, 0.0, 0.0, 0.0),
+    (AppThemeMode.chrome, 0.0, 0.0, 0.0),
   ];
 
   @override
@@ -973,7 +1044,7 @@ class _SignatureFooter extends StatefulWidget {
   final ThemeColors colors;
   const _SignatureFooter({required this.colors});
 
-  static const _appVersion = '1.5.1';
+  static const _appVersion = '1.5.5';
 
   @override
   State<_SignatureFooter> createState() => _SignatureFooterState();

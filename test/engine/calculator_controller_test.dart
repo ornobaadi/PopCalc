@@ -294,6 +294,14 @@ void main() {
     expect(controller.state.expression.getAllTokens().first.text, '1.5e20');
   });
 
+  test('History restore keeps a tiny scientific number whole (1e-23)', () {
+    controller.loadExpression('1e-23 × 2', '2e-23');
+    expect(controller.state.expression.getAllTokens().first.text, '1e-23');
+    controller.onEquals();
+    expect(controller.state.error, isNull);
+    expect(controller.state.resultText, '2e-23');
+  });
+
   group('Editing tokens', () {
     void type(String keys) {
       for (final k in keys.split('')) {
