@@ -67,7 +67,10 @@ void main() {
 
   group('ConverterController', () {
     late ConverterController c;
-    setUp(() => c = ConverterController(persist: false));
+    setUp(
+      () => c = ConverterController(persist: false)
+        ..selectCategory(Units.byId('length')),
+    );
 
     test('typing converts live', () {
       c.onDigit('1');

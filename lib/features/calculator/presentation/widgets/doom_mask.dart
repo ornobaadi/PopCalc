@@ -159,3 +159,38 @@ void paintDoomMask(
   canvas.restore();
   canvas.restore();
 }
+
+/// A still of the masked figure with its eyes lit: the store's glimpse of
+/// Reckoning's hidden moment.
+class MaskGlimpse extends StatelessWidget {
+  final Color light;
+  const MaskGlimpse({super.key, required this.light});
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(painter: _GlimpsePainter(light), size: Size.infinite);
+}
+
+class _GlimpsePainter extends CustomPainter {
+  final Color light;
+  _GlimpsePainter(this.light);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xD9020604),
+    );
+    paintDoomMask(
+      canvas,
+      Offset(size.width / 2, size.height * 0.46),
+      size.width * 0.78,
+      glow: 1.0,
+      alpha: 1.0,
+      light: light,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GlimpsePainter old) => old.light != light;
+}

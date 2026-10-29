@@ -5,7 +5,11 @@ import 'package:popcalc/features/calculator/presentation/calculator_screen.dart'
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> pumpScreen(WidgetTester tester, {bool tools = false}) async {
-  SharedPreferences.setMockInitialValues({'settings_advanced_tools': tools});
+  SharedPreferences.setMockInitialValues({
+    'settings_advanced_tools': tools,
+    // Currency is first now; these tests check exact length units.
+    'converter_category': 'length',
+  });
   tester.view.physicalSize = const Size(1080, 2340); // 360 × 780 dp phone
   tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);

@@ -4,12 +4,12 @@
 
 **Math, but make it physical.**
 
-PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, musical sound effects, eight hand-crafted skins, seven materials and one secret skin you have to earn.
+PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, musical sound effects, hand-crafted skins, materials, two limited-edition drops with hidden scenes, a live currency converter and one secret skin you have to earn.
 
-- Version: 1.5.5
+- Version: 1.6.0
 - Platform: Android
 - Built with: Flutter
-- 100% offline, no ads, no account, zero data collected
+- Works 100% offline, no ads, no account, zero data collected (go online only if you want live currency rates)
 
 ---
 
@@ -39,12 +39,8 @@ PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, mus
   </tr>
   <tr>
     <td><img src="assets/readme/store/5.jpg" width="240" alt="Unit converter: 100 mph to 160.9344 km/h"/></td>
-    <td><img src="assets/readme/store/7.jpg" width="240" alt="Skin store with the Everything bundle"/></td>
-    <td><img src="assets/readme/store/4.jpg" width="240" alt="History sheet in Velvet"/></td>
-  </tr>
-  <tr>
     <td><img src="assets/readme/store/2.jpg" width="240" alt="Settings in Marigold"/></td>
-    <td colspan="2"></td>
+    <td><img src="assets/readme/store/4.jpg" width="240" alt="History sheet in Velvet"/></td>
   </tr>
 </table>
 
@@ -79,7 +75,8 @@ PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, mus
 ### Scientific & Converter
 - One switch in Settings adds two buttons to the top bar
 - **Scientific:** powers, roots, brackets, trig (DEG/RAD), logs, π, e and factorial, in a tray that folds away. Switch between simple and scientific with one tap
-- **Unit converter:** ten categories with exact factors, on its own screen. Swipe through units and categories like a slider. Data units show both families side by side: decimal (1 GB = 1000 MB) and binary (1 GiB = 1024 MiB), plus bits for internet speeds
+- **Currency converter:** 33 currencies, first in the converter. Works offline with rates built into the app; tap the rates pill to fetch today's rates from the internet whenever you like. Flags, currency signs, money-style rounding
+- **Unit converter:** ten more categories with exact factors, on its own screen. Swipe through units and categories like a slider. Data units show both families side by side: decimal (1 GB = 1000 MB) and binary (1 GiB = 1024 MiB), plus bits for internet speeds
 
 ### Quick Settings tile
 - Add a PopCalc tile to the pull-down Quick Settings panel (Settings → Quick Settings Tile) and open the calculator from anywhere with one tap
@@ -90,7 +87,7 @@ PopCalc is an Android calculator with sculpted 3D numerals, tactile haptics, mus
 - Errors are written as jokes, with the plain reason underneath. Results too big to show get a "that's what she said" all of their own
 
 ### Privacy and performance
-- Works fully offline; nothing you type ever leaves your phone
+- Works fully offline; nothing you type ever leaves your phone. The only optional online feature is fetching live currency rates, and it sends nothing about you
 - No ads, no account, no data collected
 - Lite Effects mode for low-end devices
 
@@ -108,6 +105,8 @@ Each skin restyles the whole app: numerals, keys, sheets, celebration and status
 | Matcha | Sage paper, ink and terracotta | `#DDE4D0` | `#A8431F` | Pro |
 | Frost | Nordic ice, navy numerals | `#E8EFF5` | `#BF360C` | Pro |
 | Velvet | Deep wine, cream and rose gold | `#3A0A1B` | `#E8A87C` | Pro |
+
+**Limited drops** (until 11 January 2027): **Mirage**, living dunes under a sky that follows your clock, and **Reckoning**, a doomsday clock on your phone's own time. Each has its own film-style sounds, haptics and a hidden scene to find. $2.99 each or both in the **Dunesday bundle** for $4.99; yours for good once bought.
 
 Pro skins and the five materials (Chrome, Glass, Wood, Neon, Mechanical: a look with its own sound and haptics) are one-time purchases through Google Play, singly or all together in the Everything bundle. Nothing needed to do math will ever be locked.
 
@@ -141,6 +140,7 @@ Multiply and divide come before add and subtract. Operations at the same level r
 | `a × b%` | `a × (b / 100)` | `80 × 25%` | `20` |
 | `a ÷ b%` | `a ÷ (b / 100)` | `50 ÷ 25%` | `200` |
 | `b%` | `b / 100` | `12%` | `0.12` |
+| `a% ± b%` | percentages add | `50% + 10%` | `0.6` |
 
 ### Edge cases
 

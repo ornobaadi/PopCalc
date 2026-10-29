@@ -38,8 +38,10 @@ This policy applies only to Pop Calc and covers how the app collects, uses, and 
 
 <h2>Summary</h2>
 <p>Pop Calc does not collect, store, or transmit any personal or sensitive user data.
-The app has no account system, no user profiles, and no internet connection requirement for
-its core calculator features. All calculations and your calculation history stay on your device.</p>
+The app has no account system and no user profiles. <strong>Pop Calc works completely offline</strong>:
+every calculation, conversion and your history stay on your device. The only thing that ever uses the
+internet is optional: fetching today's currency rates when you tap Update in the converter.
+Without it, currency conversion uses rates built into the app.</p>
 
 <h2>Information we collect</h2>
 <p><strong>None.</strong> Pop Calc does not collect:</p>
@@ -62,6 +64,12 @@ or to any third party, and we have no access to it:</p>
 </table>
 <p>Uninstalling the app permanently deletes this data. We do not back it up to any server we operate.</p>
 
+<h2>Optional live currency rates</h2>
+<p>When you tap Update under a currency conversion, the app downloads a public file of exchange
+rates from a free rate service (via the jsDelivr and Cloudflare content networks). The request
+contains no personal data, account or identifier; like any web request, those networks see your
+IP address. The rates are saved on your device. If you never tap Update, the app never makes this request.</p>
+
 <h2>In-app purchases</h2>
 <p>Pop Calc offers an optional one-time "Pro" purchase for additional themes and features. Purchases
 are processed entirely by Google Play Billing. We do not receive or store your payment details
@@ -74,6 +82,7 @@ unlock Pro features on your device.</p>
 <table>
   <tr><th>Permission</th><th>Why it's needed</th></tr>
   <tr><td>Vibration</td><td>Provides haptic feedback when you tap keys</td></tr>
+  <tr><td>Internet</td><td>Optional: downloads currency rates when you tap Update, and lets Google Play handle purchases and app updates</td></tr>
   <tr><td>Billing</td><td>Enables the optional in-app Pro purchase through Google Play</td></tr>
 </table>
 <p>Pop Calc does not request access to your camera, microphone, contacts, location, storage, or
@@ -81,8 +90,8 @@ any other sensitive device permission.</p>
 
 <h2>Data sharing</h2>
 <p>We do not sell, rent, or share any user data with third parties, because we do not collect any
-user data in the first place. The only third party involved in the app at all is Google Play
-Billing, which processes optional purchases as described above.</p>
+user data in the first place. The only third parties involved are Google Play, which processes
+optional purchases and updates, and the currency-rate service, contacted only when you ask for live rates.</p>
 
 <h2>Children's privacy</h2>
 <p>Pop Calc is not directed at children and is not designed to appeal primarily to children.

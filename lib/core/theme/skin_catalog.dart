@@ -339,13 +339,17 @@ class DropWindow {
 /// looks and names, nothing borrowed from the films. Not in the bundle.
 const _dropWindow = DropWindow(from: (2026, 10, 27), until: (2027, 1, 11));
 
+/// Both limited drops at once, for less than the two singly. Like the drops
+/// it is sold only inside their window and is not part of `themes_all`.
+const kDropBundleId = 'drop_dunesday';
+const kDropBundleLabel = 'DUNESDAY BUNDLE';
+
 const kDrops = <SkinInfo>[
   SkinInfo(
     mode: AppThemeMode.mirage,
     label: 'MIRAGE',
-    tagline: 'Hold still. Listen.',
-    description:
-        'Sunlit sand over drifting dunes. Hold the sun, and see what rises.',
+    tagline: 'Living dunes.',
+    description: 'Hold the sun.',
     modelCode: 'LTD-MRG',
     productId: 'drop_mirage',
     drop: _dropWindow,
@@ -362,9 +366,8 @@ const kDrops = <SkinInfo>[
   SkinInfo(
     mode: AppThemeMode.reckoning,
     label: 'RECKONING',
-    tagline: 'Every number, the last one.',
-    description:
-        'Cracked iron over a doomsday clock. Hold the clock, and see what answers.',
+    tagline: 'The final hour.',
+    description: 'Hold the clock.',
     modelCode: 'LTD-RCK',
     productId: 'drop_reckoning',
     drop: _dropWindow,
@@ -399,6 +402,7 @@ final Set<String> kProductIds = {
   kAllThemesProductId,
   for (final skin in kBundleItems) skin.productId!,
   for (final skin in kDrops) skin.productId!,
+  kDropBundleId,
 };
 
 SkinInfo skinOf(AppThemeMode mode) => [

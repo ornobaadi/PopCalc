@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
+import 'package:popcalc/core/storage/rates_store.dart';
 import 'package:popcalc/core/storage/settings_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
+import 'package:popcalc/core/units/currency.dart';
 import 'package:popcalc/core/units/units.dart';
 import 'package:popcalc/features/calculator/application/calculator_controller.dart';
 import 'package:popcalc/features/calculator/presentation/widgets/backspace_icon.dart';
@@ -325,6 +327,7 @@ class _CategoryTabsState extends ConsumerState<_CategoryTabs> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10.0),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             AnimatedDefaultTextStyle(
@@ -341,14 +344,19 @@ class _CategoryTabsState extends ConsumerState<_CategoryTabs> {
                               child: Text(category.name.toUpperCase()),
                             ),
                             const SizedBox(height: 5.0),
-                            AnimatedContainer(
+                            // Scale, not width: easeOutBack overshoots below
+                            // zero on the way out, and a negative width throws.
+                            AnimatedScale(
                               duration: const Duration(milliseconds: 220),
                               curve: Curves.easeOutBack,
-                              width: category.id == selected.id ? 6.0 : 0.0,
-                              height: 6.0,
-                              decoration: BoxDecoration(
-                                color: colors.accent,
-                                shape: BoxShape.circle,
+                              scale: category.id == selected.id ? 1.0 : 0.0,
+                              child: Container(
+                                width: 6.0,
+                                height: 6.0,
+                                decoration: BoxDecoration(
+                                  color: colors.accent,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
                             ),
                           ],
@@ -438,7 +446,10 @@ class _Readout extends ConsumerWidget {
                       ),
                     ),
                     child: Text(
-                      state.outputText,
+                      state.isCurrency
+                          ? '${Currency.signs[state.to.symbol] ?? ''}'
+                                '${state.outputText}'
+                          : state.outputText,
                       key: ValueKey(state.outputText),
                       semanticsLabel: '${state.outputText} ${state.to.name}',
                       style: _display.copyWith(
@@ -462,8 +473,105 @@ class _Readout extends ConsumerWidget {
               color: colors.inkSoft.withValues(alpha: 0.7),
             ),
           ),
+          if (state.isCurrency) _RatesLine(colors: colors),
           const SizedBox(height: 6.0),
         ],
+      ),
+    );
+  }
+}
+
+/// Under the currency result: how old the rates are, and the one button
+/// that takes the app online to fetch newer ones.
+class _RatesLine extends ConsumerWidget {
+  final ThemeColors colors;
+
+  const _RatesLine({required this.colors});
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rates = ref.watch(ratesProvider);
+    final d = rates.rates.date;
+    final date = '${d.day} ${_months[d.month - 1]} ${d.year}';
+
+    final busy = rates.status == RatesStatus.refreshing;
+    final (String text, Color dot) = switch (rates.status) {
+      RatesStatus.idle => ('Rates of $date', colors.inkSoft),
+      RatesStatus.refreshing => ('Getting live rates…', colors.accent),
+      RatesStatus.updated => ('Live · $date', const Color(0xFF2FBF71)),
+      RatesStatus.failed => ('Offline · rates of $date', colors.accent),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6.0),
+      child: Semantics(
+        button: true,
+        label: 'Update currency rates. $text',
+        excludeSemantics: true,
+        child: GestureDetector(
+          key: const ValueKey('rates-pill'),
+          behavior: HitTestBehavior.opaque,
+          onTap: busy
+              ? null
+              : () async {
+                  AppHaptics.selectionClick();
+                  final ok = await ref.read(ratesProvider.notifier).refresh();
+                  ok ? AppHaptics.success() : AppHaptics.error();
+                },
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(10.0, 4.0, 6.0, 4.0),
+            decoration: BoxDecoration(
+              color: colors.ink.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(20.0),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6.0,
+                  height: 6.0,
+                  decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 7.0),
+                Flexible(
+                  child: Text(
+                    text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11.5,
+                      color: colors.inkSoft,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6.0),
+                SizedBox(
+                  width: 20.0,
+                  height: 20.0,
+                  child: busy
+                      ? Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.6,
+                            color: colors.accent,
+                          ),
+                        )
+                      : Icon(
+                          Icons.refresh_rounded,
+                          size: 17.0,
+                          color: colors.accent,
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -574,32 +682,44 @@ class _UnitDialState extends State<_UnitDial> {
                     alignment: Alignment.center,
                     children: [...previous, ?current],
                   ),
-                  child: Row(
+                  // Currency names run long ("BANGLADESHI TAKA").
+                  child: FittedBox(
                     key: ValueKey(unit.id),
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        unit.name.toUpperCase(),
-                        style: _display.copyWith(
-                          fontSize: 18.0,
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (Currency.isCode(unit.symbol)) ...[
+                          Text(
+                            Currency.flag(unit.symbol),
+                            style: const TextStyle(fontSize: 17.0),
+                          ),
+                          const SizedBox(width: 7.0),
+                        ],
+                        Text(
+                          unit.name.toUpperCase(),
+                          maxLines: 1,
+                          style: _display.copyWith(
+                            fontSize: 18.0,
+                            color: colors.inkSoft,
+                          ),
+                        ),
+                        const SizedBox(width: 8.0),
+                        Text(
+                          unit.symbol,
+                          style: _display.copyWith(
+                            fontSize: 18.0,
+                            color: colors.accent,
+                          ),
+                        ),
+                        const SizedBox(width: 2.0),
+                        Icon(
+                          Icons.unfold_more_rounded,
                           color: colors.inkSoft,
+                          size: 18.0,
                         ),
-                      ),
-                      const SizedBox(width: 8.0),
-                      Text(
-                        unit.symbol,
-                        style: _display.copyWith(
-                          fontSize: 18.0,
-                          color: colors.accent,
-                        ),
-                      ),
-                      const SizedBox(width: 2.0),
-                      Icon(
-                        Icons.unfold_more_rounded,
-                        color: colors.inkSoft,
-                        size: 18.0,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

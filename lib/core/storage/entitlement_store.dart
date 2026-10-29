@@ -131,6 +131,8 @@ class FakePurchaseService extends PurchaseService {
       ? 6.99
       : productId == 'material_mechanical'
       ? 2.99
+      : productId == kDropBundleId
+      ? 4.99
       : productId.startsWith('drop_')
       ? 2.99
       : productId.startsWith('material_')
@@ -189,4 +191,5 @@ bool ownsSkin(
     !skin.premium ||
     !locked ||
     (skin.drop == null && owned.contains(kAllThemesProductId)) ||
+    (skin.drop != null && owned.contains(kDropBundleId)) ||
     owned.contains(skin.productId);

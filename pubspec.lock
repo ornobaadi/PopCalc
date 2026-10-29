@@ -201,7 +201,7 @@ packages:
     source: hosted
     version: "0.15.7"
   http:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: http
       sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
@@ -272,6 +272,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.5"
+  in_app_update:
+    dependency: "direct main"
+    description:
+      name: in_app_update
+      sha256: c55b4da41baf34b440ba627843932aa6f1689b5c499cfac98aec156b3113d89e
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.0"
   intl:
     dependency: transitive
     description:

@@ -54,6 +54,15 @@ void main() {
     expect(kProductIds, containsAll([sand.productId, hour.productId]));
   });
 
+  test('the Dunesday bundle unlocks both drops and nothing else', () {
+    expect(ownsSkin({kDropBundleId}, sand, locked: true), isTrue);
+    expect(ownsSkin({kDropBundleId}, hour, locked: true), isTrue);
+    expect(
+      ownsSkin({kDropBundleId}, skinOf(AppThemeMode.matcha), locked: true),
+      isFalse,
+    );
+  });
+
   test('the bundle saving ignores the drops', () {
     final prices = {for (final id in kProductIds) id: 'x'};
     final amounts = {
@@ -124,6 +133,8 @@ void main() {
     final hub = Offset(size.width * kClockHub.dx, size.height * kClockHub.dy);
     final line = find.text(DoomIncursion.line);
     expect(line, findsNothing);
+    final hint = find.byKey(const ValueKey('egg-hint'));
+    expect(hint, findsOneWidget, reason: 'first time: HOLD HERE over the hub');
 
     final g = await tester.startGesture(hub);
     for (var i = 0; i < 24; i++) {
@@ -143,6 +154,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(line, findsNothing, reason: 'it leaves again');
+    expect(hint, findsNothing, reason: 'found once, the hint is gone for good');
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('egg_found_reckoning'), isTrue);
   });
 
   testWidgets('a quick tap or an early release on the hub does nothing', (
@@ -194,6 +208,7 @@ void main() {
     final size = tester.view.physicalSize / tester.view.devicePixelRatio;
     final sun = DuneSky.at(duneNow(), size).body;
     expect(wormShowing(tester), isFalse);
+    expect(find.byKey(const ValueKey('egg-hint')), findsOneWidget);
     await hold(tester, sun, 2400);
     expect(wormShowing(tester), isTrue);
     for (var i = 0; i < 90; i++) {

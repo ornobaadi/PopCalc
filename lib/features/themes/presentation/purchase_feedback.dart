@@ -245,11 +245,7 @@ const dropMark = 'LIMITED EDITION';
 
 /// One line on how long a drop lasts, for its section and its sheet.
 String dropLine(DropWindow drop) {
-  if (drop.upcoming) {
-    return 'Lands ${_date(drop.start)}, gone ${_date(drop.end)}. '
-        'Not in the bundle.';
-  }
+  if (drop.upcoming) return 'From ${_date(drop.start)}';
   final days = drop.daysLeft;
-  final left = days <= 1 ? 'Last day' : 'Leaves in $days days';
-  return '$left. Yours for good once bought. Not in the bundle.';
+  return days <= 1 ? 'Last day' : '$days days left';
 }

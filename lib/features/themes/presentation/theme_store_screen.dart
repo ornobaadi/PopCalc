@@ -6,6 +6,7 @@ import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
 
+import 'dunesday_bundle.dart';
 import 'purchase_feedback.dart';
 import 'store_widgets.dart';
 import 'theme_bundle_sheet.dart';
@@ -263,6 +264,11 @@ class _ThemeStoreScreenState extends ConsumerState<ThemeStoreScreen> {
                           BundleDetailSheet.show(context, skinOf(currentMode));
                         },
                       ),
+                    ),
+                    // Both drops at once, while they are on sale
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(20.0, 18.0, 20.0, 0.0),
+                      child: DunesdayBanner(),
                     ),
                     if (drops.isNotEmpty)
                       ...section(

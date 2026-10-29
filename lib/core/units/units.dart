@@ -1,6 +1,8 @@
 import 'package:decimal/decimal.dart';
 import 'package:rational/rational.dart';
 
+import 'currency.dart';
+
 /// Unit definitions and exact conversion.
 /// PURE DART - No Flutter imports allowed in core/units.
 ///
@@ -54,10 +56,19 @@ class Units {
     return result.toDecimal(scaleOnInfinitePrecision: 32);
   }
 
+  /// Swaps in newer currency rates. Currency is the one category whose
+  /// factors change; anything holding its [Unit]s should look them up again.
+  static void setCurrencyRates(CurrencyRates rates) {
+    final index = categories.indexWhere((c) => c.id == Currency.categoryId);
+    categories[index] = rates.toCategory();
+  }
+
   static UnitCategory byId(String id) =>
       categories.firstWhere((c) => c.id == id, orElse: () => categories.first);
 
   static final List<UnitCategory> categories = [
+    // Market rates, not exact: starts from the snapshot in the app.
+    CurrencyRates.bundled.toCategory(),
     UnitCategory(
       'length',
       'Length',

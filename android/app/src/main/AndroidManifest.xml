@@ -4,6 +4,9 @@
     <!-- Google Play Billing: premium skins and materials. -->
     <uses-permission
         android:name="com.android.vending.BILLING"/>
+    <!-- Currency rates, only when the user taps Update in the converter
+         (Play billing and updates use it too). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="${appLabel}"
         android:name="${applicationName}"

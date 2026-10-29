@@ -99,11 +99,21 @@ class _Evaluation {
     if (node is BinaryOpNode) {
       final leftVal = _eval(node.left);
 
+
       // Handle percent on right operand
       if (node.right is NumberNode && (node.right as NumberNode).isPercent) {
         final percentNum = (node.right as NumberNode).value;
         final fraction = Evaluator._divide(percentNum, Evaluator._oneHundred);
 
+        // "Percent of the left side" only makes sense when the left side is
+        // an amount. When it is a percentage itself (1% − 1%, 50% + 10%),
+        // percentages simply add up: 1% − 1% = 0, not 0.0099.
+        if ((node.op == TokenType.plus || node.op == TokenType.minus) &&
+            _isPercentage(node.left)) {
+          return node.op == TokenType.plus
+              ? leftVal + fraction
+              : leftVal - fraction;
+        }
         switch (node.op) {
           case TokenType.plus:
             // a + (a * b / 100)
@@ -247,10 +257,10 @@ class _Evaluation {
         return _fromDouble(math.log(x.toDouble()) / math.ln10);
       case '√':
         if (x < Decimal.zero) throw CalcException(CalcError.negativeRoot);
-        return _fromDouble(math.sqrt(x.toDouble()));
+        return _root(x, 2);
       case '∛':
-        final r = math.pow(x.abs().toDouble(), 1 / 3).toDouble();
-        return _fromDouble(x < Decimal.zero ? -r : r);
+        final r = _root(x.abs(), 3);
+        return x < Decimal.zero ? -r : r;
     }
     throw CalcException(CalcError.invalidExpression);
   }
@@ -313,5 +323,42 @@ class _Evaluation {
     if (value.isInfinite) throw CalcException(CalcError.overflow);
     if (value == 0) return Decimal.zero;
     return Decimal.parse(value.toStringAsPrecision(15));
+  }
+
+  /// True when [node] is itself a percentage (5%, 1% + 2%, −5%), as opposed
+  /// to an amount that merely used one (200 × 5% is 10, an amount).
+  static bool _isPercentage(AstNode node) => switch (node) {
+    NumberNode(:final isPercent) => isPercent,
+    UnaryMinusNode(:final operand) => _isPercentage(operand),
+    BinaryOpNode(:final op, :final left, :final right) =>
+      (op == TokenType.plus || op == TokenType.minus) &&
+          _isPercentage(left) &&
+          _isPercentage(right),
+    _ => false,
+  };
+
+  /// The [n]th root of [x] (x ≥ 0) to 32 decimal places, by Newton's method
+  /// in exact decimals. A double root carries only ~16 digits, which showed
+  /// up on screen as √2 × √2 = 2.00000000000001.
+  static Decimal _root(Decimal x, int n) {
+    if (x == Decimal.zero) return Decimal.zero;
+    final d = x.toDouble();
+    var guess = d.isFinite
+        ? Decimal.parse(math.pow(d, 1 / n).toStringAsPrecision(15))
+        : Decimal.ten.pow((x.precision - x.scale) ~/ n).toDecimal();
+    if (guess == Decimal.zero) guess = Decimal.one;
+    final nd = Decimal.fromInt(n);
+    final tiny = Decimal.parse('1e-40');
+    for (var i = 0; i < 80; i++) {
+      final power = guess.pow(n - 1).toDecimal();
+      final next = (((nd - Decimal.one) * guess +
+                      (x / power).toDecimal(scaleOnInfinitePrecision: 45)) /
+                  nd)
+              .toDecimal(scaleOnInfinitePrecision: 45);
+      final done = (next - guess).abs() < tiny;
+      guess = next;
+      if (done) break;
+    }
+    return guess.round(scale: 32);
   }
 }

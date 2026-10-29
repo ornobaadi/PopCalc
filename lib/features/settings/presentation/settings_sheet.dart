@@ -20,6 +20,7 @@ import 'hunt_note_sheet.dart';
 
 import 'package:popcalc/features/themes/presentation/theme_card.dart';
 import 'package:popcalc/features/themes/presentation/theme_detail_sheet.dart';
+import 'package:popcalc/features/themes/presentation/dunesday_bundle.dart';
 import 'package:popcalc/features/themes/presentation/theme_store_screen.dart';
 
 class SettingsSheet extends ConsumerWidget {
@@ -157,6 +158,12 @@ class SettingsSheet extends ConsumerWidget {
                   ),
 
                   const SizedBox(height: 16.0),
+                  // The limited drops, both at once (hides itself when
+                  // over or owned)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20.0, 0.0, 20.0, 12.0),
+                    child: DunesdayBanner(),
+                  ),
                   // Skin store entry
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -170,8 +177,6 @@ class SettingsSheet extends ConsumerWidget {
                       },
                     ),
                   ),
-
-                  _AppIconSection(colors: colors),
 
                   const SizedBox(height: 20.0),
                   Divider(color: colors.ink.withValues(alpha: 0.08), height: 1),
@@ -282,6 +287,9 @@ class SettingsSheet extends ConsumerWidget {
                     },
                   ),
                   const SizedBox(height: 6.0),
+                  Divider(color: colors.ink.withValues(alpha: 0.08), height: 1),
+                  _AppIconSection(colors: colors),
+                  const SizedBox(height: 20.0),
                   Divider(color: colors.ink.withValues(alpha: 0.08), height: 1),
                   _SoundSection(colors: colors),
                   const SizedBox(height: 8.0),
@@ -1044,7 +1052,7 @@ class _SignatureFooter extends StatefulWidget {
   final ThemeColors colors;
   const _SignatureFooter({required this.colors});
 
-  static const _appVersion = '1.5.5';
+  static const _appVersion = '1.6.0';
 
   @override
   State<_SignatureFooter> createState() => _SignatureFooterState();

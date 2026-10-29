@@ -7,6 +7,7 @@ import 'package:flutter_soloud/flutter_soloud.dart' show SoundHandle;
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'drop_backdrop.dart';
+import 'egg_hint.dart';
 import 'doom_mask.dart';
 
 /// Reckoning's hidden moment. Press and hold the hub of the doomsday clock:
@@ -63,12 +64,17 @@ class _DoomIncursionState extends State<DoomIncursion>
   Timer? _pulse;
   Timer? _arm;
   SoundHandle? _chargeHandle;
+  /// First-time "HOLD HERE" nudge, until the moment has been found once.
+  bool _hint = false;
   bool _voiced = false;
   bool _rumbled = false;
 
   @override
   void initState() {
     super.initState();
+    EggHint.pending('reckoning').then((show) {
+      if (mounted && show) setState(() => _hint = true);
+    });
     AppSounds.warmExtras(_folder, const ['warp_charge', 'warp_boom', 'warp_voice']);
   }
 
@@ -127,6 +133,10 @@ class _DoomIncursionState extends State<DoomIncursion>
     _chargeHandle = null;
     if (widget.warp.charge >= _minCharge) {
       setState(() => _phase = _Phase.boom);
+      if (_hint) {
+        _hint = false;
+        EggHint.markFound('reckoning');
+      }
       _t.value = 0.0;
       widget.warp.set(charge: 1.0, frozen: true);
       AppSounds.playExtra(_folder, 'warp_boom');
@@ -237,6 +247,8 @@ class _DoomIncursionState extends State<DoomIncursion>
                   child: const SizedBox.expand(),
                 ),
               ),
+              if (_hint && _phase == _Phase.idle)
+                EggHint(at: hub, color: widget.light),
               if (boom) ...[
                 Positioned.fill(
                   child: GestureDetector(

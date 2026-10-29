@@ -6,6 +6,7 @@ import 'package:popcalc/core/storage/entitlement_store.dart';
 import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/skin_catalog.dart';
 
+import 'dunesday_bundle.dart';
 import 'purchase_feedback.dart';
 import 'store_widgets.dart';
 import 'theme_bundle_sheet.dart';
@@ -158,17 +159,47 @@ class _SkinDetailSheetState extends ConsumerState<SkinDetailSheet> {
       body: [
         Center(
           child: SizedBox(
-            width: 190.0,
-            child: SkinSwatch(
-              skin: skin,
-              aspectRatio: 0.86,
-              borderColor: c.accent,
-              borderWidth: 2.0,
-              radius: 28.0,
-            ),
+            width: skin.drop != null ? 140.0 : 190.0,
+            child: skin.drop != null
+                ? DropShowcase(skin: skin)
+                : SkinSwatch(
+                    skin: skin,
+                    aspectRatio: 0.86,
+                    borderColor: c.accent,
+                    borderWidth: 2.0,
+                    radius: 28.0,
+                  ),
           ),
         ),
         const SizedBox(height: 20.0),
+        if (skin.drop != null) ...[
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10.0,
+                vertical: 4.0,
+              ),
+              decoration: BoxDecoration(
+                color: c.accent,
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              child: Text(
+                owned
+                    ? 'LIMITED EDITION'
+                    : 'LIMITED EDITION · ${dropLine(skin.drop!).toUpperCase()}',
+                key: const ValueKey('drop-line'),
+                style: TextStyle(
+                  fontFamily: 'BebasNeue',
+                  fontSize: 13.0,
+                  letterSpacing: 1.6,
+                  height: 1.2,
+                  color: c.bg,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10.0),
+        ],
         Text(
           'MODEL  ${skin.modelCode}',
           textAlign: TextAlign.center,
@@ -199,25 +230,20 @@ class _SkinDetailSheetState extends ConsumerState<SkinDetailSheet> {
           ),
         ),
         const SizedBox(height: 10.0),
-        Text(
-          skin.description,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 12.5,
-            height: 1.45,
-            color: c.inkSoft,
-          ),
-        ),
-        if (skin.drop != null && !owned) ...[
-          const SizedBox(height: 10.0),
+        if (skin.drop != null) ...[
+          const SizedBox(height: 6.0),
+          DropPerks(skin: skin),
+        ] else
           Text(
-            dropLine(skin.drop!).toUpperCase(),
-            key: const ValueKey('drop-line'),
+            skin.description,
             textAlign: TextAlign.center,
-            style: small(color: c.accent),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12.5,
+              height: 1.45,
+              color: c.inkSoft,
+            ),
           ),
-        ],
         if (skin.isMaterial) ...[
           const SizedBox(height: 22.0),
           Text(
@@ -287,6 +313,39 @@ class _SkinDetailSheetState extends ConsumerState<SkinDetailSheet> {
         const SizedBox(height: 10.0),
         StoreButton(colors: c, onTap: onPrimary, child: primary),
         if (note != null) PurchaseNote(note, color: c.inkSoft),
+        if (skin.drop != null &&
+            !owned &&
+            !widget.fromBundle &&
+            showDunesday(purchases.owned))
+          GestureDetector(
+            key: const ValueKey('drop-dunesday-link'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              AppHaptics.selectionClick();
+              DunesdayBundleSheet.show(context);
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16.0, bottom: 2.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Both drops for ${priceTag(purchases, kDropBundleId)}',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      color: c.ink,
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18.0,
+                    color: c.inkSoft,
+                  ),
+                ],
+              ),
+            ),
+          ),
         if (offerBundle)
           GestureDetector(
             behavior: HitTestBehavior.opaque,

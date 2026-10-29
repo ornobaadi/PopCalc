@@ -406,6 +406,7 @@ void main() {
 
   test('every product id is unique and the bundle is among them', () {
     expect(kProductIds, contains(kAllThemesProductId));
-    expect(kProductIds.length, kBundleItems.length + kDrops.length + 1);
+    expect(kProductIds.length, kBundleItems.length + kDrops.length + 2);
+    expect(kProductIds, contains(kDropBundleId));
   });
 }

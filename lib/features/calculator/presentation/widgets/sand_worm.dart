@@ -9,6 +9,7 @@ import 'package:flutter_soloud/flutter_soloud.dart' show SoundHandle;
 import 'package:popcalc/core/audio/app_sounds.dart';
 import 'package:popcalc/core/haptics/app_haptics.dart';
 import 'drop_backdrop.dart';
+import 'egg_hint.dart';
 
 /// Mirage's hidden moment. Press and hold the sun (or the moon, after
 /// dark): a drumbeat starts in your hand and speeds up, the screen shudders
@@ -60,12 +61,17 @@ class _SandWormEggState extends State<SandWormEgg>
   Timer? _pulse;
   Timer? _arm;
   SoundHandle? _chargeHandle;
+  /// First-time "HOLD HERE" nudge, until the moment has been found once.
+  bool _hint = false;
   bool _rumbled1 = false;
   bool _rumbled2 = false;
 
   @override
   void initState() {
     super.initState();
+    EggHint.pending('mirage').then((show) {
+      if (mounted && show) setState(() => _hint = true);
+    });
     AppSounds.warmExtras(_folder, const ['worm_charge', 'worm_rise']);
   }
 
@@ -128,6 +134,10 @@ class _SandWormEggState extends State<SandWormEgg>
     _chargeHandle = null;
     if (widget.warp.charge >= _minCharge) {
       setState(() => _phase = _Phase.rising);
+      if (_hint) {
+        _hint = false;
+        EggHint.markFound('mirage');
+      }
       _t.value = 0.0;
       widget.warp.set(charge: 1.0);
       AppSounds.playExtra(_folder, 'worm_rise');
@@ -219,6 +229,8 @@ class _SandWormEggState extends State<SandWormEgg>
                 onPointerCancel: _up,
                 child: const SizedBox.expand(),
               ),
+              if (_hint && _phase == _Phase.idle && !_size.isEmpty)
+                EggHint(at: _body, color: const Color(0xFFFFE2B0)),
               if (rising)
                 Positioned.fill(
                   child: GestureDetector(
@@ -518,4 +530,14 @@ class _WormPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WormPainter old) => old.t != t;
+}
+
+/// A still of the worm at its height, mouth open: the store's glimpse of
+/// Mirage's hidden moment.
+class WormGlimpse extends StatelessWidget {
+  const WormGlimpse({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(painter: _WormPainter(4.0, 1.0, false), size: Size.infinite);
 }

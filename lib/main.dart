@@ -9,6 +9,7 @@ import 'package:popcalc/core/theme/app_theme.dart';
 import 'package:popcalc/core/theme/material_feel.dart';
 import 'package:popcalc/core/theme/skin_catalog.dart';
 import 'package:popcalc/core/theme/theme_tokens.dart';
+import 'package:popcalc/core/update/update_prompter.dart';
 import 'package:popcalc/features/splash/presentation/splash_screen.dart';
 
 // Kept for the app's lifetime; see main().
@@ -56,6 +57,9 @@ Future<void> main() async {
   );
 
   runApp(const ProviderScope(child: PopCalcApp()));
+
+  // A newer version on Play, offered once the launch has settled.
+  Future<void>.delayed(const Duration(seconds: 4), UpdatePrompter.run);
 }
 
 class PopCalcApp extends ConsumerWidget {
