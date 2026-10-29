@@ -40,9 +40,11 @@ class RatesNotifier extends StateNotifier<RatesState> {
   static const _kRates = 'currency_rates_json';
   static const _timeout = Duration(seconds: 8);
 
-  /// A public daily rates file on a CDN, and its mirror. No key, no
-  /// account, and nothing about the user is sent.
+  /// Free public rate files: no key, no account, nothing about the user is
+  /// sent. All of them publish about once a day, each on its own clock, so
+  /// a refresh asks them all at once and keeps whichever is newest.
   static const sources = [
+    'https://open.er-api.com/v6/latest/USD',
     'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json',
     'https://latest.currency-api.pages.dev/v1/currencies/usd.min.json',
   ];
@@ -68,24 +70,33 @@ class RatesNotifier extends StateNotifier<RatesState> {
     if (state.status == RatesStatus.refreshing) return false;
     state = RatesState(state.rates, RatesStatus.refreshing);
 
-    for (final url in sources) {
+    Future<CurrencyRates?> fetch(String url) async {
       try {
         final response = await _client.get(Uri.parse(url)).timeout(_timeout);
-        if (response.statusCode != 200) continue;
-        final rates = CurrencyRates.tryParse(response.body);
-        // Never step back to older rates than the ones in use.
-        if (rates == null || rates.date.isBefore(state.rates.date)) continue;
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString(_kRates, rates.toJson());
-        } catch (_) {
-          // Not saved: still use them for this session.
-        }
-        _apply(rates, RatesStatus.updated);
-        return true;
+        if (response.statusCode != 200) return null;
+        return CurrencyRates.tryParse(response.body);
       } catch (_) {
-        // Offline, timed out or blocked: try the mirror.
+        return null; // Offline, timed out or blocked.
       }
+    }
+
+    CurrencyRates? newest;
+    for (final rates in await Future.wait(sources.map(fetch))) {
+      if (rates != null &&
+          (newest == null || rates.date.isAfter(newest.date))) {
+        newest = rates;
+      }
+    }
+    // Never step back to older rates than the ones in use.
+    if (newest != null && !newest.date.isBefore(state.rates.date)) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_kRates, newest.toJson());
+      } catch (_) {
+        // Not saved: still use them for this session.
+      }
+      _apply(newest, RatesStatus.updated);
+      return true;
     }
     if (mounted) state = RatesState(state.rates, RatesStatus.failed);
     return false;

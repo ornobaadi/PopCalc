@@ -125,15 +125,17 @@ class CurrencyRates {
 
   /// The rates that ship with the app.
   static final CurrencyRates bundled = CurrencyRates._(
-    DateTime.parse(_bundledDate),
+    _utc(DateTime.parse(_bundledDate)),
     {
       for (final entry in _bundledPerUsd.entries)
         entry.key: Rational.parse(entry.value),
     },
   );
 
-  /// Parses the rate service's response:
-  /// `{"date": "2026-10-08", "usd": {"bdt": 123.1, "eur": 0.89, ...}}`.
+  /// Parses either rate service's response, always as UTC:
+  /// currency-api `{"date": "2026-10-08", "usd": {"bdt": 123.1, ...}}`, or
+  /// open.er-api `{"result": "success", "time_last_update_unix": 1793232151,
+  /// "rates": {"BDT": 123.1, ...}}` (which carries the hour, too).
   ///
   /// Returns null unless the date is valid and every listed currency has a
   /// positive rate, so a broken or partial response can never replace good
@@ -142,9 +144,23 @@ class CurrencyRates {
     try {
       final data = jsonDecode(json);
       if (data is! Map) return null;
-      final date = DateTime.tryParse('${data['date']}');
-      final usd = data['usd'];
-      if (date == null || usd is! Map) return null;
+      DateTime? date;
+      Map? usd;
+      if (data['rates'] is Map) {
+        final unix = data['time_last_update_unix'];
+        if (data['result'] != 'success' || unix is! int) return null;
+        date = DateTime.fromMillisecondsSinceEpoch(unix * 1000, isUtc: true);
+        usd = {
+          for (final e in (data['rates'] as Map).entries)
+            '${e.key}'.toLowerCase(): e.value,
+        };
+      } else {
+        final raw = DateTime.tryParse('${data['date']}');
+        // A bare day means that day in UTC; a saved timestamp keeps its hour.
+        date = raw == null ? null : _utc(raw);
+        if (data['usd'] is Map) usd = data['usd'] as Map;
+      }
+      if (date == null || usd == null) return null;
 
       final rates = <String, Rational>{};
       for (final currency in Currency.all) {
@@ -163,7 +179,7 @@ class CurrencyRates {
 
   /// The same shape [tryParse] reads, for saving on the device.
   String toJson() => jsonEncode({
-    'date': date.toIso8601String().substring(0, 10),
+    'date': date.toIso8601String(),
     'usd': {
       for (final entry in perUsd.entries)
         entry.key.toLowerCase(): entry.value.toDouble(),
@@ -189,41 +205,44 @@ class CurrencyRates {
   );
 }
 
+/// A bare day read as that day in UTC; a full timestamp is kept as it is.
+DateTime _utc(DateTime d) => d.isUtc ? d : DateTime.utc(d.year, d.month, d.day);
+
 // BEGIN bundled rates (written by tool/update_rates.py; do not edit by hand)
-const _bundledDate = '2026-10-28';
+const _bundledDate = '2026-10-29T00:02:31Z';
 const _bundledPerUsd = <String, String>{
   'USD': '1',
-  'EUR': '0.89912268',
-  'GBP': '0.75212496',
-  'BDT': '124.13600097',
-  'INR': '95.14009092',
-  'PKR': '277.15527775',
-  'LKR': '332.61767286',
-  'NPR': '152.29550053',
-  'JPY': '157.82921435',
-  'CNY': '6.66763882',
-  'KRW': '1342.15524726',
-  'SGD': '1.2818442',
-  'MYR': '4.08262468',
-  'THB': '33.81667707',
-  'IDR': '18174.23354809',
-  'PHP': '63.99340051',
-  'VND': '25801.99322409',
+  'EUR': '0.897215',
+  'GBP': '0.751538',
+  'BDT': '124.144543',
+  'INR': '95.29615',
+  'PKR': '276.914167',
+  'LKR': '332.163227',
+  'NPR': '152.465479',
+  'JPY': '157.90537',
+  'CNY': '6.680538',
+  'KRW': '1340.24082',
+  'SGD': '1.28178',
+  'MYR': '4.077375',
+  'THB': '33.772095',
+  'IDR': '18181.613355',
+  'PHP': '63.997475',
+  'VND': '25834.040863',
   'AED': '3.6725',
   'SAR': '3.75',
   'QAR': '3.64',
-  'KWD': '0.31113203',
-  'TRY': '49.82582198',
-  'CAD': '1.40646342',
-  'AUD': '1.4219191',
-  'NZD': '1.7832984',
-  'CHF': '0.8298767',
-  'SEK': '9.95435183',
-  'RUB': '80.49093792',
-  'BRL': '5.35218539',
-  'MXN': '18.69096305',
-  'ZAR': '16.66746888',
-  'EGP': '56.11961073',
-  'NGN': '1341.62892744',
+  'KWD': '0.310205',
+  'TRY': '49.858901',
+  'CAD': '1.401824',
+  'AUD': '1.419838',
+  'NZD': '1.778098',
+  'CHF': '0.82903',
+  'SEK': '9.919159',
+  'RUB': '80.531694',
+  'BRL': '5.346831',
+  'MXN': '18.653512',
+  'ZAR': '16.633923',
+  'EGP': '56.119018',
+  'NGN': '1346.236888',
 };
 // END bundled rates

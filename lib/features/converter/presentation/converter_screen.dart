@@ -496,8 +496,14 @@ class _RatesLine extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rates = ref.watch(ratesProvider);
-    final d = rates.rates.date;
-    final date = '${d.day} ${_months[d.month - 1]} ${d.year}';
+    // In the phone's own time; the hour only when the source gave one.
+    final utc = rates.rates.date;
+    final d = utc.toLocal();
+    final hasTime = utc.hour != 0 || utc.minute != 0;
+    String two(int n) => n.toString().padLeft(2, '0');
+    final date = hasTime
+        ? '${d.day} ${_months[d.month - 1]}, ${two(d.hour)}:${two(d.minute)}'
+        : '${utc.day} ${_months[utc.month - 1]} ${utc.year}';
 
     final busy = rates.status == RatesStatus.refreshing;
     final (String text, Color dot) = switch (rates.status) {

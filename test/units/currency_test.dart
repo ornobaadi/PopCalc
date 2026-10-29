@@ -29,6 +29,20 @@ String ratesJson(String date, {double bdt = 120.0, Set<String> drop = const {}})
   });
 }
 
+/// An open.er-api response with BDT at [bdt] per dollar, updated [at].
+String erJson(DateTime at, {double bdt = 120.0}) => jsonEncode({
+  'result': 'success',
+  'time_last_update_unix': at.millisecondsSinceEpoch ~/ 1000,
+  'rates': {
+    for (final c in Currency.all)
+      c.code: c.code == 'USD'
+          ? 1
+          : c.code == 'BDT'
+          ? bdt
+          : 2.5,
+  },
+});
+
 /// Rates newer than anything the app ships with.
 const later = '2099-01-02';
 
@@ -72,9 +86,24 @@ void main() {
   group('Parsing', () {
     test('reads the service response', () {
       final rates = CurrencyRates.tryParse(ratesJson(later, bdt: 123.5))!;
-      expect(rates.date, DateTime(2099, 1, 2));
+      expect(rates.date, DateTime.utc(2099, 1, 2));
       expect(rates.perUsd['BDT'], Decimal.parse('123.5').toRational());
       expect(rates.perUsd.length, Currency.all.length);
+    });
+
+    test('reads open.er-api, hour included', () {
+      final at = DateTime.utc(2099, 1, 2, 0, 2, 31);
+      final rates = CurrencyRates.tryParse(erJson(at, bdt: 124.5))!;
+      expect(rates.date, at);
+      expect(rates.perUsd['BDT'], Decimal.parse('124.5').toRational());
+      final again = CurrencyRates.tryParse(rates.toJson())!;
+      expect(again.date, at);
+      expect(
+        CurrencyRates.tryParse(
+          erJson(at).replaceFirst('"success"', '"error"'),
+        ),
+        isNull,
+      );
     });
 
     test('survives being saved and read back', () {
@@ -161,7 +190,7 @@ void main() {
 
       expect(await c.read(ratesProvider.notifier).refresh(), isTrue);
       expect(c.read(ratesProvider).status, RatesStatus.updated);
-      expect(c.read(ratesProvider).rates.date, DateTime(2099, 1, 2));
+      expect(c.read(ratesProvider).rates.date, DateTime.utc(2099, 1, 2));
       // USD -> BDT is the default pair; the open converter picked it up.
       expect(c.read(converterProvider).outputText, '300');
 
@@ -169,17 +198,21 @@ void main() {
       expect(prefs.getString('currency_rates_json'), contains('2099-01-02'));
     });
 
-    test('falls back to the mirror when the first source fails', () async {
+    test('asks every source and keeps the newest', () async {
       final c = container(
         MockClient((request) async {
           calls++;
-          return request.url.host.contains('jsdelivr')
-              ? http.Response('nope', 503)
-              : http.Response(ratesJson(later), 200);
+          final host = request.url.host;
+          if (host.contains('jsdelivr')) return http.Response('nope', 503);
+          if (host.contains('er-api')) {
+            return http.Response(erJson(DateTime.utc(2099, 1, 3, 0, 2)), 200);
+          }
+          return http.Response(ratesJson(later), 200);
         }),
       );
       expect(await c.read(ratesProvider.notifier).refresh(), isTrue);
-      expect(calls, 2);
+      expect(calls, 3);
+      expect(c.read(ratesProvider).rates.date, DateTime.utc(2099, 1, 3, 0, 2));
     });
 
     test('failure keeps the rates already in use', () async {
@@ -208,7 +241,7 @@ void main() {
       final newer = container(client);
       newer.read(ratesProvider);
       await Future<void>.delayed(const Duration(milliseconds: 20));
-      expect(newer.read(ratesProvider).rates.date, DateTime(2099, 1, 2));
+      expect(newer.read(ratesProvider).rates.date, DateTime.utc(2099, 1, 2));
 
       Units.setCurrencyRates(CurrencyRates.bundled);
       SharedPreferences.setMockInitialValues({
